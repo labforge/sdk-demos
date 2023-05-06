@@ -62,13 +62,13 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 
 ## Code Samples
 
-| ***Sample***               | ***Applicable Device(s)*** |
-|----------------------------|----------------------------|
-| [Stream](stream/README.md) | Mono, Stereo               |
-| Stereo                     | Stereo                     |
-| Keypoints                  | Mono, Stereo               |
-| ImageProcessing            | Mono, Stereo               |
-| Utility                    | Mono, Stereo               |
+| ***Sample***                 | ***Applicable Device(s)*** |
+|------------------------------|----------------------------|
+| [Stream](stream/README.md)   | Mono, Stereo               |
+| Stereo                       | Stereo                     |
+| Keypoints                    | Mono, Stereo               |
+| ImageProcessing              | Mono, Stereo               |
+| [Utility](utility/README.md) | Mono, Stereo               |
 
 
 ## License
