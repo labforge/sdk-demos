@@ -12,10 +12,15 @@ drivers if they are not already installed by a previous eBUS SDK installation.
 ```
 build.bat
 ```
- * Distribute the generated executable along with all dependent link libraries 
-   as part of your installer.
+ * Distribute the generated executable ```build\driver.exe``` along with all 
+   dependent link libraries as part of your installer.
 
 ## Usage
+ * To install the new eBUS driver call the driver executable as follows
+ 
+```
+build\driver.exe --install=eBUSUniversalProForEthernet
+```
 
 ----
 Back to [Home](README.md)
