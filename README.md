@@ -69,6 +69,7 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 | Keypoints                    | Mono, Stereo               |
 | ImageProcessing              | Mono, Stereo               |
 | [Utility](utility/README.md) | Mono, Stereo               |
+| [Driver](driver/README.md)   | Mono, Stereo               |
 
 ## API Documentation
 
