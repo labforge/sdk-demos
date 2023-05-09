@@ -175,7 +175,7 @@ class MainWindow(QMainWindow):
         # else:
         filter_text = item + " (*.tar)"
 
-        selected_file, _ = QFileDialog.getOpenFileName(self, title, fpath, filter_text)
+        selected_file, _ = QFileDialog.getOpenFileName(self, title, fpath, filter_text, "", QFileDialog.DontUseNativeDialog)
         if selected_file is not None and len(selected_file) > 0:
             self.ui.btnUpload.setVisible(True)
             self.ui.btnUpload.setEnabled(True)

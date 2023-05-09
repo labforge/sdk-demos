@@ -122,7 +122,6 @@ def filter_analysis(a):
                  'QtNetwork.pyd',
 
                  ## Not needed python core libraries
-                 'unicodedata.pyd',
                  '_bz2.pyd',
                  '_hashlib.pyd',
                  '_lzma.pyd',
@@ -151,7 +150,8 @@ a = Analysis(
     hiddenimports=['numpy.core.multiarray', 
 		'numpy.random.common', 
 		'numpy.random.bounded_integers', 
-		'numpy.random.entropy'],
+		'numpy.random.entropy',
+		'encodings.idna'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

@@ -28,7 +28,7 @@ import os
 
 # Definitions used to generate distribution
 NAME = "Bottlenose Utilities"
-SHORTNAME = "utilities"
+SHORTNAME = "updater"
 DESCRIPTION = "A tool to manage Labforge Bottlenose Cameras"
 VERSION = "0.1.1"
 URL = "https://labforge.ca"
