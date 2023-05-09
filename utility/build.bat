@@ -15,5 +15,5 @@ REM # See the License for the specific language governing permissions and       
 REM # limitations under the License.                                             #
 REM ##############################################################################
 
-pyside6-uic -g python -o widgets.py *.ui
+pyside6-uic -g python -o widgets.py filemanager.ui
 pyside6-rcc -g python -o resources_rc.py resources.qrc
