@@ -73,7 +73,7 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 ## API Documentation
 
 The API documentation corresponding to the latest SDK release can be found
-in the [releases section of this repository](https://github.com/labforge/sdk-demos/releases).
+in ```api_docs.zip``` the [releases section of this repository](https://github.com/labforge/bottlenose/releases).
 
 
 ## License
