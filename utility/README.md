@@ -13,6 +13,9 @@ build.bat
 
 # Run the sample application
 python utility.py
+
+# Alternatively use the commandline version to update the firmware
+python uploader.py -f {filename} -t {firmware,dnn} -i {Bottlenose IP address}
 ```
 
 ----

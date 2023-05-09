@@ -20,16 +20,42 @@ __author__ = "Thomas Reidemeister <thomas@labforge.ca>"
 __copyright__ = "Copyright 2023, Labforge Inc."
 import eBUS as eb
 import sys
+import time
+from uploader import Uploader
 
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QStyle, QFileDialog, QDialog, QFormLayout, QListView, \
-    QDialogButtonBox, QMessageBox
+    QDialogButtonBox, QMessageBox, QAbstractItemView
 from PySide6.QtGui import QIcon, QStandardItemModel, QStandardItem
-from PySide6.QtCore import QDir, QFileInfo, Qt
-from PySide6.QtNetwork import QNetworkAccessManager
+from PySide6.QtCore import QDir, QFileInfo, Qt, Signal, QThread, QFile, QIODevice
 from widgets import Ui_MainWindow
 
 LABFORGE_MAC_RANGE = '8c:1f:64:d0:e'
+
+
+class BottlenoseFinderWorker(QThread):
+    found = Signal(str, str)
+
+    def find_bottlenose(self):
+        system = eb.PvSystem()
+        system.Find()
+
+        # Detect, select Bottlenose.
+        for i in range(system.GetInterfaceCount()):
+            interface = system.GetInterface(i)
+            for j in range(interface.GetDeviceCount()):
+                device_info = interface.GetDeviceInfo(j)
+                if device_info.GetMACAddress().GetUnicode().find(LABFORGE_MAC_RANGE) == 0:
+                    self.found.emit(device_info.GetConnectionID().GetUnicode(), device_info.GetDisplayID().GetUnicode())
+
+    def halt(self) -> None:
+        self.stop = True
+
+    def run(self):
+        self.stop = False
+        while not self.stop:
+            self.find_bottlenose()
+            time.sleep(1)
 
 
 class BottlenoseSelector(QDialog):
@@ -41,32 +67,34 @@ class BottlenoseSelector(QDialog):
 
         self.setWindowTitle(title)
 
-        # Enumerate all bottlenose candidates
-        # FIXME: move this into a background thread with polling
-        model = QStandardItemModel(self.listView)
-        self.find_bottlenose(model)
-        self.listView.setModel(model)
+        self.model = QStandardItemModel(self.listView)
+        self.listView.setModel(self.model)
+        self.listView.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.worker = BottlenoseFinderWorker()
+        self.worker.found.connect(self.handle_found)
+        self.worker.start()
 
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
         form.addRow(button_box)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
+        self.finished.connect(self.terminate_worker)
 
-    def find_bottlenose(self, model):
-        system = eb.PvSystem()
-        system.Find()
+    def terminate_worker(self, arg):
+        self.worker.halt()
 
-        # Detect, select Bottlenose.
-        for i in range(system.GetInterfaceCount()):
-            interface = system.GetInterface(i)
-            print(f"   {interface.GetDisplayID()}")
-            for j in range(interface.GetDeviceCount()):
-                device_info = interface.GetDeviceInfo(j)
-                if device_info.GetMACAddress().GetUnicode().find(LABFORGE_MAC_RANGE) == 0:
-                    standard_item = QStandardItem(f"{device_info.GetDisplayID()}")
-                    standard_item.setSelectable(True)
-                    standard_item.setData(device_info.GetConnectionID())
-                    model.appendRow(standard_item)
+    def handle_found(self, addr, display):
+        # Check if we have IP already
+        for row in range(self.model.rowCount()):
+            # BN already exists do not add twice
+            item = self.model.item(row)
+            if item.data(257) == addr:
+                return
+
+        standard_item = QStandardItem(display)
+        standard_item.setSelectable(True)
+        standard_item.setData(addr)
+        self.model.appendRow(standard_item)
 
     def selected_bottlenose(self):
         if len(self.listView.selectedIndexes()) > 0:
@@ -79,8 +107,6 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         self.ui = Ui_MainWindow()
 
-        self.network = QNetworkAccessManager()
-
         # Event handler registration
         self.ui.setupUi(self)
 
@@ -88,10 +114,10 @@ class MainWindow(QMainWindow):
         self.ui.btnConnect.released.connect(self.handle_connect)
         self.ui.btnQuit.released.connect(self.handle_quit)
         self.ui.btnFile.released.connect(self.handle_select_file)
-        self.network.finished.connect(self.handle_upload_finished)
+        self.ui.btnUpload.released.connect(self.handle_upload)
 
         # Style
-        self.ui.cbxFileType.addItems(["Firmware", "DNN Weights", "Calibration"])
+        self.ui.cbxFileType.addItems(["Firmware", "DNN Weights"])
         self.ui.btnFile.setText("")
         self.ui.btnFile.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogStart))
         self.ui.btnUpload.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
@@ -102,33 +128,39 @@ class MainWindow(QMainWindow):
 
         # locals
         self.device = None
-        self.status_query = None
-        self.calib = None
+        self.uploader = None
 
-    def __del__(self):
+        # Force UI into disconnected state
         self.disconnect()
 
     def connect_gev(self, connection_id):
         result, device = eb.PvDevice.CreateAndConnect(connection_id)
-        if device is None:
+        if device is None or not result.IsOK():
+            description = result.GetDescription().GetUnicode()
+            if description.find("protect") >= 0:
+                description = "This sensor is locked, please disconnect eBusPlayer first"
             QMessageBox.critical(self,
-                                 "Cannot connect",
-                                 f"Unable to connect to device: {result.GetCodeString()} ({result.GetDescription()})")
+                                 f"Cannot connect: {result.GetCodeString().GetUnicode()}",
+                                 f"Unable to connect to device: {description}")
             self.disconnect()
+            return None
         else:
             self.device = device
             self.ui.txtIP.setText(device.GetIPAddress().GetUnicode())
             self.ui.txtMAC.setText(device.GetMACAddress().GetUnicode())
         return device
 
-
     def disconnect(self):
         if self.device is not None:
+            self.device.Disconnect()
+            self.device.Free(self.device)
             self.device = None
-            pass
+
         # Reset network device
         self.ui.txtIP.setText("")
         self.ui.txtMAC.setText("")
+        self.ui.btnFile.setEnabled(False)
+        self.ui.btnUpload.setEnabled(False)
 
     def handle_select_file(self):
         fpath = QDir.currentPath()
@@ -138,13 +170,14 @@ class MainWindow(QMainWindow):
         i = self.ui.cbxFileType.currentIndex()
         item = self.ui.cbxFileType.itemText(i)
         title = "Select " + item + " File"
-        if item == "Calibration":
-            filter_text = item + " (*.json *.yaml *.yml)"
-        else:
-            filter_text = item + " (*.tar)"
+        # if item == "Calibration":
+        #     filter_text = item + " (*.json *.yaml *.yml)"
+        # else:
+        filter_text = item + " (*.tar)"
 
-        selected_file = QFileDialog.getOpenFileName(self, title, fpath, filter_text)
+        selected_file, _ = QFileDialog.getOpenFileName(self, title, fpath, filter_text)
         if selected_file is not None and len(selected_file) > 0:
+            self.ui.btnUpload.setVisible(True)
             self.ui.btnUpload.setEnabled(True)
             self.ui.txtFile.setText(selected_file)
 
@@ -154,15 +187,75 @@ class MainWindow(QMainWindow):
             connection_id = select.selected_bottlenose()
             if connection_id is not None:
                 self.disconnect()
-                self.connect_gev(connection_id)
-                print(connection_id)
+                if self.connect_gev(connection_id) is not None:
+                    self.ui.btnFile.setEnabled(True)
+                    if len(self.ui.txtFile.text()) > 0:
+                        self.ui.btnUpload.setVisible(True)
+                        self.ui.btnUpload.setEnabled(True)
 
     def handle_quit(self):
         self.close()
 
-    def handle_upload_finished(self):
-        print("Upload Finished")
+    @staticmethod
+    def validate_transfer(fname, ftype):
+        if (ftype == "Firmware") or (ftype == "DNN Weights"):
+            return fname.lower().endswith(".tar")
+        else:
+            return fname.lower().endswith(".json") or fname.lower().endswith(".yml") or fname.lower().endswith(".yaml")
+        return False
 
+    def handle_upload(self):
+        fname = self.ui.txtFile.text()
+        ftype = self.ui.cbxFileType.itemText(self.ui.cbxFileType.currentIndex())
+        if not MainWindow.validate_transfer(fname, ftype):
+            QMessageBox.warning(self, "File Error", "File Type and Name mismatch!")
+            return
+        if self.device is None or len(self.ui.txtIP.text()) == 0:
+            QMessageBox.warning(self, "Connection Error", "Bottlenose Camera not found.")
+            self.disconnect()
+            return
+        if not QFile.exists(fname):
+            QMessageBox.warning(self, "File Error", "Could not find the specified file.")
+            return
+
+        if ftype == "Firmware":
+            update_flag = "EnableUpdate"
+            update_status = "UpdateStatus"
+        elif ftype == "DNN Weights":
+            update_flag = "EnableWeightsUpdate"
+            update_status = "WeightsStatus"
+        else:
+            raise Exception("Unsupported Operation")
+
+        self.uploader = Uploader(self.ui.txtIP.text(), update_flag, update_status, self.device, fname)
+        self.uploader.finished.connect(self.handle_upload_finished)
+        self.uploader.progress.connect(self.handle_upload_progress)
+        self.uploader.error.connect(self.handle_error)
+        self.ui.btnFile.setEnabled(False)
+        self.ui.btnUpload.setEnabled(False)
+        self.ui.btnConnect.setEnabled(False)
+        self.ui.prgUpload.setVisible(True)
+        self.ui.btnQuit.setEnabled(False)
+        self.uploader.start()
+
+    def handle_error(self, what):
+        QMessageBox.warning(self, "Update failed", what)
+
+    def handle_upload_progress(self, pct):
+        self.ui.prgUpload.setValue(pct)
+
+    def handle_upload_finished(self, state):
+        if state:
+            ftype = self.ui.cbxFileType.itemText(self.ui.cbxFileType.currentIndex())
+            if ftype == "Firmware":
+                QMessageBox.information(self, "Update Finished", "Please power cycle the sensor to apply the update")
+            else:
+                QMessageBox.information(self, "Update Finished", "Weights updated")
+        self.ui.btnFile.setEnabled(True)
+        self.ui.btnUpload.setEnabled(True)
+        self.ui.btnConnect.setEnabled(True)
+        self.ui.prgUpload.setVisible(False)
+        self.ui.btnQuit.setEnabled(True)
 
 
 if __name__ == '__main__':
