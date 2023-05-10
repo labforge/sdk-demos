@@ -18,17 +18,18 @@
 """
 __author__ = "Thomas Reidemeister <thomas@labforge.ca>"
 __copyright__ = "Copyright 2023, Labforge Inc."
-import eBUS as eb
+
 import sys
 import time
-from uploader import Uploader
-
-
 from PySide6.QtWidgets import QApplication, QMainWindow, QStyle, QFileDialog, QDialog, QFormLayout, QListView, \
-    QDialogButtonBox, QMessageBox, QAbstractItemView
-from PySide6.QtGui import QIcon, QStandardItemModel, QStandardItem
+    QDialogButtonBox, QMessageBox, QAbstractItemView, QLineEdit
+from PySide6.QtGui import QIcon, QStandardItemModel, QStandardItem, QPalette
 from PySide6.QtCore import QDir, QFileInfo, Qt, Signal, QThread, QFile, QIODevice
 from widgets import Ui_MainWindow
+
+# Note eBUS seems to have issues with COM initialization, import only after QApplication is initialised
+eb = None
+Uploader = None
 
 LABFORGE_MAC_RANGE = '8c:1f:64:d0:e'
 
@@ -125,6 +126,7 @@ class MainWindow(QMainWindow):
         self.ui.btnConnect.setIcon(QIcon.fromTheme("network-wired", QIcon(":/network-wired.png")))
         self.ui.prgUpload.setVisible(False)
         self.ui.btnUpload.setVisible(False)
+        self.ui.txtFile.setReadOnly(True)
 
         # locals
         self.device = None
@@ -132,6 +134,18 @@ class MainWindow(QMainWindow):
 
         # Force UI into disconnected state
         self.disconnect()
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls:
+            e.accept()
+        else:
+            e.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls:
+            self.ui.txtFile.setText(event.mimeData().urls()[0].toLocalFile())
+            self.ui.btnUpload.setVisible(True)
+            self.ui.btnUpload.setEnabled(True)
 
     def connect_gev(self, connection_id):
         result, device = eb.PvDevice.CreateAndConnect(connection_id)
@@ -160,6 +174,7 @@ class MainWindow(QMainWindow):
         self.ui.txtIP.setText("")
         self.ui.txtMAC.setText("")
         self.ui.btnFile.setEnabled(False)
+        self.setAcceptDrops(False)
         self.ui.btnUpload.setEnabled(False)
 
     def handle_select_file(self):
@@ -175,7 +190,7 @@ class MainWindow(QMainWindow):
         # else:
         filter_text = item + " (*.tar)"
 
-        selected_file, _ = QFileDialog.getOpenFileName(self, title, fpath, filter_text, "", QFileDialog.DontUseNativeDialog)
+        selected_file, _ = QFileDialog.getOpenFileName(self, title, fpath, filter_text, "")
         if selected_file is not None and len(selected_file) > 0:
             self.ui.btnUpload.setVisible(True)
             self.ui.btnUpload.setEnabled(True)
@@ -189,6 +204,7 @@ class MainWindow(QMainWindow):
                 self.disconnect()
                 if self.connect_gev(connection_id) is not None:
                     self.ui.btnFile.setEnabled(True)
+                    self.setAcceptDrops(True)
                     if len(self.ui.txtFile.text()) > 0:
                         self.ui.btnUpload.setVisible(True)
                         self.ui.btnUpload.setEnabled(True)
@@ -261,8 +277,10 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
+    # Instantiate import here
+    import eBUS as eb
+    from uploader import Uploader
     window = MainWindow()
     window.setWindowIcon(QIcon(":/labforge.ico"))
-
     window.show()
     sys.exit(app.exec())
