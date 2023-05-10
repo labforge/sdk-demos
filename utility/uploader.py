@@ -42,8 +42,20 @@ class Uploader(QThread):
         self.flag = self.device.GetParameters().Get(flag_name)
         self.status = self.device.GetParameters().Get(status_name)
         self.filename = filename
+        if flag_name.lower().find('weight') > 0:
+            self.reset_flag = True
+        else:
+            self.reset_flag = False
 
     def run(self):
+        # Sanity check to prevent firmware corruption
+        if not self.reset_flag:
+            res, status = self.flag.GetValue()
+            if status:
+                self.error.emit("Please power-cycle sensor before attempting another update.")
+                self.finished.emit(False)
+                return False
+
         self.progress.emit(0)
         if self.flag is None or self.status is None:
             self.error.emit("Function not supported by device ... please update the firmware")
@@ -80,8 +92,12 @@ class Uploader(QThread):
             ftp.storbinary(f"STORE {path.basename(self.filename)}", fp=open(self.filename, "rb"))
             ftp.close()
         except Exception as e:
-            self.flag.SetValue(False)
-            self.error.emit(f"Unable to communicate with device: {str(e)}")
+            time.sleep(0.1)
+
+            if self.reset_flag:
+                self.flag.SetValue(False)
+            _, status = self.status.GetValue()
+            self.error.emit(f"Unable to communicate with device: {status}")
             self.finished.emit(False)
             return
 
@@ -93,7 +109,10 @@ class Uploader(QThread):
                 number = match.group(1)
                 self.progress.emit(int(number))
             elif status.find('finished') >= 0 or status.find('Loaded') >= 0:
-                self.flag.SetValue(False)
+                # Only weights update is reentrant
+                if self.reset_flag:
+                    self.flag.SetValue(False)
+
                 self.progress.emit(100)
                 self.finished.emit(True)
                 break
