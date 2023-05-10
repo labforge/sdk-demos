@@ -137,7 +137,8 @@ class MainWindow(QMainWindow):
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls:
-            e.accept()
+            if e.mimeData().urls()[0].toLocalFile().endswith(".tar"):
+                e.accept()
         else:
             e.ignore()
 
