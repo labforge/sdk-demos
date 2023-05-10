@@ -62,7 +62,7 @@ class Uploader(QThread):
             res, status = self.status.GetValue()
             if not res.IsOK():
                 self.flag.SetValue(False)
-                self.error.emit(f"Unable to communicate with device")
+                self.error.emit(f"Unable to communicate with device: {res.GetDescription().GetUnicode()}")
                 self.finished.emit(False)
                 return
             time.sleep(0.1)
@@ -92,14 +92,14 @@ class Uploader(QThread):
             if match:
                 number = match.group(1)
                 self.progress.emit(int(number))
-            elif status.find('finished') >= 0:
+            elif status.find('finished') >= 0 or status.find('Loaded') >= 0:
                 self.flag.SetValue(False)
                 self.progress.emit(100)
                 self.finished.emit(True)
                 break
             else:
                 self.flag.SetValue(False)
-                self.error.emit(f"Unknown error")
+                self.error.emit(f"Unknown error: {status}")
                 self.finished.emit(False)
                 break
 
