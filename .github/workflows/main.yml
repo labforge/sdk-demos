@@ -57,7 +57,9 @@ jobs:
         shell: cmd
         run: |
           .github\workflows\bootstrap.bat
-          call venv\Scripts\activate
+          ECHO "Activating virtual environment"
+          CALL venv\Scripts\activate
+          ECHO "Installing eBUS Python"
           pip install dependencies\ebus_python-6.3.0-6343-py310-none-win_amd64.whl
 
       - name: Build examples
@@ -65,6 +67,6 @@ jobs:
         run: |
           call venv\Scripts\activate
           
-          # Build distribution example (depends on most other samples)
+          REM Build distribution example (depends on most other samples)
           cd distribution
           call build.bat

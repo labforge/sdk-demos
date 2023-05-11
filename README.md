@@ -1,5 +1,7 @@
 ![Labforge logo](doc/img/logo-2-300x212.png)
 
+![CI](https://github.com/labforge/sdk-demos/actions/workflows/main.yml/badge.svg)
+
 ## Overview
 
 This repository contains the Python SDK samples for [Bottlenose cameras](https://www.labforge.ca/features-bottlenose/).
