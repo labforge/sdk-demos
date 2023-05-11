@@ -22,6 +22,7 @@
 #   - VS build tools,
 #   - Pleora SDK,
 #   - Python 3.10
+#   - Git for Windows
 # (4) Set up a private backing repository holding proprietary wheels and check this out using a CI token
 # (5) Set a repo actions secret for CITOKEN
 # (5) Tag that runner as W64HIL
