@@ -57,6 +57,9 @@ jobs:
         shell: cmd
         run: |
           .github\workflows\bootstrap.bat
+          call venv\Scripts\activate
+          pip install dependencies\ebus_python-6.3.0-6343-py310-none-win_amd64.whl
+
       - name: Build examples
         shell: cmd
         run: |
@@ -65,6 +68,3 @@ jobs:
           # Build distribution example (depends on most other samples)
           cd distribution
           call build.bat
-         
-
-  # FIXME: splice headless samples into Bottlenose firmware CI across Linux and Windows hosts
