@@ -61,7 +61,7 @@ jobs:
         shell: cmd
         run: |
           CALL venv\Scripts\activate
-          ECHO "Installing eBUS Python"
+          ECHO "Install eBUS Python"
           pip install dependencies\ebus_python-6.3.0-6343-py310-none-win_amd64.whl
 
       - name: Build examples
