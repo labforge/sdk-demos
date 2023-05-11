@@ -26,6 +26,7 @@
 # (4) Set up a private backing repository holding proprietary wheels and check this out using a CI token
 # (5) Set a repo actions secret for CITOKEN
 # (5) Tag that runner as W64HIL
+# (6) Allow for executing shell scripts https:/go.microsoft.com/fwlink/?LinkID=135170
 name: ContinousIntegration
 
 on:
