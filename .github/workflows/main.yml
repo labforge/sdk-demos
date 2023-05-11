@@ -54,7 +54,8 @@ jobs:
           token:  ${{ secrets.CITOKEN }}
           path: dependencies
       - name: Setup dependencies
+        shell: cmd
         run: |
           .github\workflows\bootstrap.bat
-          shell: cmd
+
   # FIXME: splice headless samples into Bottlenose firmware CI across Linux and Windows hosts
