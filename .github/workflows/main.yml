@@ -57,5 +57,14 @@ jobs:
         shell: cmd
         run: |
           .github\workflows\bootstrap.bat
+      - name: Build examples
+        shell: cmd
+        run: |
+          call venv\Scripts\activate
+          
+          # Build distribution example (depends on most other samples)
+          cd distribution
+          call build.bat
+         
 
   # FIXME: splice headless samples into Bottlenose firmware CI across Linux and Windows hosts

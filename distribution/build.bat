@@ -14,6 +14,9 @@ REM    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 REM    See the License for the specific language governing permissions and
 REM    limitations under the License.
 
+REM build driver installer
+CD ..\driver\
+CALL build.bat
 REM Build utility Qt python scripts
 CD ..\utility\
 CALL build.bat
