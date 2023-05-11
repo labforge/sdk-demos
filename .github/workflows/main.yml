@@ -51,5 +51,4 @@ jobs:
           repository: labforge/pleora_backing
           token:  ${{ secrets.CITOKEN }}
           path: dependencies
-      - name: Testing
   # FIXME: splice headless samples into Bottlenose firmware CI across Linux and Windows hosts
