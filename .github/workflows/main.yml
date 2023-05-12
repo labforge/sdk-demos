@@ -72,3 +72,8 @@ jobs:
           REM Build distribution example (depends on most other samples)
           cd distribution
           call build.bat
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: installFiles
+          path: distribution/build/updater.exe
