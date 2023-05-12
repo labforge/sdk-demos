@@ -1,5 +1,7 @@
 ![Labforge logo](doc/img/logo-2-300x212.png)
 
+![CI](https://github.com/labforge/sdk-demos/actions/workflows/main.yml/badge.svg)
+
 ## Overview
 
 This repository contains the Python SDK samples for [Bottlenose cameras](https://www.labforge.ca/features-bottlenose/).
@@ -62,13 +64,20 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 
 ## Code Samples
 
-| ***Sample***               | ***Applicable Device(s)*** |
-|----------------------------|----------------------------|
-| [Stream](stream/README.md) | Mono, Stereo               |
-| Stereo                     | Stereo                     |
-| Keypoints                  | Mono, Stereo               |
-| ImageProcessing            | Mono, Stereo               |
-| Utility                    | Mono, Stereo               |
+| ***Sample***                            | ***Applicable Device(s)*** |
+|-----------------------------------------|----------------------------|
+| [Stream](stream/README.md)              | Mono, Stereo               |
+| Stereo                                  | Stereo                     |
+| Keypoints                               | Mono, Stereo               |
+| ImageProcessing                         | Mono, Stereo               |
+| [Utility](utility/README.md)            | Mono, Stereo               |
+| [Driver](driver/README.md)              | Mono, Stereo               |
+| [distribution](distribution/README.md)  | Mono, Stereo               |
+
+## API Documentation
+
+The API documentation corresponding to the latest SDK release can be found
+in ```api_docs.zip``` the [releases section of this repository](https://github.com/labforge/bottlenose/releases).
 
 
 ## License
