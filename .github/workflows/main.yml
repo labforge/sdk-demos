@@ -96,7 +96,3 @@ jobs:
         artifact_name: installer
         token: ${{ secrets.CITOKEN }}
         path: samples
-    - name: Assemble SDK files
-      shell: cmd
-      run:
-      dependencies
