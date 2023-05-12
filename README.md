@@ -6,20 +6,25 @@
 
 This repository contains the Python SDK samples for [Bottlenose cameras](https://www.labforge.ca/features-bottlenose/).
 
+The camera supports the GEV 2.1 standard and does work with major Machine Vision
+software packages out of the box without additional drivers, please see our documentation
+[here](https://docs.labforge.ca/docs/interfaces).
+
+In this repository we provide samples for power users and integrators that want to work directly with the Camera 
+without third-party frameworks. 
+
 The samples allow depth and color streaming, and provide snippets to update intrinsic and extrinsic calibration 
-information. 
+information.
 
-The samples are based on the Pleora SDK version. We distribute a version of the
-SDK [here](https://github.com/labforge/bottlenose/releases/) for a variety of
-operating systems.
-
-Bottlenose cameras necessary to use these samples library are available for purchase at [Mouser](https://www.mouser.ca/manufacturer/labforge/).
-
-## Environment Setup
+Bottlenose cameras necessary to use these samples library are available for 
+purchase at [Mouser](https://www.mouser.ca/manufacturer/labforge/).
 
 Please follow the steps to set up the [Bottlenose camera from our documentation](https://docs.labforge.ca/docs).
 
-Please download and install the **Pleora eBUS SDK** for your target platform.
+## Environment Setup
+
+Please see the [releases](https://github.com/labforge/sdk-demos/releases/) page 
+for the necessary **Pleora eBUS SDK** for your target platform. 
 
 Please see the ```requirements.txt``` file in each sample directory for the
 required python packages to run.
