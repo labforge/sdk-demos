@@ -18,7 +18,7 @@ runs:
     - name: Test working directory
       shell: cmd
       run:
-        cd ${{ input.path }}
+        cd ${{ inputs.path }}
     - name: Check out private dependencies
       uses: actions/checkout@v3
       with:
@@ -26,15 +26,15 @@ runs:
         submodules: true
         repository: labforge/pleora_backing
         token: ${{ inputs.token }}
-        path: ${{ input.path }}/dependencies
+        path: ${{ inputs.path }}/dependencies
     - name: Setup dependencies
       shell: cmd
-      working-directory: ${{ input.path }}
+      working-directory: ${{ inputs.path }}
       run: |
         .github\actions\build\bootstrap.bat
     - name: Install eBUS Python
       shell: cmd
-      working-directory: ${{ input.path }}
+      working-directory: ${{ inputs.path }}
       run: |
         CALL venv\Scripts\activate
         ECHO "Install eBUS Python"
@@ -42,7 +42,7 @@ runs:
 
     - name: Build examples
       shell: cmd
-      working-directory: ${{ input.path }}
+      working-directory: ${{ inputs.path }}
       run: |
         call venv\Scripts\activate
 
@@ -54,4 +54,4 @@ runs:
       uses: actions/upload-artifact@v2
       with:
         name: ${{ inputs.artifact_name }}
-        path: ${{ input.path }}/distribution/build/updater.exe
+        path: ${{ inputs.path }}/distribution/build/updater.exe
