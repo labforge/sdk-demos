@@ -50,12 +50,3 @@ jobs:
         artifact_name: installer
         token: ${{ secrets.CITOKEN }}
         path: samples
-    - uses: actions/download-artifact@v2
-      with:
-        name: installer
-        path: tmp
-    - name: Display structure of downloaded files
-      shell: cmd
-      run: |
-        cd tmp
-        dir
