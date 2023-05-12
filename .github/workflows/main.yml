@@ -46,6 +46,12 @@ jobs:
     - name: Build samples
       uses: ./.github/actions/build
       with:
-        artifact_name: 'installer'
+        artifact_name: installer
         token: ${{ secrets.CITOKEN }}
         path: '.'
+    - uses: actions/download-artifact@v2
+      with:
+        name: installer
+    - name: Display structure of downloaded files
+      shell: cmd
+      run: dir
