@@ -35,45 +35,10 @@ on:
   workflow_dispatch:
 
 jobs:
-
-  # See if assumed environment builds on windows
   build_samples:
     runs-on: W64HIL
     steps:
-      - name: Check out samples
-        uses: actions/checkout@v3
-        with:
-          lfs: true
-          submodules: true
-      - name: Check out private dependencies
-        uses: actions/checkout@v3
-        with:
-          lfs: true
-          submodules: true
-          repository: labforge/pleora_backing
-          token:  ${{ secrets.CITOKEN }}
-          path: dependencies
-      - name: Setup dependencies
-        shell: cmd
-        run: |
-          .github\workflows\bootstrap.bat
-      - name: Install eBUS Python
-        shell: cmd
-        run: |
-          CALL venv\Scripts\activate
-          ECHO "Install eBUS Python"
-          pip install dependencies\ebus_python-6.3.0-6343-py310-none-win_amd64.whl
-
-      - name: Build examples
-        shell: cmd
-        run: |
-          call venv\Scripts\activate
-          
-          REM Build distribution example (depends on most other samples)
-          cd distribution
-          call build.bat
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: installFiles
-          path: distribution/build/updater.exe
+    - name: Build samples
+      uses: ./.github/actions/build
+      with:
+        artifact_name: 'installer'

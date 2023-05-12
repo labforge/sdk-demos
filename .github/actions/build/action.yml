@@ -1,0 +1,49 @@
+name: 'Build updater as actions artifact'
+description: 'Generate the NSIS installer as upload artifact'
+inputs:
+  artifact_name:
+    description: 'Name of artifact'
+    required: true
+    default: 'installFiles'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check out samples
+      uses: actions/checkout@v3
+      with:
+        lfs: true
+        submodules: true
+    - name: Check out private dependencies
+      uses: actions/checkout@v3
+      with:
+        lfs: true
+        submodules: true
+        repository: labforge/pleora_backing
+        token: ${{ secrets.CITOKEN }}
+        path: dependencies
+    - name: Setup dependencies
+      shell: cmd
+      run: |
+        .github\workflows\bootstrap.bat
+    - name: Install eBUS Python
+      shell: cmd
+      run: |
+        CALL venv\Scripts\activate
+        ECHO "Install eBUS Python"
+        pip install dependencies\ebus_python-6.3.0-6343-py310-none-win_amd64.whl
+
+    - name: Build examples
+      shell: cmd
+      run: |
+        call venv\Scripts\activate
+
+        REM Build distribution example (depends on most other samples)
+        cd distribution
+        call build.bat
+
+    - name: Upload installer artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: distribution/build/updater.exe
