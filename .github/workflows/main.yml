@@ -38,7 +38,14 @@ jobs:
   build_samples:
     runs-on: W64HIL
     steps:
+    - name: Check out samples
+      uses: actions/checkout@v3
+      with:
+        lfs: true
+        submodules: true
     - name: Build samples
       uses: ./.github/actions/build
       with:
         artifact_name: 'installer'
+        token: ${{ secrets.CITOKEN }}
+        path: '.'

@@ -5,29 +5,36 @@ inputs:
     description: 'Name of artifact'
     required: true
     default: 'installFiles'
+  token:
+    description: 'Github token to checkout private dependencies'
+    required: true
+  path:
+    description: 'Path to checked out sdk-samples'
+    required: true
 
 runs:
   using: "composite"
   steps:
-    - name: Check out samples
-      uses: actions/checkout@v3
-      with:
-        lfs: true
-        submodules: true
+    - name: Test working directory
+      shell: cmd
+      run:
+        cd ${{ input.path }}
     - name: Check out private dependencies
       uses: actions/checkout@v3
       with:
         lfs: true
         submodules: true
         repository: labforge/pleora_backing
-        token: ${{ secrets.CITOKEN }}
-        path: dependencies
+        token: ${{ inputs.token }}
+        path: ${{ input.path }}/dependencies
     - name: Setup dependencies
       shell: cmd
+      working-directory: ${{ input.path }}
       run: |
-        .github\workflows\bootstrap.bat
+        .github\actions\build\bootstrap.bat
     - name: Install eBUS Python
       shell: cmd
+      working-directory: ${{ input.path }}
       run: |
         CALL venv\Scripts\activate
         ECHO "Install eBUS Python"
@@ -35,6 +42,7 @@ runs:
 
     - name: Build examples
       shell: cmd
+      working-directory: ${{ input.path }}
       run: |
         call venv\Scripts\activate
 
@@ -46,4 +54,4 @@ runs:
       uses: actions/upload-artifact@v2
       with:
         name: ${{ inputs.artifact_name }}
-        path: distribution/build/updater.exe
+        path: ${{ input.path }}/distribution/build/updater.exe
