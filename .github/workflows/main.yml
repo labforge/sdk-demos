@@ -35,7 +35,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_api_docs:
+  publish_sdk:
     runs-on: HIL
     steps:
     - name: Checkout head for release notes
