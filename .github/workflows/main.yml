@@ -35,6 +35,52 @@ on:
   workflow_dispatch:
 
 jobs:
+  publish_sdk:
+    runs-on: HIL
+    steps:
+    - name: Checkout head for release notes
+      uses: actions/checkout@v3
+      with:
+        lfs: true
+        submodules: true
+    - name: Generate release notes
+      run: |
+        git describe --tags --abbrev=0 HEAD | xargs git log -1 --pretty=%B > release.txt
+    - name: Stage backing files
+      uses: actions/checkout@v3
+      with:
+        lfs: true
+        submodules: true
+        repository: labforge/pleora_backing
+        token: ${{ secrets.CITOKEN }}
+        path: release
+    - name: Build SDK documentation to publish
+      run: |
+        cd release
+        ar x eBUS_SDK_Ubuntu-22.04-x86_64-6.3.0-6343.deb
+        tar xvzf data.tar.gz
+        cd opt/pleora/ebus_sdk/Ubuntu-22.04-x86_64/share/doc/python/
+        zip -r9ov ../../../../../../../api_docs.zip *
+        cd ../../../../../../../
+        # back to root from release
+        cd ..
+    - name: Assemble Windows SDK
+      run: |
+        cat release/eBUS_*.exea* > release/eBUS_SDK_Windows-64-bit.exe
+    - name: Release Public
+      uses: treideme/action-gh-release@master
+      if: startsWith(github.ref, 'refs/tags/v')
+      with:
+        fail_on_unmatched_files: true
+        files: |
+          release/*.whl
+          release/eBUS_SDK_Windows-64-bit.exe
+          release/*.deb
+          release/api_docs.zip
+        token: ${{ secrets.DEPLOYTOKEN }}
+        repository: labforge/bottlenose
+        body_path: release.txt
+
   build_samples:
     runs-on: W64HIL
     steps:
