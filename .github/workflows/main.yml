@@ -79,8 +79,7 @@ jobs:
           release/eBUS_SDK_Windows-64-bit.exe
           release/*.deb
           release/api_docs.zip
-        token: ${{ secrets.DEPLOYTOKEN }}
-        repository: labforge/bottlenose
+        token: ${{ secrets.CITOKEN }}
         body_path: release.txt
 
   build_samples:
