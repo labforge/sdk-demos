@@ -12,11 +12,13 @@ version of the utility is included as part of the [Bottlenose software](https://
  * [Qt5](https://doc.qt.io/qt-5.15/)
  * [OpenCV 4.3 or newer](https://opencv.org/)
  * [Meson Build System](https://mesonbuild.com/)
+ * [XXD](https://www.tutorialspoint.com/unix_commands/xxd.htm)
+   * [Microsoft Windows](https://sourceforge.net/projects/xxd-for-windows/)  
  * A C++ compiler
    * Build-essentials for Linux (tested with gcc-10 on Ubuntu 20.04, and 22.04)
    * [Microsoft Visual Studio Build tools for Visual Studio 17 or newer](https://aka.ms/vs/17/release/vs_buildtools.exe) 
 
-### Building the utility in Ubuntu 22.04
+### Building the Utility in Ubuntu 22.04
 
 ----
 Back to [Home](../README.md)

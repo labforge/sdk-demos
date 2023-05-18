@@ -1,9 +1,8 @@
 ## Project definition
-# https://mesonbuild.com/Reference-manual.html#project
-project('Bottlenose Suite', 'cpp',
-    version : '1.0.0',
+project('Bottlenose Calibrator', 'cpp',
+    version : '0.1.100',
     license : 'Labforge',
-    meson_version : '>= 0.59.1',
+    meson_version : '>= 0.60.0',
     default_options : ['cpp_std=c++20',
                        'warning_level=3',
                        'buildtype=release',
@@ -14,23 +13,12 @@ project('Bottlenose Suite', 'cpp',
 app_inc = include_directories(
 	'.',
 	'inc',
-	#'subprojects/chunkdata/inc',
 	)
 ## Add all library dependencies here before subdirectories and executables
 cpp = meson.get_compiler('cpp')
 # set PATH=C:\qt5\bin;%PATH%
 qt5 = import('qt5')
 qt5_deps = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'Test', 'Network'])
-## Windows 64 considerations
-# This fails when the only cmake is the VC tools cmake, install cmake separately
-qwt_dep = dependency('Qwt', method: 'cmake', cmake_module_path: join_paths(meson.project_source_root(), 'cmake','Modules'), required: false )
-if not qwt_dep.found()
-    qwt_lib = cpp.find_library('qwt', dirs: ['C:/qwt-6.2.0/lib'])
-    qwt_dep = declare_dependency(version: '6.2.0',
-                                 compile_args: ['-IC:/qwt-6.2.0/include'],
-                                 dependencies : qwt_lib,
-                                 )
-endif
 opencv_dep = dependency('opencv4', required: false)
 if not opencv_dep.found()
   # Windows hacks, version info is appened to cvlibs for cl compiler, but not in cmake specs, so hardcode libs here
@@ -44,8 +32,12 @@ if not opencv_dep.found()
                                   )
 endif
 if host_machine.system() == 'linux'
-  pleora_dirs = ['/opt/pleora/ebus_sdk/Ubuntu-18.04-x86_64/lib', '/opt/pleora/ebus_sdk/Ubuntu-20.04-x86_64/lib']
-  pleora_inc = ['-I/opt/pleora/ebus_sdk/Ubuntu-18.04-x86_64/include', '-I/opt/pleora/ebus_sdk/Ubuntu-20.04-x86_64/include/']
+  pleora_dirs = ['/opt/pleora/ebus_sdk/Ubuntu-18.04-x86_64/lib',
+                 '/opt/pleora/ebus_sdk/Ubuntu-20.04-x86_64/lib',
+                 '/opt/pleora/ebus_sdk/Ubuntu-22.04-x86_64/lib/']
+  pleora_inc = ['-I/opt/pleora/ebus_sdk/Ubuntu-18.04-x86_64/include',
+                '-I/opt/pleora/ebus_sdk/Ubuntu-20.04-x86_64/include/',
+                '-I/opt/pleora/ebus_sdk/Ubuntu-22.04-x86_64/include/']
   pleora_args = pleora_inc+'-DQT_GUI_LIB'
   PvBase = cpp.find_library('PvBase', required: true, dirs: pleora_dirs)
   PvBuffer = cpp.find_library('PvBuffer', required: true, dirs: pleora_dirs)
@@ -88,23 +80,14 @@ pleora_dep = declare_dependency(compile_args: pleora_inc,
 app_deps = [
   qt5_deps,
   opencv_dep,
-  qwt_dep,
   pleora_dep,
 ]
-
-test_cpp_args = []
-test_link_args = []
-if meson.get_compiler('cpp').get_id() == 'gcc'
-## Flags to use for all test-cases for test-coverage analysis
-  test_cpp_args = ['-fprofile-arcs', '-ftest-coverage', '-Wno-deprecated', '-Wno-deprecated-copy', '-Wno-non-virtual-dtor', '-Wno-unused-parameter']
-  test_link_args = ['-fprofile-arcs']
-endif
 
 ## Fingerprint current git sha for version info
 # On Windows install https://sourceforge.net/projects/xxd-for-windows/
 git_txt = custom_target(
   'git-sha',
-  command : [find_program('git'), '--git-dir', meson.current_source_dir()+'/.git', 'rev-parse', '--short', 'HEAD'],
+  command : [find_program('git'), '--git-dir', meson.current_source_dir()+'/../.git', 'rev-parse', '--short', 'HEAD'],
   output : ['git-sha.txt'],
   capture : true,
 )
@@ -116,5 +99,3 @@ git_hdr = custom_target('git_hdr',
 )
 
 subdir('src')
-#subdir('test')
-
