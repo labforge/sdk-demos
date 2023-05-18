@@ -4,7 +4,8 @@
 
 ## Overview
 
-This repository contains the Python SDK samples for [Bottlenose cameras](https://www.labforge.ca/features-bottlenose/).
+This repository contains the Python SDK samples for [Bottlenose cameras](https://www.labforge.ca/features-bottlenose/),
+and a C++ example for [stereo acquisition and calibration](calibrator/README.md).
 
 The camera supports the GEV 2.1 standard and does work with major Machine Vision
 software packages out of the box without additional drivers, please see our documentation
@@ -67,7 +68,7 @@ Use this helper script to include the libraries in your environment
 source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 ```
 
-## Code Samples
+## Python Code Samples
 
 | ***Sample***                            | ***Applicable Device(s)*** |
 |-----------------------------------------|----------------------------|
@@ -79,7 +80,7 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 | [Driver](driver/README.md)              | Mono, Stereo               |
 | [distribution](distribution/README.md)  | Mono, Stereo               |
 
-## API Documentation
+## Python API Documentation
 
 The API documentation corresponding to the latest SDK release can be found
 in ```api_docs.zip``` the [releases section of this repository](https://github.com/labforge/sdk-demos/releases/).
