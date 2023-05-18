@@ -1,3 +1,4 @@
+:: FIXME: Cover this somehow in NSIS
 ::=============================================================================
 :: Script: bundle.bat
 :: Author: Thomas Reidemeister <thomas@labforge.ca>

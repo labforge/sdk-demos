@@ -20,5 +20,19 @@ version of the utility is included as part of the [Bottlenose software](https://
 
 ### Building the Utility in Ubuntu 22.04
 
+ * Install the above dependencies
+ * Build utility
+```
+meson build
+ninja -C build
+```
+ * The executable for the utility can be found in ```build/src/calibrator```
+
+### Building the Utility in Microsoft Windows
+
+ * Install the above dependencies
+ * Configure the path of the utilities
+ * See this [helper script](win/install_oss.bat) for how to bootstrap the environment for Qt and its dependencies
+
 ----
 Back to [Home](../README.md)

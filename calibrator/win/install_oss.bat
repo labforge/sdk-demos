@@ -13,22 +13,21 @@
 ::   Installations of the Script
 ::     Visual C++ 2022 Build Tools -> %ProgramFiles(x86)%\Microsoft Visual Studio\
 ::     QT5 5.1.12 LGPL components  -> C:\qt5
-::     QWT 6.2.0                   -> C:\qwt-6.2.0
 ::     OpenCV 4.3.0                -> C:\cv4
 ::
 :: Copyright (C) 2013-2021 Labforge Inc.
 ::
-:: THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-:: AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-:: IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-:: ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS AND CONTRIBUTORS BE
-:: LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-:: CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-:: SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-:: INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-:: CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-:: ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-:: POSSIBILITY OF SUCH DAMAGE.
+::    Licensed under the Apache License, Version 2.0 (the "License");
+::    you may not use this file except in compliance with the License.
+::    You may obtain a copy of the License at
+::
+::        http://www.apache.org/licenses/LICENSE-2.0
+::
+::    Unless required by applicable law or agreed to in writing, software
+::    distributed under the License is distributed on an "AS IS" BASIS,
+::    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+::    See the License for the specific language governing permissions and
+::    limitations under the License.
 ::
 ::=============================================================================
 @ECHO OFF
@@ -87,27 +86,6 @@ IF NOT EXIST %QT5HOME% (
     )
 ) ELSE (
     SET "PATH=%QT5HOME%\bin;%QT5HOME%\lib;%PATH%"
-)
-
-:: Install QWT
-SET "QWTHOME=C:\qwt-6.2.0\"
-IF NOT EXIST %QWTHOME% (
-    IF NOT EXIST "qwt-6.2.0\" (
-        CURL -SL --output qwt-6.2.0.zip http://downloads.sourceforge.net/project/qwt/qwt/6.2.0/qwt-6.2.0.zip
-        POWERSHELL Expand-Archive qwt-6.2.0.zip -DestinationPath . && del /q qwt-6.2.0.zip
-        :: Reduce scope of QWT install
-        COPY /Y qwtconfig.pri qwt-6.2.0
-        CD qwt-6.2.0
-        QMAKE qwt.pro
-        NMAKE
-        NMAKE install
-        CD ..
-    ) ELSE (
-        ECHO QWT not properly installed ... exiting
-        EXIT /B 1
-    )    
-) ELSE (
-    SET "PATH=%QWTHOME%bin;%QWTHOME%lib;%PATH%"
 )
 
 :: Install OpenCV4.3.0
