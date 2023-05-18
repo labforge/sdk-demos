@@ -14,7 +14,6 @@
 
 namespace labforge::gev {
 
-PvStream *OpenStream( const PvString &macAddress, PvResult *res );
 bool ConfigureStream(PvDevice *aDevice, PvStream *aStream );
 void CreateStreamBuffers(PvDevice *aDevice, PvStream *aStream, std::list<PvBuffer *> *aBufferList,
                          const size_t buffer_count);
