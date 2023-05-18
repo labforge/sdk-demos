@@ -9,7 +9,7 @@ version of the utility is included as part of the [Bottlenose software](https://
 ## Requirements
  * [eBUS SDK 6.3.0 or later](https://github.com/labforge/bottlenose/releases)
    * For Linux SDK please see the [releases in this repository](https://github.com/labforge/sdk-demos/releases) 
- * [Qt5](https://doc.qt.io/qt-5.15/)
+ * [Qt 5.12 or newer](https://doc.qt.io/qt-5.15/)
  * [OpenCV 4.3 or newer](https://opencv.org/)
  * [Meson Build System](https://mesonbuild.com/)
  * [XXD](https://www.tutorialspoint.com/unix_commands/xxd.htm)

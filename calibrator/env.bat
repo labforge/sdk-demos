@@ -12,7 +12,6 @@
 ::   Installations of the Script
 ::     Visual C++ 2022 Build Tools -> %ProgramFiles(x86)%\Microsoft Visual Studio\
 ::     QT5 5.1.12 LGPL components  -> %ProgramFiles\qt5
-::     QWT 6.2.0                   -> %ProgramFiles\qwt-6.2.0
 ::     OpenCV 4.3.0                -> %ProgramFiles\cv4
 ::     XXD                         -> C:\Windows\System32\
 ::

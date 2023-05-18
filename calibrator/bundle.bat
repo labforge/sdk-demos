@@ -14,7 +14,6 @@
 ::   Installations of the Script
 ::     Visual C++ 2022 Build Tools -> %ProgramFiles(x86)%\Microsoft Visual Studio\
 ::     QT5 5.1.12 LGPL components  -> %ProgramFiles\qt5
-::     QWT 6.2.0                   -> %ProgramFiles\qwt-6.2.0
 ::     OpenCV 4.3.0                -> %ProgramFiles\cv4
 ::     XXD                         -> C:\Windows\System32\
 ::
@@ -85,17 +84,6 @@ copy /Y "C:\Program Files\Common Files\Pleora\eBUS SDK\GenICam\bin\Win64_x64\*.d
 copy /Y "C:\Program Files\Common Files\Pleora\eBUS SDK\*64.dll" %~dp0\install\bin
 copy /Y "C:\Program Files\Common Files\Pleora\eBUS SDK\*64.dll" %~dp0\install\bin
 copy /Y "C:\Program Files\Common Files\Pleora\eBUS SDK\*64_VC16.dll" %~dp0\install\bin
-
-:: COPY license
-copy /Y License.rtf %~dp0\install
-IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
-copy /Y calibrator.json %~dp0\install
-IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
-CD %~dp0\install
-IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
-PYTHON ..\createmsi.py calibrator.json
-IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
-CD ..
 
 GOTO :normal_end
 
