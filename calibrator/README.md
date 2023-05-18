@@ -27,6 +27,11 @@ meson build
 ninja -C build
 ```
  * The executable for the utility can be found in ```build/src/calibrator```
+ * Make sure to set the eBUS environment variables before executing
+```
+source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
+build/src/calibrator
+```
 
 ### Building the Utility in Microsoft Windows
 

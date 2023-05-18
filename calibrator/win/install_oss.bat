@@ -15,6 +15,10 @@
 ::     QT5 5.1.12 LGPL components  -> C:\qt5
 ::     OpenCV 4.3.0                -> C:\cv4
 ::
+::   Attention:
+::     Make sure to run this script from a shallow path, e.g. C:\, otherwise the Qt build will fail,
+::     see https://www.qtcentre.org/threads/29851-The-problem-fatal-error-U1077-cd-return-code-0x2
+::
 :: Copyright (C) 2013-2021 Labforge Inc.
 ::
 ::    Licensed under the Apache License, Version 2.0 (the "License");
