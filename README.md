@@ -5,7 +5,7 @@
 ## Overview
 
 This repository contains the Python SDK samples for [Bottlenose cameras](https://www.labforge.ca/features-bottlenose/),
-and a C++ example for [stereo acquisition and calibration](calibrator/README.md).
+and a C++ example for [stereo acquisition](stereo_viewer/README.md).
 
 The camera supports the GEV 2.1 standard and does work with major Machine Vision
 software packages out of the box without additional drivers, please see our documentation

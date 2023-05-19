@@ -27,7 +27,7 @@
 #include <PvDevice.h>
 #include <PvStreamGEV.h>
 
-#include "ui_calibrator.h"
+#include "ui_stereo_viewer.h"
 //#include "features.hpp"
 #include "gev/pipeline.hpp"
 #include "io/data_thread.hpp"

@@ -12,7 +12,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-project('Bottlenose Calibrator', 'cpp',
+project('Bottlenose Stereo Viewer', 'cpp',
     version : '0.1.100',
     license : 'Labforge',
     meson_version : '>= 0.60.0',

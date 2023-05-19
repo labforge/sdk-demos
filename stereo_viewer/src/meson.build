@@ -19,12 +19,12 @@ qt_app_headers = [
   ]
 
 qtprocessed = qt5.preprocess(moc_headers: qt_app_headers,
-                             ui_files: '../calibrator.ui',
+                             ui_files: '../stereo_viewer.ui',
                              qresources: '../resources.qrc',
                              include_directories: app_inc)
 
 source_files = files([
-  'calibrator.cc',
+  'viewer.cc',
   'io/util.cc',
   'gev/pipeline.cc',
   'gev/util.cc',
@@ -34,7 +34,7 @@ source_files = files([
 
 if host_machine.system() == 'linux'
   stereo_aq = executable(
-    'calibrator',
+    'stereoviewer',
     source_files,
     qtprocessed,
     include_directories : app_inc,
@@ -45,9 +45,9 @@ if host_machine.system() == 'linux'
 else
   # Compile rc resources as well
   windows = import('windows')
-  windows_rc = windows.compile_resources('../calibrator.rc')
+  windows_rc = windows.compile_resources('../stereo_viewer.rc')
   stereo_aq = executable(
-    'calibrator',
+    'stereoviewer',
     source_files,
     qtprocessed,
     windows_rc,

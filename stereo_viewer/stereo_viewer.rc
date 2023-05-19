@@ -30,10 +30,10 @@ BEGIN
       VALUE "CompanyName", "Labforge Inc."
       VALUE "FileDescription", "Labforge Stereo Calibration Utility."
       VALUE "FileVersion", "1.0"
-      VALUE "InternalName", "Calibration Utility"
+      VALUE "InternalName", "Stereo Viewer"
       VALUE "LegalCopyright", "Labforge Inc."
-      VALUE "OriginalFilename", "calibrator.exe"
-      VALUE "ProductName", "Calibration Utility"
+      VALUE "OriginalFilename", "stereoviewer.exe"
+      VALUE "ProductName", "Stereo Viewer"
       VALUE "ProductVersion", "1.0"
     END
   END
