@@ -1,0 +1,5 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+<file alias="labforge.ico">img/labforge.ico</file>
+</qresource>
+</RCC>

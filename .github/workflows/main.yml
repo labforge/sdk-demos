@@ -15,7 +15,7 @@
 #
 # @author Thomas Reidemeister <thomas@labforge.ca>
 #
-# To setup a self-hosted runner to test this
+# To setup a self-hosted runner to test this on Windows
 # (1) Setup a Windows 10 machine with autologin
 # (2) Register a Github actions runner on that machine, run from startup (not as headless service runner)
 # (3) Install
@@ -37,6 +37,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  build_cpp_samples_linux:
+    runs-on: HIL
+    steps:
+      - name: Check out samples
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          submodules: true
+          path: samples
+      - name: Build calibrator
+        run: |
+          cd samples/calibrator
+          meson build
+          ninja -C build
+
   publish_sdk:
     runs-on: HIL
     steps:
@@ -82,7 +97,7 @@ jobs:
         token: ${{ secrets.CITOKEN }}
         body_path: release.txt
 
-  build_samples:
+  build_python_samples:
     runs-on: W64HIL
     steps:
     - name: Check out samples
