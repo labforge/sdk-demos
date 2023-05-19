@@ -16,14 +16,27 @@
 :: build calibration utility
 CD ..\calibrator\
 CALL bundle.bat
+IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 :: build driver installer
 CD ..\driver\
 CALL build.bat
+IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 :: Build utility Qt python scripts
 CD ..\utility\
 CALL build.bat
+IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 CD ..\distribution
 :: build python modules, including the driver installer
 python setup.py build
+IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 :: build python modules, including the driver installer
 python setup.py installer
+IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
+
+GOTO :normal_end
+
+:exit_with_error
+    ECHO "Error encountered ... exiting"
+    exit /B 1
+
+:normal_end
