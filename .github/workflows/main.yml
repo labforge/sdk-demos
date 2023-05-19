@@ -46,9 +46,9 @@ jobs:
           lfs: true
           submodules: true
           path: samples
-      - name: Build calibrator
+      - name: Build stereo_viewer
         run: |
-          cd samples/calibrator
+          cd samples/stereo_viewer
           meson build
           ninja -C build
 

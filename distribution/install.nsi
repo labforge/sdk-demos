@@ -85,13 +85,13 @@ Section "-hidden section"
   createShortCut "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk" "$INSTDIR\${ENTRYPOINT}"
 
   ; Calibration Utility for Windows
-  File /r "${SRC}\..\calibrator\install\bin\*.exe"
-  File /r "${SRC}\..\calibrator\install\bin\*.dll"
+  File /r "${SRC}\..\stereo_viewer\install\bin\*.exe"
+  File /r "${SRC}\..\stereo_viewer\install\bin\*.dll"
   ; Qt windows plugin requirements
-  File /r "${SRC}\..\calibrator\install\bin\styles"
-  File /r "${SRC}\..\calibrator\install\bin\platforms"
-  File /r "${SRC}\..\calibrator\install\bin\imageformats"
-  createShortCut "$SMPROGRAMS\${COMPANYNAME}\Calibration Utility.lnk" "$INSTDIR\calibrator.exe"
+  File /r "${SRC}\..\stereo_viewer\install\bin\styles"
+  File /r "${SRC}\..\stereo_viewer\install\bin\platforms"
+  File /r "${SRC}\..\stereo_viewer\install\bin\imageformats"
+  createShortCut "$SMPROGRAMS\${COMPANYNAME}\Calibration Utility.lnk" "$INSTDIR\stereoviewer.exe"
 
   ; Add Uninstaller with hooks to "Programs and Features"
   writeUninstaller "$INSTDIR\uninstall.exe"

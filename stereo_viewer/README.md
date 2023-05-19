@@ -1,4 +1,4 @@
-# Bottlenose Calibrator
+# Bottlenose Stereo Viewer
 
 This example shows how to acquire stereo images, enumerate Bottlenose cameras, and acquire stereo images for 
 calibration.

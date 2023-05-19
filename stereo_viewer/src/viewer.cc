@@ -14,7 +14,7 @@
  * limitations under the License.                                             *
  ******************************************************************************
 
-@file calibrator.cc Calibrator application entry point
+@file viewer.cc Viewer application entry point
 @author Thomas Reidemeister <thomas@labforge.ca>, Guy Martin Tchamgoue <martin@labforge.ca>
 */
 

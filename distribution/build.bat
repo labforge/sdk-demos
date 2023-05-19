@@ -14,7 +14,7 @@
 ::    See the License for the specific language governing permissions and
 ::    limitations under the License.
 :: build calibration utility
-CD ..\calibrator\
+CD ..\stereo_viewer\
 CALL bundle.bat
 IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 :: build driver installer

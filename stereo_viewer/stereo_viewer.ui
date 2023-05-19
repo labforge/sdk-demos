@@ -20,7 +20,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Bottlenose Calibrator</string>
+   <string>Bottlenose Stereo Viewer</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">
