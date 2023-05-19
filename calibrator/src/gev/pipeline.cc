@@ -62,7 +62,7 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
      !m_pixformat || 
      !m_rectify   ||
      !m_undistort){
-      throw runtime_error("Could map Rate, bandwidth, format, rectify/undistort controls");
+      throw runtime_error("This camera is most likely not a stereo.");
      }
 
   m_rectify->GetValue(m_rectify_init);
