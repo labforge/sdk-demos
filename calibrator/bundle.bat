@@ -74,16 +74,18 @@ FOR %%M IN (
     opencv_imgproc
 ) DO (
     COPY /Y %OPENCVHOME%\bin\%%M*.dll %~dp0\install\bin
+    echo "Past %OPENCVHOME%\bin\%%M*.dll"
     IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 )
-
 
 :: COPY Pleora SDK Files
 copy /Y "C:\Program Files\Common Files\Pleora\eBUS SDK\GenICam\bin\Win64_x64\*.dll" ^
 	%~dp0\install\bin
+ECHO "Genicam copied"
 copy /Y "C:\Program Files\Common Files\Pleora\eBUS SDK\*64.dll" %~dp0\install\bin
-copy /Y "C:\Program Files\Common Files\Pleora\eBUS SDK\*64.dll" %~dp0\install\bin
+ECHO "PV copied"
 copy /Y "C:\Program Files\Common Files\Pleora\eBUS SDK\*64_VC16.dll" %~dp0\install\bin
+ECHO "GUI copied"
 
 GOTO :normal_end
 
