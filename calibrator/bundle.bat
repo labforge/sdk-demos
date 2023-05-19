@@ -74,8 +74,8 @@ FOR %%M IN (
     opencv_imgproc
 ) DO (
     COPY /Y %OPENCVHOME%\bin\%%M*.dll %~dp0\install\bin
-    echo "Past %OPENCVHOME%\bin\%%M*.dll"
     IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
+    echo "Past %OPENCVHOME%\bin\%%M*.dll"
 )
 
 :: COPY Pleora SDK Files

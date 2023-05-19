@@ -38,15 +38,10 @@ if not opencv_dep.found()
   cv4_core = cpp.find_library('opencv_core430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
   cv4_gui = cpp.find_library('opencv_highgui430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
   cv4_codec = cpp.find_library('opencv_imgcodecs430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
-   cv4_imgproc = cpp.find_library('opencv_imgproc430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
+  cv4_imgproc = cpp.find_library('opencv_imgproc430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
   opencv_dep = declare_dependency(version: '4.3.0',
                                   compile_args: ['-IC:/cv4/include'],
                                   dependencies : [cv4_core, cv4_gui, cv4_codec, cv4_imgproc],
-                                  )
-else
-  opencv_dep = declare_dependency(version: '4.3.0',
-                                  compile_args: ['-IC:/cv4/include'],
-                                  dependencies : [cv4_all],
                                   )
 endif
 if host_machine.system() == 'linux'
