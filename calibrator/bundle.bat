@@ -58,14 +58,6 @@ FOR %%M IN (
 COPY /Y %QTHOME%\bin\libGLESv2.dll %~dp0\install\bin
 IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 
-:: COPY QWT dlls
-FOR %%M IN (
-    qwt.dll
-) DO (
-    COPY /Y %QWTHOME%\lib\%%M %~dp0\install\bin
-    IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
-)
-
 :: COPY OPENCV dlls
 FOR %%M IN (
     opencv_core
