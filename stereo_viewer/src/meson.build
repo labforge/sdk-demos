@@ -47,7 +47,7 @@ else
   windows = import('windows')
   windows_rc = windows.compile_resources('../stereo_viewer.rc')
   stereo_aq = executable(
-    'calibrator',
+    'stereoviewer',
     source_files,
     qtprocessed,
     windows_rc,
