@@ -46,7 +46,6 @@ else
     'calibrator',
     source_files,
     qtprocessed,
-    git_hdr,
     include_directories : app_inc,
     install: true,
     dependencies: [app_deps],
