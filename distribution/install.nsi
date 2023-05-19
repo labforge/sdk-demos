@@ -88,8 +88,9 @@ Section "-hidden section"
   File /r "${SRC}\..\calibrator\install\bin\*.exe"
   File /r "${SRC}\..\calibrator\install\bin\*.dll"
   ; Qt windows plugin requirements
-  File /r "${SRC}\..\calibrator\install\styles"
-  File /r "${SRC}\..\calibrator\install\platforms"
+  File /r "${SRC}\..\calibrator\install\bin\styles"
+  File /r "${SRC}\..\calibrator\install\bin\platforms"
+  File /r "${SRC}\..\calibrator\install\bin\imageformats"
   createShortCut "$SMPROGRAMS\${COMPANYNAME}\Calibration Utility.lnk" "$INSTDIR\calibrator.exe"
 
   ; Add Uninstaller with hooks to "Programs and Features"

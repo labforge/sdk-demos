@@ -62,8 +62,10 @@ MD %~dp0\install\bin\platforms
 COPY /Y %QTHOME%\plugins\platforms\qwindows.dll %~dp0\install\bin\platforms
 IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 MD %~dp0\install\bin\styles
-COPY /Y %QTHOME%\plugins\styles\qwindowsvistastyle.dll %~dp0\install\styles
+COPY /Y %QTHOME%\plugins\styles\qwindowsvistastyle.dll %~dp0\install\bin\styles
 IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
+MD %~dp0\install\bin\imageformats
+COPY /Y %QTHOME%\plugins\imageformats\qico.dll %~dp0\install\bin\imageformats
 
 :: COPY OPENCV dlls
 FOR %%M IN (
