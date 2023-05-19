@@ -20,6 +20,7 @@ qt_app_headers = [
 
 qtprocessed = qt5.preprocess(moc_headers: qt_app_headers,
                              ui_files: '../calibrator.ui',
+                             qresources: '../resources.qrc',
                              include_directories: app_inc)
 
 source_files = files([
