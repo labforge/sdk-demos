@@ -111,8 +111,9 @@ SectionEnd
 
 ; Create an uninstaller
 Section "Uninstall"
-  ; Remove shortcut
+  ; Remove shortcut and viewer
   Delete "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk"
+  Delete "$SMPROGRAMS\${COMPANYNAME}\Stereo Viewer.lnk"
   ; Delete the entire installation dir
   RMDir /R /REBOOTOK "$INSTDIR"
   ; Remove registry entry
