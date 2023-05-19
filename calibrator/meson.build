@@ -34,7 +34,7 @@ qt5 = import('qt5')
 qt5_deps = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'Test', 'Network'])
 opencv_dep = dependency('opencv4', required: false)
 if not opencv_dep.found()
-  cv4_all = cpp.find_library('opencv_world430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
+  cv4_all = cpp.find_library('opencv_world430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'], required: false)
   if not cv4_all.found()
     # Windows hacks, version info is appened to cvlibs for cl compiler, but not in cmake specs, so hardcode libs here
     cv4_core = cpp.find_library('opencv_core430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
