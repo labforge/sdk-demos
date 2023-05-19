@@ -36,7 +36,6 @@ if host_machine.system() == 'linux'
     'calibrator',
     source_files,
     qtprocessed,
-    git_hdr,
     include_directories : app_inc,
     install: true,
     dependencies: [app_deps],
