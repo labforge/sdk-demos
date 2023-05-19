@@ -43,10 +43,14 @@ if host_machine.system() == 'linux'
     cpp_args : ['-Wno-deprecated', '-Wno-deprecated-copy'],
   )
 else
+  # Compile rc resources as well
+  windows = import('windows')
+  windows_rc = windows.compile_resources('../calibrator.rc')
   stereo_aq = executable(
     'calibrator',
     source_files,
     qtprocessed,
+    windows_rc,
     include_directories : app_inc,
     install: true,
     dependencies: [app_deps],

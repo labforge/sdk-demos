@@ -524,7 +524,11 @@ void MainWindow::handleMonoData(bool is_disparity){
 
 int main(int argc, char *argv[]) {
   QApplication a(argc, argv);
+  QIcon ico(":labforge.ico");
+
   MainWindow w;
+  a.setWindowIcon(ico);
+  w.setWindowIcon(ico);
 
   w.show();
 

@@ -6,7 +6,6 @@
 ::   Requirements:
 ::     Powershell
 ::     Python > 3.7 (and in path)
-::     WixToolset
 ::     MS Build tools configured for Visual C++ (Desktop), https://aka.ms/vs/17/release/vs_buildtools.exe
 ::
 ::   Installations of the Script
