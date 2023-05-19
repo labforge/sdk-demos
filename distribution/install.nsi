@@ -81,6 +81,14 @@ Section "-hidden section"
   ; Explicitly include GenICam libraries, not directly referenced by pyinstaller
   File /r "C:\Program Files\Common Files\Pleora\eBUS SDK\GenICam\bin\Win64_x64\*"
 
+  createDirectory "$SMPROGRAMS\${COMPANYNAME}"
+  createShortCut "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk" "$INSTDIR\${ENTRYPOINT}"
+
+  ; Calibration Utility for Windows
+  File /r "${SRC}\..\calibrator\install\bin\*.exe"
+  File /r "${SRC}\..\calibrator\install\bin\*.dll"
+  createShortCut "$SMPROGRAMS\${COMPANYNAME}\Calibration Utility.lnk" "$INSTDIR\calibrator.exe"
+
   ; Add Uninstaller with hooks to "Programs and Features"
   writeUninstaller "$INSTDIR\uninstall.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${REGISTRY_KEY}" \
@@ -90,8 +98,7 @@ Section "-hidden section"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${REGISTRY_KEY}" \
                    "DisplayIcon" "$INSTDIR\${ENTRYPOINT},0"
 
-  createDirectory "$SMPROGRAMS\${COMPANYNAME}"
-  createShortCut "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk" "$INSTDIR\${ENTRYPOINT}"
+
 
   ; Install MSVC 2015 redistributable
   File "${SRC}\vc_redist.x64.exe"
