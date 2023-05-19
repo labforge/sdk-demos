@@ -60,6 +60,8 @@ IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 :: COPY Windows Plugin
 COPY /Y %QTHOME%\plugins\platforms\qwindows.dll %~dp0\install\bin
 IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
+COPY /Y %QTHOME%\plugins\styles\qwindowsvistastyle.dll %~dp0\install\bin
+IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 
 :: COPY OPENCV dlls
 FOR %%M IN (
