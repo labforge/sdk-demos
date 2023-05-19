@@ -91,7 +91,7 @@ Section "-hidden section"
   File /r "${SRC}\..\stereo_viewer\install\bin\styles"
   File /r "${SRC}\..\stereo_viewer\install\bin\platforms"
   File /r "${SRC}\..\stereo_viewer\install\bin\imageformats"
-  createShortCut "$SMPROGRAMS\${COMPANYNAME}\Calibration Utility.lnk" "$INSTDIR\stereoviewer.exe"
+  createShortCut "$SMPROGRAMS\${COMPANYNAME}\Stereo Viewer.lnk" "$INSTDIR\stereoviewer.exe"
 
   ; Add Uninstaller with hooks to "Programs and Features"
   writeUninstaller "$INSTDIR\uninstall.exe"
