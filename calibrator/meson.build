@@ -50,6 +50,7 @@ if not opencv_dep.found()
                                     compile_args: ['-IC:/cv4/include'],
                                     dependencies : [cv4_all],
                                     )
+  endif
 endif
 if host_machine.system() == 'linux'
   pleora_dirs = ['/opt/pleora/ebus_sdk/Ubuntu-18.04-x86_64/lib',
