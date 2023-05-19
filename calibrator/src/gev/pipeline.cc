@@ -62,7 +62,7 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
      !m_pixformat || 
      !m_rectify   ||
      !m_undistort){
-      throw runtime_error("This camera is most likely not a stereo.");
+      throw runtime_error("Unable to initialise stereo features, please connect to a Bottlenose Stereo camera.");
      }
 
   m_rectify->GetValue(m_rectify_init);
