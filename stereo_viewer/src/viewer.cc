@@ -377,12 +377,12 @@ void MainWindow::handleColormap(){
 void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArray, const QString &aTitle )
 {
   if(!aWnd) return;
-  if ( aWnd->GetQWidget()->isVisible() )
-  {
+  /*if ( aWnd->GetQWidget()->isVisible() )
+  {*/
       // If already open, just toggle to closed...
       CloseGenWindow( aWnd );
-      return;
-  }
+  /*    return;
+  }*/
 
   // Create, assign parameters, set title and show modeless
   aWnd->SetTitle( aTitle.toUtf8().constData() );
@@ -400,9 +400,9 @@ void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArr
 void MainWindow::CloseGenWindow( PvGenBrowserWnd *aWnd )
 {
   if(!aWnd) return;
-  if (aWnd->GetQWidget()->isVisible()){
+  //if (aWnd->GetQWidget()->isVisible()){
     aWnd->Close();
-  }
+  //}
 }
 
 void MainWindow::handleDeviceControl(){
