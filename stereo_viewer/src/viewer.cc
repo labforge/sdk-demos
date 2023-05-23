@@ -388,7 +388,7 @@ void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArr
   aWnd->SetTitle( aTitle.toUtf8().constData() );
 
 #ifdef _AFXDLL
-  PvResult lResult = aWnd->ShowModeless( (HWND)winId() );
+  PvResult lResult = aWnd->ShowModeless( (PvWindowHandle)winId() );
   lResult = lFinder.DoEvents();
 #else // Native QT library
   PvResult lResult = aWnd->ShowModeless( this );
