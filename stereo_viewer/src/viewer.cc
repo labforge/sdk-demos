@@ -378,7 +378,7 @@ bool isWinVisible(PvGenBrowserWnd *aWnd, PvString wTitle){
   #ifdef _AFXDLL
     (void)aWnd;
     HWND whandle = FindWindowA(wTitle.GetAscii());
-    return IsWindowVisible(whandle);
+    return IsWindowVisible(NULL, whandle);
   #else 
     (void)wTitle;
     return aWnd->GetQWidget()->isVisible();
