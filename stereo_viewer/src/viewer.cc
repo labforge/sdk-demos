@@ -389,7 +389,7 @@ void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArr
 
 #ifdef _AFXDLL
   PvResult lResult = aWnd->ShowModeless( (PvWindowHandle)winId() );
-  lResult = lFinder.DoEvents();
+  lResult = aWnd->DoEvents();
 #else // Native QT library
   PvResult lResult = aWnd->ShowModeless( this );
 #endif
