@@ -374,36 +374,23 @@ void MainWindow::handleColormap(){
   cfg.cbxColormap->setEnabled(cfg.chkColormap->isChecked());
 }
 
-bool isWinVisible(PvGenBrowserWnd *aWnd, PvString wTitle){
+bool isWinVisible(PvGenBrowserWnd *aWnd){
   #ifdef _AFXDLL
-    (void)aWnd;
+    PvString wTitle = aWnd->GetTitle();
     HWND whandle = FindWindowA(NULL, wTitle.GetAscii());
     return IsWindowVisible(whandle);
-  #else 
-    (void)wTitle;
+  #else     
     return aWnd->GetQWidget()->isVisible();
   #endif
 }
 
 void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArray, const QString &aTitle )
 {
-  if(!aWnd) return; 
-  PvString winTitle = aWnd->GetTitle();
-  //cfg.editFolder->setText(winTitle.GetAscii());
-  #ifdef _AFXDLL
-    if(isWinVisible(aWnd, winTitle)){
-      CloseGenWindow( aWnd );
-      return;
-    }
-  #else 
-    if ( aWnd->GetQWidget()->isVisible() )
-    {
-      // If already open, just toggle to closed...
-      CloseGenWindow( aWnd );
-      return;
-    }
-  #endif
-
+  if(!aWnd) return;   
+  if(isWinVisible(aWnd)){
+    CloseGenWindow( aWnd );
+    return;
+  }
 
   // Create, assign parameters, set title and show modeless
   aWnd->SetTitle( aTitle.toUtf8().constData() );
@@ -419,16 +406,10 @@ void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArr
 }
 
 void MainWindow::CloseGenWindow( PvGenBrowserWnd *aWnd )
-{
-  if(!aWnd) return;
-  #ifdef _AFXDLL
-  aWnd->Close();
-  #else  
-  if (aWnd->GetQWidget()->isVisible()){
+{  
+  if(isWinVisible(aWnd)){
     aWnd->Close();
-  }
-  #endif
-  aWnd->SetTitle("");
+  }  
 }
 
 void MainWindow::handleDeviceControl(){  
