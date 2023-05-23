@@ -124,7 +124,7 @@ void labforge::gev::CreateStreamBuffers(PvDevice *aDevice, PvStream *aStream, li
   // Use BUFFER_COUNT or the maximum number of buffers, whichever is smaller
   uint32_t lBufferCount = ( aStream->GetQueuedBufferMaximum() < buffer_count ) ?
                           aStream->GetQueuedBufferMaximum() :
-                          buffer_count;
+                          (uint32_t)buffer_count;
 
   // Allocate buffers
   for ( uint32_t i = 0; i < lBufferCount; i++ )

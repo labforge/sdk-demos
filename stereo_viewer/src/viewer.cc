@@ -387,7 +387,13 @@ void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArr
   // Create, assign parameters, set title and show modeless
   aWnd->SetTitle( aTitle.toUtf8().constData() );
 
-  aWnd->ShowModeless( this );
+#ifdef _AFXDLL
+  PvResult lResult = aWnd->ShowModeless( (HWND)winId() );
+  lResult = lFinder.DoEvents();
+#else // Native QT library
+  PvResult lResult = aWnd->ShowModeless( this );
+#endif
+
   aWnd->SetGenParameterArray( aArray );
 }
 
