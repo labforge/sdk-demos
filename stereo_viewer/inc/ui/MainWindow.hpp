@@ -16,6 +16,7 @@
 
 @file MainWindow.hpp MainWindow class definition
 @author Thomas Reidemeister <thomas@labforge.ca>
+        Guy Martin Tchamgoue <martin@labforge.ca> 
 */
 #ifndef __MAINWINDOW_HPP__
 #define __MAINWINDOW_HPP__
@@ -28,9 +29,10 @@
 #include <PvStreamGEV.h>
 
 #include "ui_stereo_viewer.h"
-//#include "features.hpp"
 #include "gev/pipeline.hpp"
 #include "io/data_thread.hpp"
+
+class PvGenBrowserWnd;
 
 namespace labforge::ui {
 
@@ -38,7 +40,7 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 public:
   explicit MainWindow(QWidget *parent = nullptr);
-  virtual ~MainWindow() {};
+  virtual ~MainWindow();
 
 public Q_SLOTS:
   void handleStart();
@@ -52,7 +54,12 @@ public Q_SLOTS:
   void onFolderSelect();
   void handleSave();
   void handleColormap();
- 
+  void handleDeviceControl();
+
+protected:
+  void ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArray, const QString &aTitle );
+  void CloseGenWindow( PvGenBrowserWnd *aWnd );
+
 private:
   bool connectGEV(const PvDeviceInfo *info);
 
@@ -67,6 +74,7 @@ private:
   volatile bool m_saving;
 
   std::unique_ptr<labforge::io::DataThread> m_data_thread;
+  PvGenBrowserWnd *m_device_browser;
 };
 
 }
