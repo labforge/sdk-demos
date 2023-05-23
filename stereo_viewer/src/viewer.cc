@@ -377,8 +377,8 @@ void MainWindow::handleColormap(){
 bool isWinVisible(PvGenBrowserWnd *aWnd, PvString wTitle){
   #ifdef _AFXDLL
     (void)aWnd;
-    HWND whandle = FindWindowA(wTitle.GetAscii());
-    return IsWindowVisible(NULL, whandle);
+    HWND whandle = FindWindowA(NULL, wTitle.GetAscii());
+    return IsWindowVisible(whandle);
   #else 
     (void)wTitle;
     return aWnd->GetQWidget()->isVisible();
