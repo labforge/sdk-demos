@@ -376,11 +376,11 @@ void MainWindow::handleColormap(){
 
 bool isWinVisible(PvGenBrowserWnd *aWnd){
   #ifdef _AFXDLL
-    PvString wTitle = aWnd->GetTitle();
+    /*PvString wTitle = "Device Control";//aWnd->GetTitle();
     if(strcmp(wTitle.GetAscii(), "") == 0){
       return false;
-    }
-    HWND whandle = FindWindowA(NULL, wTitle.GetAscii());
+    }*/
+    HWND whandle = FindWindowA(NULL, "Device Control");
     if(whandle == NULL) return false;
     return IsWindowVisible(whandle);
   #else     
@@ -541,8 +541,8 @@ void MainWindow::handleData() {
   if(m_pipeline) {
     list<tuple<Mat*, Mat*>> images;
     m_pipeline->GetPairs(images);
-    m_data_thread->setStereo(true);
-
+    m_data_thread->setStereoDisparity(true,false);
+    
     // Convert and display
     for (auto it = images.begin(); it != images.end(); ++it) {
       QImage q1 = s_yuv2_to_qimage(get<0>(*it));
@@ -558,8 +558,8 @@ void MainWindow::handleMonoData(bool is_disparity){
   if(m_pipeline){
     list<tuple<Mat*, Mat*>> images;
     m_pipeline->GetPairs(images);
-    m_data_thread->setStereo(false);
-   
+    m_data_thread->setStereoDisparity(false, is_disparity);
+
     for (auto it = images.begin(); it != images.end(); ++it) {
       QImage q1; 
       QImage q2; 

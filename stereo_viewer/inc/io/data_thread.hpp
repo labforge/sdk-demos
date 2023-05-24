@@ -34,7 +34,6 @@ struct ImageData
     QImage right;
 };
 
-
 class DataThread : public QThread
 {
     Q_OBJECT
@@ -45,7 +44,7 @@ public:
 
     void process(const QImage &left, const QImage &right);
     bool setFolder(QString new_folder);
-    void setStereo(bool is_stereo){m_stereo = is_stereo;}
+    void setStereoDisparity(bool is_stereo, bool is_disparity);
 
 signals:
     void dataReceived();
@@ -69,6 +68,7 @@ private:
     QString m_disparity_fname;
     bool m_stereo;
     bool m_abort;
+    bool m_disparity;
 };
 }
 
