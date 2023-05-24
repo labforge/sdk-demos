@@ -361,9 +361,9 @@ void MainWindow::handleConnect() {
 
 void MainWindow::handleDisconnect() {
   CloseGenWindow( m_device_browser );
+  /* This helps clearing the wHND on windows*/
   if(m_device_browser){
     delete m_device_browser;
-    m_device_browser = nullptr;  
     m_device_browser = new PvGenBrowserWnd;
   }
   
