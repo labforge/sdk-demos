@@ -380,7 +380,7 @@ bool isWinVisible(PvGenBrowserWnd *aWnd){
     if(strcmp(wTitle.GetAscii(), "") == 0){
       return false;
     }
-    
+    HWND whandle = FindWindowA(NULL, wTitle.GetAscii());
     if(whandle == NULL) return false;
     return IsWindowVisible(whandle);
   #else     
@@ -390,11 +390,10 @@ bool isWinVisible(PvGenBrowserWnd *aWnd){
 
 void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArray, const QString &aTitle )
 {
-  if(!aWnd) return;  
+  if(!aWnd) return;   
   bool vis = isWinVisible(aWnd);
   QString msg = vis?"TRUE":"FALSE";
   QMessageBox::critical(this, "Folder Error", msg);
-
   if(isWinVisible(aWnd)){
     CloseGenWindow( aWnd );
     return;
