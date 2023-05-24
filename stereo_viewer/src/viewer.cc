@@ -361,7 +361,12 @@ void MainWindow::handleConnect() {
 
 void MainWindow::handleDisconnect() {
   CloseGenWindow( m_device_browser );
-
+  if(m_device_browser){
+    delete m_device_browser;
+    m_device_browser = nullptr;  
+    m_device_browser = new PvGenBrowserWnd;
+  }
+  
   m_pipeline = nullptr;
   if(m_device) {
     PvDevice::Free(m_device);
@@ -391,9 +396,6 @@ bool isWinVisible(PvGenBrowserWnd *aWnd){
 void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArray, const QString &aTitle )
 {
   if(!aWnd) return;   
-  bool vis = isWinVisible(aWnd);
-  QString msg = vis?"TRUE":"FALSE";
-  QMessageBox::critical(this, "Folder Error", msg);
   if(isWinVisible(aWnd)){
     CloseGenWindow( aWnd );
     return;
@@ -401,7 +403,7 @@ void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArr
 
   // Create, assign parameters, set title and show modeless
   aWnd->SetTitle( aTitle.toUtf8().constData() );
-
+  
 #ifdef _AFXDLL
   PvResult lResult = aWnd->ShowModeless((PvWindowHandle)winId());
   lResult = aWnd->DoEvents();
