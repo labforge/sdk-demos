@@ -122,9 +122,37 @@ def LoadFlatJSONParameters(fname=''):
 
     return kdata
 
+def rodrigues(r):    
+    u, d, v = np.linalg.svd(r)
+    r = np.dot(u, v)
+    rx = r[2, 1] - r[1, 2]
+    ry = r[0, 2] - r[2, 0]
+    rz = r[1, 0] - r[0, 1]
+    s = np.linalg.norm(np.array([rx, ry, rz])) * np.sqrt(0.25)
+    c = np.clip((np.sum(np.diag(r)) - 1) * 0.5, -1, 1)
+    theta = np.arccos(c)
+
+    r_out = np.zeros((3, 1))
+    if s < 1e-5:
+        if c > 0:
+            pass #r_out = np.zeros((3, 1))
+        else:
+            rx, ry, rz = np.clip(np.sqrt((np.diag(r) + 1) * 0.5), 0, np.inf)
+            if r[0, 1] < 0:
+                ry = -ry
+            if r[0, 2] < 0:
+                rz = -rz
+            if np.abs(rx) < np.abs(ry) and np.abs(rx) < np.abs(rz) and ((r[1, 2] > 0) != (ry * rz > 0)):
+                rz = -rz
+
+            r_out = np.array([[rx, ry, rz]]).T
+            theta /= np.linalg.norm(r_out)
+            r_out *= theta
+    return r_out
+
 def LoadKalibrParameters(fname=''):
     kdata = dict()
-    
+    import pdb; pdb.set_trace()
     if not path.isfile(fname) or \
        not fname.lower().endswith(".yaml") or \
        not fname.lower().endswith(".yml"):
@@ -163,11 +191,16 @@ def LoadKalibrParameters(fname=''):
                 kdata["tx" + id] = tvec[0]
                 kdata["ty" + id] = tvec[1]
                 kdata["tz" + id] = tvec[2] 
+                
+                rvec = rodrigues(R)
+                kdata["rx" + id] = rvec[0]
+                kdata["ry" + id] = rvec[1] 
+                kdata["rz" + id] = rvec[2]
 
             width, height = kalibr[cam]["resolution"]
             kdata["kWidth"] = width
             kdata["kHeight"] = height
-            
+
     except Exception as e:
         return kdata.clear()
      
