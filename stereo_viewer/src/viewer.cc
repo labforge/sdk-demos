@@ -37,9 +37,11 @@
 #undef QT_GUI_LIB
 #include <Windows.h>
 #include <PvDeviceFinderWnd.h>
+#include <PvGenBrowserWnd.h>
 #define QT_GUI_LIB
 #else // Linux or other
 #include <PvDeviceFinderWnd.h>
+#include <PvGenBrowserWnd.h>
 #endif
 
 using namespace cv;
@@ -179,6 +181,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.chkCalibrate->setEnabled(true);
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
 
+  cfg.btnDeviceControl->setEnabled(true);
+  m_device_browser = new PvGenBrowserWnd;
+  m_device = nullptr;
+
   // Register event handlers
   connect(cfg.btnStart, &QPushButton::released, this, &MainWindow::handleStart);
   // https://stackoverflow.com/questions/37639066/how-can-i-use-qt5-connect-on-a-slot-with-default-parameters
@@ -189,7 +195,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   connect(cfg.btnRecord, &QPushButton::released, this, &MainWindow::handleRecording);
   connect(cfg.btnSave, &QPushButton::released, this, &MainWindow::handleSave);
   connect(cfg.chkColormap, &QCheckBox::stateChanged, this, &MainWindow::handleColormap);
-  
+  connect(cfg.btnDeviceControl, &QPushButton::released, this, &MainWindow::handleDeviceControl);
+
   // Force disconnected state
   OnDisconnected();
 
@@ -205,20 +212,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   }
 
   m_data_thread = std::make_unique<labforge::io::DataThread>();
+}
 
- /* uint32_t w=3840, h=2160;
-  cv::Mat points(1, 4, CV_64FC2);
-    Vec2d* pptr = points.ptr<Vec2d>();
-    pptr[0] = Vec2d(w/2, 0);
-    pptr[1] = Vec2d(w, h/2);
-    pptr[2] = Vec2d(w/2, h);
-    pptr[3] = Vec2d(0, h/2);
-    cv::Scalar center_mass = mean(points);
-    cv::Vec2d cn(center_mass.val);
-  std::cout << "Center: " << center_mass << std::endl;
-  std::cout << "Center_val: " << center_mass.val << std::endl;
-  std::cout << "points: " << points << std::endl;
-  std::cout << "cn: " << cn << std::endl;*/
+MainWindow::~MainWindow(){
+  CloseGenWindow( m_device_browser );    
+  if(m_device_browser){
+    delete m_device_browser;
+    m_device_browser = nullptr;
+  }   
+
+  m_pipeline.reset();
+  if(m_device) {
+    PvDevice::Free(m_device);
+    m_device = nullptr;
+  }
 }
 
 void MainWindow::handleStart() {
@@ -267,7 +274,7 @@ void MainWindow::OnConnected() {
   cfg.btnStop->setEnabled(false);
   cfg.btnRecord->setEnabled(false);
   cfg.btnSave->setEnabled(false);
-
+  cfg.btnDeviceControl->setEnabled(true);
   // FIXME: Clear data canvases
 }
 
@@ -285,6 +292,7 @@ void MainWindow::OnDisconnected() {
   cfg.editMAC->setText(""); 
   cfg.editModel->setText("");
   cfg.chkCalibrate->setEnabled(true);
+  cfg.btnDeviceControl->setEnabled(false);
   // FIXME: Clear data canvases
 }
 
@@ -297,7 +305,7 @@ void MainWindow::handleRecording(){
   m_saving = false;
 
   if(!m_data_thread->setFolder(cfg.editFolder->text())){
-    QMessageBox::critical(this, "Folder Error", "Could not create or find folder.");
+    QMessageBox::critical(this, "Folder Error", "Could not create or find folder. Make sure you have appropriate write permission to the destination folder.");
   }
 
 }
@@ -308,7 +316,7 @@ void MainWindow::handleSave(){
   m_saving = true;
 
   if(!m_data_thread->setFolder(cfg.editFolder->text())){
-    QMessageBox::critical(this, "Folder Error", "Could not create or find folder.");
+    QMessageBox::critical(this, "Folder Error", "Could not create or find folder. Make sure you have appropriate write permission to the destination folder.");
   }
 }
 
@@ -352,6 +360,13 @@ void MainWindow::handleConnect() {
 }
 
 void MainWindow::handleDisconnect() {
+  CloseGenWindow( m_device_browser );
+  /* This helps clearing the wHND on windows*/
+  if(m_device_browser){
+    delete m_device_browser;
+    m_device_browser = new PvGenBrowserWnd;
+  }
+  
   m_pipeline = nullptr;
   if(m_device) {
     PvDevice::Free(m_device);
@@ -362,6 +377,52 @@ void MainWindow::handleDisconnect() {
 
 void MainWindow::handleColormap(){
   cfg.cbxColormap->setEnabled(cfg.chkColormap->isChecked());
+}
+
+bool isWinVisible(PvGenBrowserWnd *aWnd){
+  #ifdef _AFXDLL
+    PvString wTitle = aWnd->GetTitle();
+    if(strcmp(wTitle.GetAscii(), "") == 0){
+      return false;
+    }
+    HWND whandle = FindWindowA(NULL, wTitle.GetAscii());
+    if(whandle == NULL) return false;
+    return IsWindowVisible(whandle);
+  #else     
+    return aWnd->GetQWidget()->isVisible();
+  #endif
+}
+
+void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArray, const QString &aTitle )
+{
+  if(!aWnd) return;   
+  if(isWinVisible(aWnd)){
+    CloseGenWindow( aWnd );
+    return;
+  }
+
+  // Create, assign parameters, set title and show modeless
+  aWnd->SetTitle( aTitle.toUtf8().constData() );
+  
+#ifdef _AFXDLL
+  PvResult lResult = aWnd->ShowModeless((PvWindowHandle)winId());
+  lResult = aWnd->DoEvents();
+#else // Native QT library
+  PvResult lResult = aWnd->ShowModeless( this );
+#endif
+
+  aWnd->SetGenParameterArray( aArray );
+}
+
+void MainWindow::CloseGenWindow( PvGenBrowserWnd *aWnd )
+{  
+  if(isWinVisible(aWnd)){
+    aWnd->Close();
+  }  
+}
+
+void MainWindow::handleDeviceControl(){  
+  ShowGenWindow( m_device_browser, m_device->GetParameters(), "Device Control" );
 }
 
 bool MainWindow::connectGEV(const PvDeviceInfo *info) {
@@ -485,8 +546,8 @@ void MainWindow::handleData() {
   if(m_pipeline) {
     list<tuple<Mat*, Mat*>> images;
     m_pipeline->GetPairs(images);
-    m_data_thread->setStereo(true);
-
+    m_data_thread->setStereoDisparity(true,false);
+    
     // Convert and display
     for (auto it = images.begin(); it != images.end(); ++it) {
       QImage q1 = s_yuv2_to_qimage(get<0>(*it));
@@ -502,8 +563,8 @@ void MainWindow::handleMonoData(bool is_disparity){
   if(m_pipeline){
     list<tuple<Mat*, Mat*>> images;
     m_pipeline->GetPairs(images);
-    m_data_thread->setStereo(false);
-   
+    m_data_thread->setStereoDisparity(false, is_disparity);
+
     for (auto it = images.begin(); it != images.end(); ++it) {
       QImage q1; 
       QImage q2; 

@@ -60,7 +60,8 @@ if host_machine.system() == 'linux'
   PvStream = cpp.find_library('PvStream', required: true, dirs: pleora_dirs)
   PvVirualDevice = cpp.find_library('PvVirtualDevice', required: true, dirs: pleora_dirs)
   PvGUI = cpp.find_library('PvGUI', required: true, dirs: pleora_dirs)
-  PvAppUtils = cpp.find_library('PvAppUtils', required: true, dirs: pleora_dirs)
+  PvAppUtils = cpp.find_library('PvAppUtils', required: true, dirs: pleora_dirs)  
+  PvPersistence = cpp.find_library('PvPersistence', required: true, dirs: pleora_dirs)
 else # Windows, note force 64-bit
   pleora_dirs = ['C:/Program Files/Pleora Technologies Inc/eBUS SDK/Libraries']
   pleora_inc = '-IC:/Program Files/Pleora Technologies Inc/eBUS SDK/Includes'
@@ -74,6 +75,7 @@ else # Windows, note force 64-bit
   PvVirualDevice = cpp.find_library('PvVirtualDevice64', required: true, dirs: pleora_dirs)
   PvGUI = cpp.find_library('PvGUI64_VC16', required: true, dirs: pleora_dirs)
   PvAppUtils = cpp.find_library('PvAppUtils64', required: true, dirs: pleora_dirs)
+  PvPersistence = cpp.find_library('PvPersistence64', required: true, dirs: pleora_dirs)
 endif
 pleora_dep = declare_dependency(compile_args: pleora_inc,
                                 dependencies : [PvBase,
@@ -84,7 +86,8 @@ pleora_dep = declare_dependency(compile_args: pleora_inc,
                                                 PvStream,
                                                 PvGUI,
                                                 PvVirualDevice,
-                                                PvAppUtils
+                                                PvAppUtils,
+                                                PvPersistence
                                                 ],
                                 compile_args: pleora_args
                                )

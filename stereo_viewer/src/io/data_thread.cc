@@ -34,6 +34,7 @@ DataThread::DataThread(QObject *parent)
     m_disparity_subfolder = "disparity";  
     m_frame_counter = 0;        
     m_stereo = true;
+    m_disparity = false;
 }
 
 DataThread::~DataThread()
@@ -73,24 +74,29 @@ bool getFilename(QString &fname, const QString &new_folder, const QString &subfo
 }
 
 bool DataThread::setFolder(QString new_folder){
+  bool status = true;
   QMutexLocker locker(&m_mutex);
 
   if(new_folder != m_folder){
     m_folder = new_folder;
     m_frame_counter = 0;
   }  
-  
-  if(!getFilename(m_left_fname, m_folder, m_left_subfolder, "left_")){
-    return false;
-  } 
-  if(!getFilename(m_right_fname, m_folder, m_right_subfolder, "right_")){
-    return false;
-  } 
-  if(!getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_")){
-    return false;
-  }  
 
-  return true;
+  if(m_stereo){
+    status = getFilename(m_left_fname, m_folder, m_left_subfolder, "left_");
+    status = status && getFilename(m_right_fname, m_folder, m_right_subfolder, "right_");
+  } else if(m_disparity){
+    status = getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
+  } else {
+    status = getFilename(m_left_fname, m_folder, m_left_subfolder, "mono_");
+  }
+  
+  return status;
+}
+
+void DataThread::setStereoDisparity(bool is_stereo, bool is_disparity){
+  m_stereo = is_stereo;
+  m_disparity = is_disparity;
 }
 
 void DataThread::run() {    
@@ -108,9 +114,12 @@ void DataThread::run() {
         if(m_stereo){
             imdata.left.save(m_left_fname + suffix, "PNG");
             imdata.right.save(m_right_fname + suffix, "PNG");           
-        }else{
+        } else if(m_disparity){
             imdata.left.save(m_disparity_fname + suffix, "PNG");
+        } else {
+          imdata.left.save(m_left_fname + suffix, "PNG");
         }
+        
         m_frame_counter += 1;               
     }
 }

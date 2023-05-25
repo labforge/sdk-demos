@@ -16,6 +16,7 @@
 
 @file pipeline.cc Pipeline implementation
 @author Thomas Reidemeister <thomas@labforge.ca>
+        Guy Martin Tchamgoue <martin@labforge.ca>
 */
 #include "gev/pipeline.hpp"
 #include "gev/util.hpp"
@@ -59,13 +60,12 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
   }
   if(!m_fps ||
      !m_bandwidth ||
-     !m_pixformat || 
-     !m_rectify   ||
+     !m_pixformat ||      
      !m_undistort){
-      throw runtime_error("Unable to initialise stereo features, please connect to a Bottlenose Stereo camera.");
+      throw runtime_error("Unable to initialise critical camera features. Please, make sure the camera is accessible.");
      }
 
-  m_rectify->GetValue(m_rectify_init);
+  if(m_rectify) m_rectify->GetValue(m_rectify_init);  
   m_undistort->GetValue(m_undistort_init);
   m_pixformat->GetValue( m_pixfmt_init );    
 
@@ -78,7 +78,7 @@ Pipeline::~Pipeline() {
     Stop();
   }
   else{
-    m_rectify->SetValue(m_rectify_init);
+    if(m_rectify) m_rectify->SetValue(m_rectify_init);
     m_undistort->SetValue(m_undistort_init);
     m_pixformat->SetValue(m_pixfmt_init);
   }
@@ -106,7 +106,7 @@ bool Pipeline::Start(bool calibrate) {
   bool und_value = calibrate?!calibrate:m_undistort_init;
   PvString pixformat = calibrate?"YUV422_8":m_pixfmt_init.GetAscii();
           
-  m_rectify->SetValue(rct_value);
+  if(m_rectify) m_rectify->SetValue(rct_value);
   m_undistort->SetValue(und_value);    
   m_pixformat->SetValue(pixformat);
   
@@ -138,7 +138,7 @@ void Pipeline::Stop() {
   wait();
   // Discard all queued buffers
 
-  m_rectify->SetValue(m_rectify_init);
+  if(m_rectify) m_rectify->SetValue(m_rectify_init);
   m_undistort->SetValue(m_undistort_init);    
   m_pixformat->SetValue(m_pixfmt_init);
   QThread::currentThread()->usleep(100*1000);  
