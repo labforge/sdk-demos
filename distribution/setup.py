@@ -134,6 +134,7 @@ setup(
     install_requires=[
         "PySide6>=6.4.3",
         "opencv-python-headless>=4.7.0.72",
+        "pyyaml"
         # eBusPython solved externally
     ],
     extras_require={
