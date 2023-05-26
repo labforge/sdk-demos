@@ -137,7 +137,10 @@ class MainWindow(QMainWindow):
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls:
-            if e.mimeData().urls()[0].toLocalFile().endswith(".tar"):
+            if e.mimeData().urls()[0].toLocalFile().endswith(".tar") or \
+               e.mimeData().urls()[0].toLocalFile().endswith(".yaml") or \
+               e.mimeData().urls()[0].toLocalFile().endswith(".yml") or \
+               e.mimeData().urls()[0].toLocalFile().endswith(".json"):
                 e.accept()
         else:
             e.ignore()
