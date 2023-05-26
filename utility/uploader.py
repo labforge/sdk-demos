@@ -15,7 +15,7 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = "Thomas Reidemeister <thomas@labforge.ca>"
+__author__ = "Thomas Reidemeister <thomas@labforge.ca>, G.M. Tchamgoue <martin@labforge.ca>"
 __copyright__ = "Copyright 2023, Labforge Inc."
 
 from os import path
@@ -27,7 +27,7 @@ import sys
 import re
 from PySide6.QtCore import QThread, Signal, QCoreApplication, QFile
 import eBUS as eb
-
+from calibration import LoadCalibration
 
 class Uploader(QThread):
 
@@ -39,15 +39,84 @@ class Uploader(QThread):
         super().__init__(parent)
         self.address = address
         self.device = device
-        self.flag = self.device.GetParameters().Get(flag_name)
-        self.status = self.device.GetParameters().Get(status_name)
         self.filename = filename
-        if flag_name.lower().find('weight') > 0:
-            self.reset_flag = True
+        self.calibrate = not self.filename.lower().endswith(".tar")
+        if not self.calibrate:
+            self.flag = self.device.GetParameters().Get(flag_name)
+            self.status = self.device.GetParameters().Get(status_name)        
+            
+            if flag_name.lower().find('weight') > 0:
+                self.reset_flag = True
+            else:
+                self.reset_flag = False
+
+    def __set_register(self, regname, regvalue):
+        reg = self.device.GetParameters().Get(regname)
+        if not reg:
+            return False
+        res, regtype = reg.GetType()
+        if not res.IsOK():
+            return False
+        if regtype == eb.PvGenTypeFloat:
+            res = reg.SetValue(regvalue)
+        elif regtype == eb.PvGenTypeInteger:
+            res = reg.SetValue(int(regvalue))     
+        elif regtype == eb.PvGenTypeCommand:
+            if bool(regvalue):
+                res = reg.Execute()            
         else:
-            self.reset_flag = False
+            return False
+        return res.IsOK()
+
+    def __get_sensors(self):
+        reg = self.device.GetParameters().Get('DeviceModelName')
+        res, model = reg.GetValue()
+        num_sensors = 0
+    
+        if res.IsOK():
+           num_sensors = 1 if model[-1].upper() == 'M' else 2
+    
+        return num_sensors
+    
+    def __upload_calibration(self, fname=''):
+        kparams = LoadCalibration(fname=fname, sensors=self.__get_sensors())
+        if bool(kparams):
+            processed = 16
+            self.progress.emit(processed)
+
+            step = 64 / len(kparams.keys());   
+            for kname, kvalue in kparams.items():
+                if not self.__set_register(kname, kvalue):
+                    self.error.emit(f"Failed to set [{kname}] on the sensor.")
+                    self.finished.emit(False)
+                    return
+            
+                processed += step
+                self.progress.emit(processed)
+                time.sleep(0.1)               
+            
+            if self.__set_register("saveCalibrationData", 1):
+                self.progress.emit(100)
+                time.sleep(0.05)                
+                self.finished.emit(True)                                 
+            else:
+                self.error.emit("Failed to recalibrate the sensor. \nPlease, check connection and try again.")
+                self.finished.emit(False)
+                            
+        else:
+            self.error.emit("Failed to load calibration file onto the sensor. \nThe file contents may not match the specification. \nPlease, verify and try again.")
+            self.finished.emit(False)
 
     def run(self):
+        if not QFile.exists(self.filename):
+            self.error.emit(f"Cannot read {path.basename(self.filename)}")
+            self.finished.emit(False)
+            return
+        
+        if self.calibrate:
+            self.__upload_calibration(self.filename)
+            return
+
         # Sanity check to prevent firmware corruption
         if not self.reset_flag:
             res, status = self.flag.GetValue()
@@ -59,11 +128,6 @@ class Uploader(QThread):
         self.progress.emit(0)
         if self.flag is None or self.status is None:
             self.error.emit("Function not supported by device ... please update the firmware")
-            self.finished.emit(False)
-            return
-
-        if not QFile.exists(self.filename):
-            self.error.emit(f"Cannot read {path.basename(self.filename)}")
             self.finished.emit(False)
             return
 

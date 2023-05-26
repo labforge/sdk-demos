@@ -16,7 +16,7 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = "Thomas Reidemeister <thomas@labforge.ca>"
+__author__ = "Thomas Reidemeister <thomas@labforge.ca>, G.M. Tchamgoue <martin@labforge.ca>"
 __copyright__ = "Copyright 2023, Labforge Inc."
 
 import sys
@@ -118,7 +118,7 @@ class MainWindow(QMainWindow):
         self.ui.btnUpload.released.connect(self.handle_upload)
 
         # Style
-        self.ui.cbxFileType.addItems(["Firmware", "DNN Weights"])
+        self.ui.cbxFileType.addItems(["Firmware", "DNN Weights", "Calibration"])
         self.ui.btnFile.setText("")
         self.ui.btnFile.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogStart))
         self.ui.btnUpload.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
@@ -137,7 +137,10 @@ class MainWindow(QMainWindow):
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls:
-            if e.mimeData().urls()[0].toLocalFile().endswith(".tar"):
+            if e.mimeData().urls()[0].toLocalFile().endswith(".tar") or \
+               e.mimeData().urls()[0].toLocalFile().endswith(".yaml") or \
+               e.mimeData().urls()[0].toLocalFile().endswith(".yml") or \
+               e.mimeData().urls()[0].toLocalFile().endswith(".json"):
                 e.accept()
         else:
             e.ignore()
@@ -153,7 +156,7 @@ class MainWindow(QMainWindow):
         if device is None or not result.IsOK():
             description = result.GetDescription().GetUnicode()
             if description.find("protect") >= 0:
-                description = "This sensor is locked, please disconnect eBusPlayer first"
+                description = "This sensor is locked by a different application, please disconnect first."
             QMessageBox.critical(self,
                                  f"Cannot connect: {result.GetCodeString().GetUnicode()}",
                                  f"Unable to connect to device: {description}")
@@ -162,7 +165,7 @@ class MainWindow(QMainWindow):
         else:
             self.device = device
             self.ui.txtIP.setText(device.GetIPAddress().GetUnicode())
-            self.ui.txtMAC.setText(device.GetMACAddress().GetUnicode())
+            self.ui.txtMAC.setText(device.GetMACAddress().GetUnicode())            
         return device
 
     def disconnect(self):
@@ -186,10 +189,10 @@ class MainWindow(QMainWindow):
         i = self.ui.cbxFileType.currentIndex()
         item = self.ui.cbxFileType.itemText(i)
         title = "Select " + item + " File"
-        # if item == "Calibration":
-        #     filter_text = item + " (*.json *.yaml *.yml)"
-        # else:
-        filter_text = item + " (*.tar)"
+        if item == "Calibration":
+            filter_text = item + " (*.json *.yaml *.yml)"
+        else:
+            filter_text = item + " (*.tar)"
 
         selected_file, _ = QFileDialog.getOpenFileName(self, title, fpath, filter_text, "")
         if selected_file is not None and len(selected_file) > 0:
@@ -219,7 +222,7 @@ class MainWindow(QMainWindow):
             return fname.lower().endswith(".tar")
         else:
             return fname.lower().endswith(".json") or fname.lower().endswith(".yml") or fname.lower().endswith(".yaml")
-        return False
+        
 
     def handle_upload(self):
         fname = self.ui.txtFile.text()
@@ -241,6 +244,9 @@ class MainWindow(QMainWindow):
         elif ftype == "DNN Weights":
             update_flag = "EnableWeightsUpdate"
             update_status = "WeightsStatus"
+        elif ftype == "Calibration":
+            update_flag = None
+            update_status = None
         else:
             raise Exception("Unsupported Operation")
 
@@ -266,8 +272,11 @@ class MainWindow(QMainWindow):
             ftype = self.ui.cbxFileType.itemText(self.ui.cbxFileType.currentIndex())
             if ftype == "Firmware":
                 QMessageBox.information(self, "Update Finished", "Please power cycle the sensor to apply the update")
+            elif ftype == "Calibration":
+                QMessageBox.information(self, "Update Finished", "Calibration updated!")
             else:
-                QMessageBox.information(self, "Update Finished", "Weights updated")
+                QMessageBox.information(self, "Update Finished", "Weights updated!")
+
         self.ui.btnFile.setEnabled(True)
         self.ui.btnUpload.setEnabled(True)
         self.ui.btnConnect.setEnabled(True)
