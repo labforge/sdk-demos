@@ -68,8 +68,18 @@ class Uploader(QThread):
             return False
         return res.IsOK()
 
+    def __get_sensors(self):
+        reg = self.device.GetParameters().Get('DeviceModelName')
+        res, model = reg.GetValue()
+        num_sensors = 0
+    
+        if res.IsOK():
+           num_sensors = 1 if model[-1].upper() == 'M' else 2
+    
+        return num_sensors
+    
     def __upload_calibration(self, fname=''):
-        kparams = LoadCalibration(fname=fname)
+        kparams = LoadCalibration(fname=fname, sensors=self.__get_sensors())
         if bool(kparams):
             processed = 16
             self.progress.emit(processed)
@@ -94,7 +104,7 @@ class Uploader(QThread):
                 self.finished.emit(False)
                             
         else:
-            self.error.emit("Failed to load calibration file. \nPlease, verify and try again.")
+            self.error.emit("Failed to load calibration file onto the sensor. \nThe file contents may not match the specification. \nPlease, verify and try again.")
             self.finished.emit(False)
 
     def run(self):

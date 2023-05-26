@@ -153,7 +153,7 @@ class MainWindow(QMainWindow):
         if device is None or not result.IsOK():
             description = result.GetDescription().GetUnicode()
             if description.find("protect") >= 0:
-                description = "This sensor is locked, please disconnect eBusPlayer first"
+                description = "This sensor is locked by a different application, please disconnect first."
             QMessageBox.critical(self,
                                  f"Cannot connect: {result.GetCodeString().GetUnicode()}",
                                  f"Unable to connect to device: {description}")
@@ -162,7 +162,7 @@ class MainWindow(QMainWindow):
         else:
             self.device = device
             self.ui.txtIP.setText(device.GetIPAddress().GetUnicode())
-            self.ui.txtMAC.setText(device.GetMACAddress().GetUnicode())
+            self.ui.txtMAC.setText(device.GetMACAddress().GetUnicode())            
         return device
 
     def disconnect(self):

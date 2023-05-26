@@ -23,12 +23,14 @@ import json
 import yaml
 import numpy as np
 
-def LoadCalibIOParameters(fname=''):
+def LoadCalibIOParameters(fname='', sensors=0):
     kdata = dict()
     
     if not path.isfile(fname) or not fname.lower().endswith(".json"):
         return kdata
-
+    if sensors == 0:
+        return kdata
+    
     try:
         with open(fname, 'r') as f:
             calib = json.load(f)
@@ -37,7 +39,7 @@ def LoadCalibIOParameters(fname=''):
             return kdata
         
         nCameras = len(calib["Calibration"]["cameras"])  
-        if nCameras < 1:
+        if nCameras != sensors:
             return kdata
 
         camera = calib["Calibration"]["cameras"][0]["model"]["ptr_wrapper"]["data"]["CameraModelCRT"]["CameraModelBase"]
@@ -73,16 +75,21 @@ def LoadCalibIOParameters(fname=''):
 
     return kdata
 
-def LoadFlatJSONParameters(fname=''):
+def LoadFlatJSONParameters(fname='', sensors=0):
     kdata = dict()
     
     if not path.isfile(fname) or not fname.lower().endswith(".json"):
         return kdata
-
+    if sensors == 0:
+        return kdata
+    
     try:
         with open(fname, 'r') as f:
             calib = json.load(f)
 
+        if len(calib.keys()) != sensors:
+            return kdata
+        
         nCameras = 2
         cam_cnt = 0
         kdata["kWidth"] = calib["width"]
@@ -113,7 +120,7 @@ def LoadFlatJSONParameters(fname=''):
                 
                 cam_cnt += 1  
         
-        if cam_cnt < 1:
+        if cam_cnt != sensors:
             return kdata.clear()
         
 
@@ -122,55 +129,55 @@ def LoadFlatJSONParameters(fname=''):
 
     return kdata
 
-def rodrigues(r):    
-    u, d, v = np.linalg.svd(r)
-    r = np.dot(u, v)
-    rx = r[2, 1] - r[1, 2]
-    ry = r[0, 2] - r[2, 0]
-    rz = r[1, 0] - r[0, 1]
-    s = np.linalg.norm(np.array([rx, ry, rz])) * np.sqrt(0.25)
-    c = np.clip((np.sum(np.diag(r)) - 1) * 0.5, -1, 1)
-    theta = np.arccos(c)
+def rodrigues(matrix):
+    epsilon = 1e-8  # Small value to handle division by zero
+    
+    # Extract the matrix components
+    R = np.array(matrix)
+    R_trace = np.trace(R)
+    R_diff = R - R.T
+    
+    # Calculate the angle and axis of rotation
+    theta = np.arccos((R_trace - 1) / 2)
+    axis = np.array([R_diff[2, 1], R_diff[0, 2], R_diff[1, 0]])
+    
+    # Normalize the axis
+    norm_axis = np.linalg.norm(axis)
+    if norm_axis < epsilon:
+        # Handle the case when norm_axis is close to zero
+        return np.zeros(3)
+    
+    axis /= norm_axis
+    
+    # Convert the axis-angle representation to a rotation vector
+    rotation_vector = theta * axis
+    
+    return rotation_vector
 
-    r_out = np.zeros((3, 1))
-    if s < 1e-5:
-        if c > 0:
-            pass #r_out = np.zeros((3, 1))
-        else:
-            rx, ry, rz = np.clip(np.sqrt((np.diag(r) + 1) * 0.5), 0, np.inf)
-            if r[0, 1] < 0:
-                ry = -ry
-            if r[0, 2] < 0:
-                rz = -rz
-            if np.abs(rx) < np.abs(ry) and np.abs(rx) < np.abs(rz) and ((r[1, 2] > 0) != (ry * rz > 0)):
-                rz = -rz
-
-            r_out = np.array([[rx, ry, rz]]).T
-            theta /= np.linalg.norm(r_out)
-            r_out *= theta
-    return r_out
-
-def LoadKalibrParameters(fname=''):
+def LoadKalibrParameters(fname='', sensors=0):
     kdata = dict()
-    import pdb; pdb.set_trace()
-    if not path.isfile(fname) or \
-       not fname.lower().endswith(".yaml") or \
-       not fname.lower().endswith(".yml"):
+    
+    if not path.isfile(fname) or (\
+       not fname.lower().endswith(".yaml") and \
+       not fname.lower().endswith(".yml")):
         return kdata
-
+    if sensors == 0:
+        return kdata
+    
     try:
         with open(fname, "r") as f:
             kalibr = yaml.safe_load(f)
         
         nCameras =  len(kalibr.keys())
-        if nCameras < 1:
+        if nCameras != sensors:
             return kdata
 
         for cam in kalibr.keys():
-            cam_model = kalibr[cam]["camera_model"]
-            if cam_model != 'pinhole':
+            cam_model = kalibr[cam]["camera_model"]            
+            if cam_model != 'pinhole' or cam not in ['cam0', 'cam1']:
                 return kdata.clear()
             
+            id = cam[-1]
             fu, fv, pu, pv = kalibr[cam]["intrinsics"]
             kdata["fx" + id] = fu
             kdata["fy" + id] = fv
@@ -187,15 +194,17 @@ def LoadKalibrParameters(fname=''):
             if 'T_cn_cnm1' in kalibr[cam].keys():
                 T_01 = np.linalg.inv(np.array(kalibr[cam]["T_cn_cnm1"]))
                 R = T_01[:3,:3]
-                tvec = T_01[:3,3]
-                kdata["tx" + id] = tvec[0]
-                kdata["ty" + id] = tvec[1]
-                kdata["tz" + id] = tvec[2] 
+                tvec = T_01[:3,3]                
+                rvec = rodrigues(R)                
+            else:
+                rvec = tvec = [0.0, 0.0, 0.0]    
                 
-                rvec = rodrigues(R)
-                kdata["rx" + id] = rvec[0]
-                kdata["ry" + id] = rvec[1] 
-                kdata["rz" + id] = rvec[2]
+            kdata["tx" + id] = tvec[0]
+            kdata["ty" + id] = tvec[1]
+            kdata["tz" + id] = tvec[2]             
+            kdata["rx" + id] = rvec[0]
+            kdata["ry" + id] = rvec[1] 
+            kdata["rz" + id] = rvec[2]
 
             width, height = kalibr[cam]["resolution"]
             kdata["kWidth"] = width
@@ -206,13 +215,66 @@ def LoadKalibrParameters(fname=''):
      
     return kdata
 
-def LoadCalibration(fname=''):    
-    kdata = LoadCalibIOParameters(fname=fname)
-    if not bool(kdata):
-        kdata = LoadFlatJSONParameters(fname=fname)
-        if not bool(kdata):
-            kdata = LoadKalibrParameters(fname=fname)
+def LoadFlatYamlParameters(fname='', sensors=0):
+    kdata = dict()
+    
+    if not path.isfile(fname) or (\
+       not fname.lower().endswith(".yaml") and \
+       not fname.lower().endswith(".yml")):
+        return kdata
+    if sensors == 0:
+        return kdata
+    
+    try:
+        with open(fname, "r") as f:
+            calib = yaml.safe_load(f)
+        import pdb; pdb.set_trace()
+        nCameras =  len(calib.keys())
+        if nCameras != sensors:
+            return kdata
 
+        for cam in calib.keys():                     
+            if cam not in ['cam0', 'cam1']:
+                return kdata.clear()
+            
+            id = cam[-1]            
+            kdata["fx" + id] = calib[cam]['fx']
+            kdata["fy" + id] = calib[cam]['fy']
+            kdata["cx" + id] = calib[cam]['cx']
+            kdata["cy" + id] = calib[cam]['cy']
+            
+            kdata["k1" + id] = calib[cam]['k1']
+            kdata["k2" + id] = calib[cam]["k2"] if "k2" in calib[cam].keys() else 0.0
+            kdata["k3" + id] = calib[cam]["k3"] if "k3" in calib[cam].keys() else 0.0    
+            kdata["p1" + id] = calib[cam]["p1"] if "p1" in calib[cam].keys() else 0.0
+            kdata["p2" + id] = calib[cam]["p2"] if "p2" in calib[cam].keys() else 0.0
+            
+            tvec = calib[cam]['tvec']                
+            rvec = calib[cam]['rvec']             
+            
+            kdata["tx" + id] = tvec[0]
+            kdata["ty" + id] = tvec[1]
+            kdata["tz" + id] = tvec[2]             
+            kdata["rx" + id] = rvec[0]
+            kdata["ry" + id] = rvec[1] 
+            kdata["rz" + id] = rvec[2]
+            
+            kdata["kWidth"] = calib[cam]['width']
+            kdata["kHeight"] = calib[cam]['height']
+            
+    except Exception as e:
+        return kdata.clear()
+     
+    return kdata
+
+def LoadCalibration(fname='', sensors=0):    
+    kdata = LoadCalibIOParameters(fname=fname, sensors=sensors)
+    if not bool(kdata):
+        kdata = LoadFlatJSONParameters(fname=fname, sensors=sensors)
+        if not bool(kdata):
+            kdata = LoadKalibrParameters(fname=fname, sensors=sensors)
+            if not bool(kdata):
+                kdata = LoadFlatYamlParameters(fname=fname, sensors=sensors)
     return kdata 
 
 
