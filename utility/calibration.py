@@ -228,11 +228,12 @@ def LoadFlatYamlParameters(fname='', sensors=0):
     try:
         with open(fname, "r") as f:
             calib = yaml.safe_load(f)
-        import pdb; pdb.set_trace()
+        
         nCameras =  len(calib.keys())
         if nCameras != sensors:
             return kdata
-
+        tvec_count = 0
+        rvec_count = 0
         for cam in calib.keys():                     
             if cam not in ['cam0', 'cam1']:
                 return kdata.clear()
@@ -249,8 +250,13 @@ def LoadFlatYamlParameters(fname='', sensors=0):
             kdata["p1" + id] = calib[cam]["p1"] if "p1" in calib[cam].keys() else 0.0
             kdata["p2" + id] = calib[cam]["p2"] if "p2" in calib[cam].keys() else 0.0
             
-            tvec = calib[cam]['tvec']                
-            rvec = calib[cam]['rvec']             
+            tvec = rvec = [0.0,0.0,0.0]
+            if "tvec" in calib[cam].keys():
+                tvec = calib[cam]['tvec']   
+                tvec_count += 1 
+            if "rvec" in calib[cam].keys():                 
+                rvec = calib[cam]['rvec']   
+                rvec_count += 1          
             
             kdata["tx" + id] = tvec[0]
             kdata["ty" + id] = tvec[1]
@@ -262,6 +268,8 @@ def LoadFlatYamlParameters(fname='', sensors=0):
             kdata["kWidth"] = calib[cam]['width']
             kdata["kHeight"] = calib[cam]['height']
             
+        if tvec_count < (sensors - 1) or rvec_count < (sensors - 1) :
+            return kdata.clear()            
     except Exception as e:
         return kdata.clear()
      
