@@ -240,10 +240,10 @@ class MainWindow(QMainWindow):
 
         if ftype == "Firmware":
             update_flag = "EnableUpdate"
-            update_status = "UpdateStatus"
+            update_status = ["UpdateStatus"]
         elif ftype == "DNN Weights":
             update_flag = "EnableWeightsUpdate"
-            update_status = "WeightsStatus"
+            update_status = ["WeightsStatus", "DNNStatus"]
         elif ftype == "Calibration":
             update_flag = None
             update_status = None

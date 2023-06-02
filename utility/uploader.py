@@ -43,7 +43,10 @@ class Uploader(QThread):
         self.calibrate = not self.filename.lower().endswith(".tar")
         if not self.calibrate:
             self.flag = self.device.GetParameters().Get(flag_name)
-            self.status = self.device.GetParameters().Get(status_name)        
+            for name in status_name:
+                self.status = self.device.GetParameters().Get(name)  
+                if self.status is not None:                    
+                    break       
             
             if flag_name.lower().find('weight') > 0:
                 self.reset_flag = True
