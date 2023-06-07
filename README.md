@@ -87,7 +87,7 @@ in ```api_docs.zip``` the [releases section of this repository](https://github.c
 
 ## C++ Code Samples
 
-A comprehensive example on how to use the C++ driver is our [ROS2 driver](https://github.com/labforge/bottlenose-ros2).
+A comprehensive example on how to use the C++ API is our [ROS2 driver](https://github.com/labforge/bottlenose-ros2).
 
 
 ## License
