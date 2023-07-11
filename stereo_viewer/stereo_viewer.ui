@@ -56,11 +56,22 @@
          <number>5</number>
         </property>
         <item>
-         <widget class="QLabel" name="labelDisplay">
-          <property name="text">
-           <string>Display</string>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLabel" name="lblDisplayLeft">
+            <property name="text">
+             <string>Left</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblDisplayRight">
+            <property name="text">
+             <string>Right</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
          <widget class="QFrame" name="frameView">

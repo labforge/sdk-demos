@@ -51,13 +51,13 @@ void DataThread::process(const QImage &left_image, const QImage &right_image){
     QMutexLocker locker(&m_mutex);
     //-check queue size  
     if(m_queue.size() < MAX_QUEUE_SIZE){
-        m_queue.enqueue({left_image, right_image});
+      m_queue.enqueue({left_image, right_image});
     }
 
     if (!isRunning()) {
-        start(LowPriority);
+      start(LowPriority);
     } else {        
-        m_condition.wakeOne();
+      m_condition.wakeOne();
     }
 }
 
@@ -83,12 +83,19 @@ bool DataThread::setFolder(QString new_folder){
   }  
 
   if(m_stereo){
-    status = getFilename(m_left_fname, m_folder, m_left_subfolder, "left_");
-    status = status && getFilename(m_right_fname, m_folder, m_right_subfolder, "right_");
-  } else if(m_disparity){
-    status = getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
-  } else {
-    status = getFilename(m_left_fname, m_folder, m_left_subfolder, "mono_");
+    if(m_disparity){
+      status = getFilename(m_left_fname, m_folder, m_left_subfolder, "left_");
+      status = status && getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
+    }else{
+      status = getFilename(m_left_fname, m_folder, m_left_subfolder, "left_");
+      status = status && getFilename(m_right_fname, m_folder, m_right_subfolder, "right_");
+    }
+  }else{
+    if(m_disparity){
+      status = getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
+    } else {
+      status = getFilename(m_left_fname, m_folder, m_left_subfolder, "mono_");
+    }
   }
   
   return status;
@@ -111,14 +118,21 @@ void DataThread::run() {
         m_mutex.unlock();
                 
         QString suffix = QString::number(m_frame_counter)  + ".png";                
-        if(m_stereo){
+        if (m_stereo){
+          if(m_disparity){
             imdata.left.save(m_left_fname + suffix, "PNG");
-            imdata.right.save(m_right_fname + suffix, "PNG");           
-        } else if(m_disparity){
-            imdata.left.save(m_disparity_fname + suffix, "PNG");
+            imdata.right.save(m_disparity_fname + suffix, "PNG");                      
+          } else {
+            imdata.left.save(m_left_fname + suffix, "PNG");
+            imdata.right.save(m_right_fname + suffix, "PNG"); 
+          }
         } else {
-          imdata.left.save(m_left_fname + suffix, "PNG");
-        }
+          if(m_disparity){
+            imdata.left.save(m_disparity_fname + suffix, "PNG");
+          } else {
+            imdata.left.save(m_left_fname + suffix, "PNG");
+          }
+        }        
         
         m_frame_counter += 1;               
     }

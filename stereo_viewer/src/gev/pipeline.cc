@@ -174,22 +174,25 @@ void Pipeline::run() {
             img0 = lBuffer->GetMultiPartContainer()->GetPart(0)->GetImage();
             img1 = lBuffer->GetMultiPartContainer()->GetPart(1)->GetImage();
             m_pixformat->GetValue( pixformat );
-            if(strcmp(pixformat.GetAscii(), "YUV422_8") != 0){
-              break;
-            }
+            
             // Protected image creation
             {
+              int cv_pixfmt0 = (img0->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
+              int cv_pixfmt1 = (img1->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
+              is_disparity = ((cv_pixfmt0 == CV_16UC1) || (cv_pixfmt1 == CV_16UC1));
+
               QMutexLocker l(&m_image_lock);
               // See if there is chunk data attached
               
               m_images.push_back(
                       make_tuple(
-                              new Mat(img0->GetHeight(), img0->GetWidth(), CV_8UC2, img0->GetDataPointer()),
-                              new Mat(img1->GetHeight(), img1->GetWidth(), CV_8UC2, img1->GetDataPointer())
+                              new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
+                              new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer())
                               )
                               );
             }
-            emit pairReceived();
+            
+            emit pairReceived(is_disparity);
             break;
 
           case PvPayloadTypeImage:                        

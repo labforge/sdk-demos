@@ -480,7 +480,7 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
           connect(m_pipeline.get(),
                   &Pipeline::pairReceived,
                   this,
-                  &MainWindow::handleData,
+                  &MainWindow::handleStereoData,
                   Qt::QueuedConnection);
           connect(m_pipeline.get(),
                   &Pipeline::monoReceived,
@@ -509,12 +509,19 @@ void MainWindow::newData(QImage &left, QImage &right, bool stereo, bool disparit
   // Set the image
   cfg.widgetLeftSensor->setImage(left, false);
   cfg.widgetRightSensor->setVisible(stereo);
-  cfg.chkColormap->setVisible((!stereo && disparity));
-  cfg.labelColormap->setVisible((!stereo && disparity));
-  cfg.cbxColormap->setVisible((!stereo && disparity));
+  cfg.lblDisplayRight->setVisible(stereo);
+
+  cfg.chkColormap->setVisible(disparity);
+  cfg.labelColormap->setVisible(disparity);
+  cfg.cbxColormap->setVisible(disparity);
 
   if(stereo){      
     cfg.widgetRightSensor->setImage(right, false);
+    QString label = disparity?"Disparity":"Right";
+    cfg.lblDisplayRight->setText(label);
+  }else{
+    QString label = disparity?"Disparity":"Display";
+    cfg.lblDisplayLeft->setText(label);
   }
 
   // Do we have boundingboxes or feature points
@@ -542,17 +549,24 @@ void MainWindow::newData(QImage &left, QImage &right, bool stereo, bool disparit
 
 }
 
-void MainWindow::handleData() {
+void MainWindow::handleStereoData(bool is_disparity) {
   if(m_pipeline) {
     list<tuple<Mat*, Mat*>> images;
     m_pipeline->GetPairs(images);
-    m_data_thread->setStereoDisparity(true,false);
+    m_data_thread->setStereoDisparity(true, is_disparity);
     
     // Convert and display
     for (auto it = images.begin(); it != images.end(); ++it) {
       QImage q1 = s_yuv2_to_qimage(get<0>(*it));
-      QImage q2 = s_yuv2_to_qimage(get<1>(*it));
-      newData(q1, q2, true, false);
+      QImage q2;
+
+      if(is_disparity){ 
+        q2 = s_mono_to_qimage(get<1>(*it), cfg.chkColormap->isChecked(), cfg.cbxColormap->currentIndex());
+      }else{
+        q2 = s_yuv2_to_qimage(get<1>(*it));
+      }
+      
+      newData(q1, q2, true, is_disparity);
       delete get<0>(*it);
       delete get<1>(*it);
     }

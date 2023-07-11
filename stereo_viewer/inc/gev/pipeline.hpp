@@ -45,7 +45,7 @@ namespace labforge::gev {
     void run() override;
 
   Q_SIGNALS:
-    void pairReceived();
+    void pairReceived(bool is_disparity);
     void monoReceived(bool is_disparity);
     void terminated(bool fatal = false);
 
