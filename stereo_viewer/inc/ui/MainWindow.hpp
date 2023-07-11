@@ -48,7 +48,7 @@ public Q_SLOTS:
   void handleConnect();
   void handleDisconnect();
   void handleRecording();
-  void handleData();
+  void handleStereoData(bool is_disparity);
   void handleMonoData(bool is_disparity);
   void newData(QImage &left, QImage &right, bool stereo=true, bool disparity=true);
   void onFolderSelect();
