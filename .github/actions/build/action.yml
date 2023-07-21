@@ -62,7 +62,7 @@ runs:
       working-directory: ${{ inputs.path }}
       if: ${{ inputs.signpassword != '' }}
       run: |
-        signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ inputs.signpassword }} stereoviewer\install\stereoviewer.exe distribution\dist\main\updater.exe distribution\build\driver.exe dist\main\driver.exe
+        signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ inputs.signpassword }} stereoviewer\install\stereoviewer.exe distribution\dist\main\updater.exe distribution\build\driver.exe
       #if: secrets.SIGNINGPASSWORD
 
     - name: Build installer
