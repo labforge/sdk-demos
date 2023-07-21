@@ -98,7 +98,7 @@ jobs:
         token: ${{ secrets.CITOKEN }}
         body_path: release.txt
 
-  build_python_samples:
+  build_python_samples_and_installer:
     runs-on: W64HIL
     steps:
     - name: Check out samples
@@ -107,6 +107,7 @@ jobs:
         lfs: true
         submodules: true
         path: samples
+
     - name: Build samples
       uses: ./.github/actions/build
       with:
