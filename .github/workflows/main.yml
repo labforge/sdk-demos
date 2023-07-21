@@ -27,6 +27,7 @@
 # (5) Set a repo actions secret for CITOKEN
 # (5) Tag that runner as W64HIL
 # (6) Allow for executing shell scripts https:/go.microsoft.com/fwlink/?LinkID=135170
+# (7) Setup code-signing (Talk to Thomas for credentials and headless approach)
 name: ContinousIntegration
 
 on:

@@ -27,11 +27,13 @@ runs:
         repository: labforge/pleora_backing
         token: ${{ inputs.token }}
         path: ${{ inputs.path }}/dependencies
+
     - name: Setup dependencies
       shell: cmd
       working-directory: ${{ inputs.path }}
       run: |
         .github\actions\build\bootstrap.bat
+
     - name: Install eBUS Python
       shell: cmd
       working-directory: ${{ inputs.path }}
@@ -40,7 +42,7 @@ runs:
         ECHO "Install eBUS Python"
         pip install dependencies\ebus_python-6.3.0-6343-py310-none-win_amd64.whl
 
-    - name: Build examples
+    - name: Build example executables
       shell: cmd
       working-directory: ${{ inputs.path }}
       run: |
@@ -49,6 +51,26 @@ runs:
         REM Build distribution example (depends on most other samples)
         cd distribution
         call build.bat
+
+    - name: Sign executables
+      shell: cmd
+      run: |
+        signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ secrets.SIGNINGPASSWORD }} stereoviewer\install\stereoviewer.exe distribution\dist\main\updater.exe distribution\build\driver.exedist\main\driver.exe dist\main\driver.exe
+      if: secrets.SIGNINGPASSWORD
+
+    - name: Build installer
+      shell: cmd
+      run: |
+        call venv\Scripts\activate
+        REM Build distribution example (depends on most other samples)
+        cd distribution
+        call make_install.bat
+    
+    - name: Sign installer
+      shell: cmd
+      run: |
+        signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ secrets.SIGNINGPASSWORD }} distribution\build\updater.exe
+      if: secrets.SIGNINGPASSWORD
 
     - name: Upload installer artifact
       uses: actions/upload-artifact@v2
