@@ -19,6 +19,7 @@ runs:
       shell: cmd
       run:
         cd ${{ inputs.path }}
+
     - name: Check out private dependencies
       uses: actions/checkout@v3
       with:
@@ -50,7 +51,7 @@ runs:
 
         REM Build distribution example (depends on most other samples)
         cd distribution
-        call build.bat
+        build.bat
 
     - name: Sign executables
       shell: cmd
@@ -64,7 +65,7 @@ runs:
         call venv\Scripts\activate
         REM Build distribution example (depends on most other samples)
         cd distribution
-        call make_install.bat
+        make_install.bat
     
     - name: Sign installer
       shell: cmd
