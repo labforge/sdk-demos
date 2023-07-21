@@ -55,12 +55,15 @@ runs:
 
     - name: Sign executables
       shell: cmd
+      working-directory: ${{ inputs.path }}
+      if: secrets.SIGNINGPASSWORD
       run: |
         signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ secrets.SIGNINGPASSWORD }} stereoviewer\install\stereoviewer.exe distribution\dist\main\updater.exe distribution\build\driver.exedist\main\driver.exe dist\main\driver.exe
       #if: secrets.SIGNINGPASSWORD
 
     - name: Build installer
       shell: cmd
+      working-directory: ${{ inputs.path }}
       run: |
         call venv\Scripts\activate
         REM Build distribution example (depends on most other samples)
@@ -69,9 +72,10 @@ runs:
     
     - name: Sign installer
       shell: cmd
+      working-directory: ${{ inputs.path }}
+      if: secrets.SIGNINGPASSWORD
       run: |
         signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ secrets.SIGNINGPASSWORD }} distribution\build\updater.exe
-      #if: secrets.SIGNINGPASSWORD
 
     - name: Upload installer artifact
       uses: actions/upload-artifact@v2
