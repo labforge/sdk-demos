@@ -114,3 +114,4 @@ jobs:
         artifact_name: installer
         token: ${{ secrets.CITOKEN }}
         path: samples
+        signpassword: ${{ secrets.SIGNINGPASSWORD }}

@@ -11,6 +11,10 @@ inputs:
   path:
     description: 'Path to checked out sdk-samples'
     required: true
+  signpassword:
+    description: 'Password for signing'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -56,9 +60,7 @@ runs:
     - name: Sign executables
       shell: cmd
       working-directory: ${{ inputs.path }}
-      env:
-        signpassword: ${{ secrets.SIGNINGPASSWORD }}
-      if: ${{ env.signpassword != '' }}
+      if: ${{ inputs.signpassword != '' }}
       run: |
         signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ secrets.SIGNINGPASSWORD }} stereoviewer\install\stereoviewer.exe distribution\dist\main\updater.exe distribution\build\driver.exedist\main\driver.exe dist\main\driver.exe
       #if: secrets.SIGNINGPASSWORD
@@ -75,9 +77,7 @@ runs:
     - name: Sign installer
       shell: cmd
       working-directory: ${{ inputs.path }}
-      env:
-        signpassword: ${{ secrets.SIGNINGPASSWORD }}
-      if: ${{ env.signpassword != '' }}
+      if: ${{ inputs.signpassword != '' }}
       run: |
         signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ secrets.SIGNINGPASSWORD }} distribution\build\updater.exe
 
