@@ -62,7 +62,7 @@ runs:
       working-directory: ${{ inputs.path }}
       if: ${{ inputs.signpassword != '' }}
       run: |
-        signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ secrets.SIGNINGPASSWORD }} stereoviewer\install\stereoviewer.exe distribution\dist\main\updater.exe distribution\build\driver.exedist\main\driver.exe dist\main\driver.exe
+        signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ inputs.signpassword }} stereoviewer\install\stereoviewer.exe distribution\dist\main\updater.exe distribution\build\driver.exedist\main\driver.exe dist\main\driver.exe
       #if: secrets.SIGNINGPASSWORD
 
     - name: Build installer
@@ -79,7 +79,7 @@ runs:
       working-directory: ${{ inputs.path }}
       if: ${{ inputs.signpassword != '' }}
       run: |
-        signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ secrets.SIGNINGPASSWORD }} distribution\build\updater.exe
+        signtool sign /f C:\Users\labforge\Documents\labforge.cer /csp "eToken Base Cryptographic Provider" /td sha256 /fd sha256 /k ${{ inputs.signpassword }} distribution\build\updater.exe
 
     - name: Upload installer artifact
       uses: actions/upload-artifact@v2
