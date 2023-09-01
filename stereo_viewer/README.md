@@ -24,7 +24,7 @@ version of the utility is included as part of the [Bottlenose software](https://
 meson build
 ninja -C build
 ```
- * The executable for the utility can be found in ```build/src/calibrator```
+ * The executable for the utility can be found in ```build/src/stereo_viewer```
  * Make sure to set the eBUS environment variables before executing
 ```
 source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh

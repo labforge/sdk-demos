@@ -15,8 +15,8 @@
 project('Bottlenose Stereo Viewer', 'cpp',
     version : '0.1.100',
     license : 'Labforge',
-    meson_version : '>= 0.60.0',
-    default_options : ['cpp_std=c++20',
+    meson_version : '>= 0.52.0',
+    default_options : ['cpp_std=c++17',
                        'warning_level=3',
                        'buildtype=release',
                        'b_ndebug=if-release',
@@ -51,7 +51,7 @@ if host_machine.system() == 'linux'
   pleora_inc = ['-I/opt/pleora/ebus_sdk/Ubuntu-18.04-x86_64/include',
                 '-I/opt/pleora/ebus_sdk/Ubuntu-20.04-x86_64/include/',
                 '-I/opt/pleora/ebus_sdk/Ubuntu-22.04-x86_64/include/']
-  pleora_args = pleora_inc+'-DQT_GUI_LIB'
+  pleora_args = pleora_inc+['-DQT_GUI_LIB']
   PvBase = cpp.find_library('PvBase', required: true, dirs: pleora_dirs)
   PvBuffer = cpp.find_library('PvBuffer', required: true, dirs: pleora_dirs)
   PvSystem = cpp.find_library('PvSystem', required: true, dirs: pleora_dirs)
