@@ -60,7 +60,7 @@ jobs:
       - name: Install OS dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy
+          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy libopencv-dev
       - name: Check out Pleora SDK backing
         uses: actions/checkout@v3
         with:
@@ -85,12 +85,14 @@ jobs:
           ninja -C build
 
   build_cpp_samples_ubuntu_18:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    container: ubuntu:18.04
     steps:
       - name: Install OS dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy
+          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy libopencv-dev
+
       - name: Check out Pleora SDK backing
         uses: actions/checkout@v3
         with:
@@ -99,7 +101,7 @@ jobs:
           token: ${{ secrets.CITOKEN }}
           submodules: true
           path: pleora
-      - name: Install Pleora 20.04 SDK
+      - name: Install Pleora 18.04 SDK
         run: |
           sudo dpkg -i pleora/eBUS_SDK_Ubuntu-18.04-x86_64-6.3.0-6343.deb
       - name: Check out samples
