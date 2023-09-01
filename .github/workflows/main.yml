@@ -60,7 +60,7 @@ jobs:
       - name: Install OS dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson build-essential qtbase5-dev
+          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy
       - name: Check out Pleora SDK backing
         uses: actions/checkout@v3
         with:
@@ -90,7 +90,7 @@ jobs:
       - name: Install OS dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson build-essential qtbase5-dev
+          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy
       - name: Check out Pleora SDK backing
         uses: actions/checkout@v3
         with:
