@@ -53,6 +53,37 @@ jobs:
           meson build
           ninja -C build
 
+  # Confirm that build also works on legacy systems
+  build_cpp_samples_ubuntu_20:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install OS dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy libopencv-dev
+      - name: Check out Pleora SDK backing
+        uses: actions/checkout@v3
+        with:
+          repository: labforge/pleora_backing
+          lfs: true
+          token: ${{ secrets.CITOKEN }}
+          submodules: true
+          path: pleora
+      - name: Install Pleora 20.04 SDK
+        run: |
+          sudo dpkg -i pleora/eBUS_SDK_Ubuntu-20.04-x86_64-6.3.0-6343.deb
+      - name: Check out samples
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          submodules: true
+          path: samples
+      - name: Build stereo_viewer
+        run: |
+          cd samples/stereo_viewer
+          meson build
+          ninja -C build
+
   publish_sdk:
     runs-on: HIL
     steps:
