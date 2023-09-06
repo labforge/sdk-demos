@@ -15,27 +15,7 @@
 ::    limitations under the License.
 :: build utility and viewer as non-signed executables
 
-CD ..\stereo_viewer\
-CALL bundle.bat
-IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
-
-:: build driver installer
-CD ..\driver\
-CALL build.bat
-IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
-
-:: Build utility Qt python scripts
-CD ..\utility\
-CALL build.bat
-IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
-CD ..\distribution
-
-:: build python modules, including the driver installer
-python setup.py build
-IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
-
-:: package all the python modules into a python executable
-python setup.py build_app
+python setup.py build_installer
 IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 
 GOTO :normal_end

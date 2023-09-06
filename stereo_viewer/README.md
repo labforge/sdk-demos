@@ -16,7 +16,7 @@ version of the utility is included as part of the [Bottlenose software](https://
    * Build-essentials for Linux (tested with gcc-10 on Ubuntu 20.04, and 22.04)
    * [Microsoft Visual Studio Build tools for Visual Studio 17 or newer](https://aka.ms/vs/17/release/vs_buildtools.exe) 
 
-### Building the Utility in Ubuntu 22.04
+### Building the Utility in Ubuntu Linux
 
  * Install the above dependencies
  * Build utility
@@ -24,11 +24,11 @@ version of the utility is included as part of the [Bottlenose software](https://
 meson build
 ninja -C build
 ```
- * The executable for the utility can be found in ```build/src/calibrator```
+ * The executable for the utility can be found in ```build/src/stereo_viewer```
  * Make sure to set the eBUS environment variables before executing
 ```
 source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
-build/src/calibrator
+build/src/stereo_viewer
 ```
 
 ### Building the Utility in Microsoft Windows
