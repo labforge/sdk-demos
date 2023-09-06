@@ -37,22 +37,18 @@ EMAIL = "thomas@labforge.ca"
 COMPANY = "Labforge Inc" # Do not add "." this is used for directory names
 
 
-class BuildInstaller(Command):
-    description = 'Build the Installer using pyinstaller and NSIS'
+class BuildApp(Command):
+    description = 'Build the application using PyInstaller'
     user_options = [
         ('src=', None, 'Path to the Python sources'),
         ('spec=', None, 'Path to spec file for PyInstaller'),
-        ('out', None, 'Output file for the executable'),
-        ('script', None, 'Path to the Python sources'),
     ]
 
     def initialize_options(self):
         script_path = os.path.abspath(__file__)
         script_dir = os.path.dirname(script_path)
         self.src = script_dir
-        self.script = 'install.nsi'
         self.spec = 'install.spec'
-        self.out = os.path.join(script_dir, 'build', SHORTNAME+'.exe')
 
     def render_version(self):
         from jinja2 import Environment, FileSystemLoader
@@ -75,6 +71,28 @@ class BuildInstaller(Command):
         self.render_version()
         # Generate the executable
         subprocess.check_call(['pyinstaller', '--clean', '-y', self.spec])
+
+
+class BuildInstaller(Command):
+    description = 'Build the Installer using NSIS'
+    user_options = [
+        ('src=', None, 'Path to the Python sources'),
+        ('out', None, 'Output file for the executable'),
+        ('script', None, 'Path to the NSIS sources'),
+    ]
+
+    def initialize_options(self):
+        script_path = os.path.abspath(__file__)
+        script_dir = os.path.dirname(script_path)
+        self.src = script_dir
+        self.script = 'install.nsi'
+        self.out = os.path.join(script_dir, 'build', SHORTNAME+'.exe')
+
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
         # Generate the installer
         subprocess.check_call(['makensis',
                                '-DSRC=%s' % self.src,
@@ -126,7 +144,8 @@ setup(
         ],
     },
     cmdclass={
-        'installer': BuildInstaller,
+        'build_app': BuildApp,
+        'build_installer': BuildInstaller,
         'build_ext': BuildExt,
     },
     ext_modules=ext_modules,
