@@ -505,7 +505,7 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
   return false;
 }
 
-void MainWindow::newData(QImage &left, QImage &right, bool stereo, bool disparity) {
+void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo, bool disparity) {
   // Set the image
   cfg.widgetLeftSensor->setImage(left, false);
   cfg.widgetRightSensor->setVisible(stereo);
@@ -531,7 +531,7 @@ void MainWindow::newData(QImage &left, QImage &right, bool stereo, bool disparit
   bool is_saving = (!cfg.btnSave->isEnabled() && m_saving);
   bool is_recording = (!cfg.btnRecord->isEnabled() && !cfg.btnSave->isEnabled() && !m_saving);
   if(is_saving || is_recording){
-    m_data_thread->process(left, right);
+    m_data_thread->process(timestamp, left, right);
     
     if(is_saving){
       cfg.btnSave->setEnabled(true);
@@ -551,7 +551,7 @@ void MainWindow::newData(QImage &left, QImage &right, bool stereo, bool disparit
 
 void MainWindow::handleStereoData(bool is_disparity) {
   if(m_pipeline) {
-    list<tuple<Mat*, Mat*>> images;
+    list<tuple<Mat*, Mat*, uint64_t>> images;
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(true, is_disparity);
     
@@ -566,7 +566,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
         q2 = s_yuv2_to_qimage(get<1>(*it));
       }
       
-      newData(q1, q2, true, is_disparity);
+      newData(get<2>(*it), q1, q2, true, is_disparity);
       delete get<0>(*it);
       delete get<1>(*it);
     }
@@ -575,7 +575,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
 
 void MainWindow::handleMonoData(bool is_disparity){
   if(m_pipeline){
-    list<tuple<Mat*, Mat*>> images;
+    list<tuple<Mat*, Mat*, uint64_t>> images;
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(false, is_disparity);
 
@@ -590,7 +590,7 @@ void MainWindow::handleMonoData(bool is_disparity){
         q1 = s_yuv2_to_qimage(get<0>(*it));
       }
 
-      newData(q1, q2, false, is_disparity);
+      newData(get<2>(*it), q1, q2, false, is_disparity);
       delete get<0>(*it);
       delete get<1>(*it);
     }

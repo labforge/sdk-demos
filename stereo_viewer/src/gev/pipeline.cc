@@ -121,7 +121,7 @@ bool Pipeline::Start(bool calibrate) {
   return true;
 }
 
-size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *>> &out) {
+size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t>> &out) {
   QMutexLocker l(&m_image_lock);
   size_t res = m_images.size();
   for (auto it = m_images.begin(); it != m_images.end(); ++it) {
@@ -154,6 +154,7 @@ void Pipeline::run() {
     bool is_disparity = true;
     double lFrameRateVal = 0.0;
     double lBandwidthVal = 0.0;
+    uint64_t timestamp;
 
     // Retrieve next buffer
     PvResult lResult = m_stream->RetrieveBuffer( &lBuffer, &lOperationResult, 1500 );
@@ -167,6 +168,7 @@ void Pipeline::run() {
 
         m_fps->GetValue( lFrameRateVal );
         m_bandwidth->GetValue( lBandwidthVal );
+        timestamp = lBuffer-> GetTimestamp();
 
         IPvImage *img0, *img1;
         switch ( lBuffer->GetPayloadType() ) {
@@ -187,7 +189,8 @@ void Pipeline::run() {
               m_images.push_back(
                       make_tuple(
                               new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
-                              new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer())
+                              new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer()),
+                              timestamp
                               )
                               );
             }
@@ -208,7 +211,8 @@ void Pipeline::run() {
                 is_disparity = false;
               }
 
-              m_images.push_back( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()), new Mat()));
+              m_images.push_back( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()), 
+                                             new Mat(), timestamp));
             }
             
             emit monoReceived(is_disparity);

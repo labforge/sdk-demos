@@ -31,6 +31,7 @@
 #include "ui_stereo_viewer.h"
 #include "gev/pipeline.hpp"
 #include "io/data_thread.hpp"
+#include <cstdint>
 
 class PvGenBrowserWnd;
 
@@ -50,7 +51,7 @@ public Q_SLOTS:
   void handleRecording();
   void handleStereoData(bool is_disparity);
   void handleMonoData(bool is_disparity);
-  void newData(QImage &left, QImage &right, bool stereo=true, bool disparity=true);
+  void newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo=true, bool disparity=true);
   void onFolderSelect();
   void handleSave();
   void handleColormap();

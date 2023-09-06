@@ -47,11 +47,11 @@ DataThread::~DataThread()
     wait();
 }
 
-void DataThread::process(const QImage &left_image, const QImage &right_image){
+void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image){
     QMutexLocker locker(&m_mutex);
     //-check queue size  
     if(m_queue.size() < MAX_QUEUE_SIZE){
-      m_queue.enqueue({left_image, right_image});
+      m_queue.enqueue({timestamp, left_image, right_image});
     }
 
     if (!isRunning()) {
@@ -117,7 +117,7 @@ void DataThread::run() {
         ImageData imdata = m_queue.dequeue();
         m_mutex.unlock();
                 
-        QString suffix = QString::number(m_frame_counter)  + ".png";                
+        QString suffix = QString::number(m_frame_counter) + "_" + QString::number(imdata.timestamp)  + ".png";                
         if (m_stereo){
           if(m_disparity){
             imdata.left.save(m_left_fname + suffix, "PNG");
