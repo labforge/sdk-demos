@@ -156,6 +156,14 @@ static void s_load_colormap(QComboBox *cbx, int default_cm=COLORMAP_JET){
   }
 }
 
+static void s_load_format(QComboBox *cbx){
+  cbx->addItem("BMP (Windows Bitmap)"); 
+  cbx->addItem("PNG (Portable Network Graphics)"); 
+  cbx->addItem("JPG (Joint Photographic Experts Group)");  
+  cbx->addItem("PPM (Portable Pixmap)");
+  cbx->setCurrentIndex(0);
+}
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   // Will apply UI file changes
   cfg.setupUi(this);
@@ -180,6 +188,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.chkCalibrate->setChecked(true);
   cfg.chkCalibrate->setEnabled(true);
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
+  s_load_format(cfg.cbxFormat);
 
   cfg.btnDeviceControl->setEnabled(true);
   m_device_browser = new PvGenBrowserWnd;
@@ -226,6 +235,11 @@ MainWindow::~MainWindow(){
     PvDevice::Free(m_device);
     m_device = nullptr;
   }
+
+  if(m_data_thread){
+    m_data_thread.reset();
+    //m_data_thread->abort();
+  }
 }
 
 void MainWindow::handleStart() {
@@ -242,6 +256,7 @@ void MainWindow::handleStart() {
 }
 
 void MainWindow::handleStop(bool fatal) {
+  cfg.cbxFormat->setEnabled(true);
   if(!cfg.btnRecord->isEnabled()){
     cfg.btnSave->setEnabled(true);
     cfg.btnRecord->setEnabled(true);
@@ -258,7 +273,7 @@ void MainWindow::handleStop(bool fatal) {
   cfg.widgetLeftSensor->reset();
   cfg.widgetRightSensor->reset();
   cfg.chkCalibrate->setEnabled(true);
-  
+
   // Check if we lost connection
   if(!m_device || !m_device->IsConnected() || fatal) {
     handleDisconnect();
@@ -302,6 +317,7 @@ void MainWindow::handleRecording(){
   cfg.btnSave->setEnabled(false);
   cfg.editFolder->setEnabled(false);
   cfg.btnFolder->setEnabled(false);
+  cfg.cbxFormat->setEnabled(false);
   m_saving = false;
 
   if(!m_data_thread->setFolder(cfg.editFolder->text())){
@@ -313,7 +329,8 @@ void MainWindow::handleRecording(){
 void MainWindow::handleSave(){  
   cfg.btnSave->setEnabled(false);
   cfg.btnRecord->setEnabled(false);
-  m_saving = true;
+  cfg.cbxFormat->setEnabled(false);
+  m_saving = true;  
 
   if(!m_data_thread->setFolder(cfg.editFolder->text())){
     QMessageBox::critical(this, "Folder Error", "Could not create or find folder. Make sure you have appropriate write permission to the destination folder.");
@@ -531,11 +548,12 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool s
   bool is_saving = (!cfg.btnSave->isEnabled() && m_saving);
   bool is_recording = (!cfg.btnRecord->isEnabled() && !cfg.btnSave->isEnabled() && !m_saving);
   if(is_saving || is_recording){
-    m_data_thread->process(timestamp, left, right);
+    m_data_thread->process(timestamp, left, right, cfg.cbxFormat->currentText());
     
     if(is_saving){
       cfg.btnSave->setEnabled(true);
       cfg.btnRecord->setEnabled(true);
+      cfg.cbxFormat->setEnabled(true);
       m_saving = false;
     }
   }

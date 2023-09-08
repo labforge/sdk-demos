@@ -19,14 +19,13 @@
 */
 #include <QDir>
 #include "io/data_thread.hpp"
-
-#define MAX_QUEUE_SIZE 5
+#include <QtConcurrent/QtConcurrent>
 
 using namespace labforge::io;
 using namespace std;
 
 DataThread::DataThread(QObject *parent)
-    : QThread(parent), m_abort(false )
+    : QThread(parent), m_abort(false)
 {
     m_folder = "";
     m_left_subfolder = "cam0";
@@ -40,22 +39,19 @@ DataThread::DataThread(QObject *parent)
 DataThread::~DataThread()
 {
     m_mutex.lock();
-    m_abort = true;
-    m_condition.wakeOne();
+    m_abort = true;    
     m_mutex.unlock();
-
+    m_condition.wakeOne();
     wait();
 }
 
-void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image){
+void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image, QString format){
     QMutexLocker locker(&m_mutex);
-    //-check queue size  
-    if(m_queue.size() < MAX_QUEUE_SIZE){
-      m_queue.enqueue({timestamp, left_image, right_image});
-    }
-
+    
+    m_queue.enqueue({timestamp, left_image, right_image, format});
+    
     if (!isRunning()) {
-      start(LowPriority);
+      start(HighPriority);
     } else {        
       m_condition.wakeOne();
     }
@@ -106,31 +102,37 @@ void DataThread::setStereoDisparity(bool is_stereo, bool is_disparity){
   m_disparity = is_disparity;
 }
 
+static void save(QImage& image, QString& impath, QString& ext){
+  image.save(impath, ext.toStdString().c_str()); 
+}
+
 void DataThread::run() {    
     while(!m_abort) {
         m_mutex.lock();
         while(m_queue.isEmpty() && !m_abort){
            m_condition.wait(&m_mutex);
         }
-        if(m_abort) return;
 
         ImageData imdata = m_queue.dequeue();
         m_mutex.unlock();
-                
-        QString suffix = QString::number(m_frame_counter) + "_" + QString::number(imdata.timestamp)  + ".png";                
+
+        QString ext = imdata.format.left(imdata.format.indexOf(" (")); //"PNG";
+
+        QString suffix = QString::number(m_frame_counter) + "_" + QString::number(imdata.timestamp)  + "." + ext.toLower();                
         if (m_stereo){
-          if(m_disparity){
-            imdata.left.save(m_left_fname + suffix, "PNG");
-            imdata.right.save(m_disparity_fname + suffix, "PNG");                      
-          } else {
-            imdata.left.save(m_left_fname + suffix, "PNG");
-            imdata.right.save(m_right_fname + suffix, "PNG"); 
+          if(m_disparity){            
+            QFuture<void> future = QtConcurrent::run(save, imdata.right, m_disparity_fname + suffix, ext); 
+            imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str());
+          } else {                        
+            //QFuture<void> future = QtConcurrent::run(save, imdata.right, m_right_fname + suffix, ext); 
+            imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str());
+            imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str());
           }
         } else {
           if(m_disparity){
-            imdata.left.save(m_disparity_fname + suffix, "PNG");
+            imdata.left.save(m_disparity_fname + suffix, ext.toStdString().c_str());
           } else {
-            imdata.left.save(m_left_fname + suffix, "PNG");
+            imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str());
           }
         }        
         

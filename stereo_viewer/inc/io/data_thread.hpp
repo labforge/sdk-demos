@@ -34,6 +34,7 @@ struct ImageData
     uint64_t timestamp;
     QImage left;
     QImage right;
+    QString format;
 };
 
 class DataThread : public QThread
@@ -44,9 +45,9 @@ public:
     DataThread(QObject *parent = nullptr);
     ~DataThread();
 
-    void process(uint64_t timestamp, const QImage &left, const QImage &right);
+    void process(uint64_t timestamp, const QImage &left, const QImage &right, QString format);
     bool setFolder(QString new_folder);
-    void setStereoDisparity(bool is_stereo, bool is_disparity);
+    void setStereoDisparity(bool is_stereo, bool is_disparity);   
 
 signals:
     void dataReceived();
@@ -71,6 +72,7 @@ private:
     bool m_stereo;
     bool m_abort;
     bool m_disparity;
+
 };
 }
 
