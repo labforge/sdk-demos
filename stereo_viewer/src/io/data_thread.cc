@@ -127,9 +127,8 @@ void DataThread::run() {
             QFuture<void> future = QtConcurrent::run(save, imdata.right, m_disparity_fname + suffix, ext); 
             imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str());
           } else {                        
-            //QFuture<void> future = QtConcurrent::run(save, imdata.right, m_right_fname + suffix, ext); 
-            imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str());
-            imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str());
+            QFuture<void> future = QtConcurrent::run(save, imdata.right, m_right_fname + suffix, ext); 
+            imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str());            
           }
         } else {
           if(m_disparity){
