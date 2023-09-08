@@ -114,6 +114,7 @@ void DataThread::run() {
            m_condition.wait(&m_mutex);
         }
         if(m_abort){
+          m_mutex.unlock();
           break;
         }
         ImageData imdata = m_queue.dequeue();
