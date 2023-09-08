@@ -262,18 +262,8 @@ void Pipeline::run() {
 
   // Discard retrieved pairs
   {
-    QMutexLocker l(&m_image_lock);
-    uint32_t qsize = m_images.size();
-    for(uint32_t i = 0; i < qsize; ++i){
-      m_images.dequeue();
-    }
-    /*
-    for (auto it = m_images.begin(); it != m_images.end(); ++it) {
-      delete get<0>(*it);
-      delete get<1>(*it);
-    }
-    
-    m_images.clear();*/
+    QMutexLocker l(&m_image_lock);    
+    m_images.clear();
   }
 
   // Mark terminated

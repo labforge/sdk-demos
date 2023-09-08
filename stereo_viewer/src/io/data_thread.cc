@@ -40,6 +40,7 @@ DataThread::~DataThread()
 {
     m_mutex.lock();
     m_abort = true;    
+    m_queue.clear();
     m_mutex.unlock();
     m_condition.wakeOne();
     wait();
@@ -112,7 +113,9 @@ void DataThread::run() {
         while(m_queue.isEmpty() && !m_abort){
            m_condition.wait(&m_mutex);
         }
-
+        if(m_abort){
+          break;
+        }
         ImageData imdata = m_queue.dequeue();
         m_mutex.unlock();
 
