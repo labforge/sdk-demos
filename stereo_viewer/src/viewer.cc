@@ -221,6 +221,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   }
 
   m_data_thread = std::make_unique<labforge::io::DataThread>();
+
+  //status
+  resetStatusCounters();
+  showStatusMessage();
 }
 
 MainWindow::~MainWindow(){
@@ -237,8 +241,7 @@ MainWindow::~MainWindow(){
   }
 
   if(m_data_thread){
-    m_data_thread.reset();
-    //m_data_thread->abort();
+    m_data_thread.reset();    
   }
 }
 
@@ -251,12 +254,14 @@ void MainWindow::handleStart() {
       cfg.btnRecord->setEnabled(true);
       
       cfg.chkCalibrate->setEnabled(false);
+      resetStatusCounters();
     }
   }
 }
 
 void MainWindow::handleStop(bool fatal) {
   cfg.cbxFormat->setEnabled(true);
+  m_data_thread->stop();
   if(!cfg.btnRecord->isEnabled()){
     cfg.btnSave->setEnabled(true);
     cfg.btnRecord->setEnabled(true);
@@ -307,8 +312,7 @@ void MainWindow::OnDisconnected() {
   cfg.editMAC->setText(""); 
   cfg.editModel->setText("");
   cfg.chkCalibrate->setEnabled(true);
-  cfg.btnDeviceControl->setEnabled(false);
-  // FIXME: Clear data canvases
+  cfg.btnDeviceControl->setEnabled(false);  
 }
 
 void MainWindow::handleRecording(){  
@@ -389,7 +393,9 @@ void MainWindow::handleDisconnect() {
     PvDevice::Free(m_device);
     m_device = nullptr;
   }
+
   OnDisconnected();
+  m_data_thread->stop();
 }
 
 void MainWindow::handleColormap(){
@@ -509,6 +515,11 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
                   this,
                   &MainWindow::handleStop,
                   Qt::QueuedConnection);
+          connect(m_pipeline.get(),
+                  &Pipeline::onError,
+                  this,
+                  &MainWindow::handleError,
+                  Qt::QueuedConnection);
           return true;
         }
       } else {
@@ -567,14 +578,50 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool s
 
 }
 
+void MainWindow::showStatusMessage(){
+  auto end = std::chrono::system_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - m_startTime);
+  float esecs = elapsed.count();
+  float fps = (esecs > 0)? (m_frameCount/esecs): 0.00;
+  //float payload = (esecs > 0)? (m_frameCount * m_payload)/esecs : 0.00;
+  float payload = (m_payload * fps);
+  payload /= 1000*1000;  
+
+  QString message = "GVSP/UDP Stream: " + QString::number(m_frameCount) + " images" +
+                    "   " + QString::number(fps, 'f', 2) + " FPS" +
+                    "   " + QString::number(payload, 'f', 2) + " Mbps" +
+                    "   Error Count: " + QString::number(m_errorCount) + 
+                    "   Last Error: " + m_errorMsg;
+  this->statusBar()->showMessage(message);
+}
+
+void MainWindow::resetStatusCounters(){
+  m_frameCount = 0;
+  m_errorCount = 0;
+  m_payload = 0;
+  m_errorMsg = "";
+  m_startTime = std::chrono::system_clock::now();
+}
+
+void MainWindow::handleError(QString msg){
+  m_errorCount += 1;
+  m_errorMsg = msg;
+  showStatusMessage();
+}
+
 void MainWindow::handleStereoData(bool is_disparity) {
   if(m_pipeline) {
     list<tuple<Mat*, Mat*, uint64_t>> images;
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(true, is_disparity);
     
+    m_frameCount += 2*images.size();
+    //m_payload = (images.size() > 0)? get<0>(images[0]).cols * get<0>(images[0]).rows * 16:0;    
+    showStatusMessage();
+
     // Convert and display
     for (auto it = images.begin(); it != images.end(); ++it) {
+      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;   
       QImage q1 = s_yuv2_to_qimage(get<0>(*it));
       QImage q2;
 
@@ -596,6 +643,9 @@ void MainWindow::handleMonoData(bool is_disparity){
     list<tuple<Mat*, Mat*, uint64_t>> images;
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(false, is_disparity);
+
+    m_frameCount += images.size();
+    showStatusMessage();
 
     for (auto it = images.begin(); it != images.end(); ++it) {
       QImage q1; 

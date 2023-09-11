@@ -102,6 +102,12 @@ void DataThread::setStereoDisparity(bool is_stereo, bool is_disparity){
   m_disparity = is_disparity;
 }
 
+void DataThread::stop(){
+  QMutexLocker locker(&m_mutex);
+  m_queue.clear();
+  m_condition.wakeOne();
+}  
+
 void DataThread::run() {    
     while(!m_abort) {
         m_mutex.lock();

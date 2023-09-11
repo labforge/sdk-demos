@@ -219,15 +219,16 @@ void Pipeline::run() {
             break;
 
           default:
-            // Invalid buffer received
-            
+            // Invalid buffer received            
             cout << "FMT_ERR(" << consequitive_errors << ") :" << lResult.GetCodeString().GetAscii() << endl;
             consequitive_errors++;
+            emit onError(lResult.GetCodeString().GetAscii());
             break;
         }
       } else {
         // Non OK operational result, wait 100ms before retry
         consequitive_errors++;
+        emit onError(lOperationResult.GetCodeString().GetAscii());
         cout << "OP_ERR(" << consequitive_errors << ") :" << lOperationResult.GetCodeString().GetAscii() << endl;
         QThread::currentThread()->usleep(100*1000);
       }
@@ -238,6 +239,7 @@ void Pipeline::run() {
       // Retrieve buffer failure, wait 100ms before retry
       QThread::currentThread()->usleep(100*1000);
       consequitive_errors++;
+      emit onError(lResult.GetCodeString().GetAscii());
       cout << "BUF_ERR(" << consequitive_errors << ") :" << lResult.GetCodeString().GetAscii() << endl;
     }
     if(consequitive_errors > MAX_CONS_ERRORS_IN_ACQUISITION) {

@@ -29,6 +29,7 @@
 #include <QMutex>
 #include <variant>
 #include <QQueue>
+#include <QString>
 
 namespace labforge::gev {
 
@@ -49,6 +50,7 @@ namespace labforge::gev {
     void pairReceived(bool is_disparity);
     void monoReceived(bool is_disparity);
     void terminated(bool fatal = false);
+    void onError(QString msg);
 
   private:
     PvStreamGEV * m_stream;
