@@ -121,8 +121,9 @@ void DataThread::run() {
         ImageData imdata = m_queue.dequeue();
         m_mutex.unlock();
 
-        QString ext = imdata.format.left(imdata.format.indexOf(" ("));
-        QString suffix = QString::number(m_frame_counter) + "_" + QString::number(imdata.timestamp)  + "." + ext.toLower();                
+        QString ext = imdata.format.left(imdata.format.indexOf(" ("));        
+        QString padded_cntr = QString("%1").arg(m_frame_counter, 4, 10, QChar('0')); 
+        QString suffix =  padded_cntr + "_" + QString::number(imdata.timestamp)  + "." + ext.toLower();                
 
         if (m_stereo){
           if(m_disparity){            
