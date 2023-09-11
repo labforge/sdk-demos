@@ -90,7 +90,7 @@ Pipeline::~Pipeline() {
   }
   if(!m_buffers.empty()) {
     FreeStreamBuffers(&m_buffers);
-  }
+  }  
 }
 
 bool Pipeline::Start(bool calibrate) {  
@@ -123,13 +123,13 @@ bool Pipeline::Start(bool calibrate) {
 
 size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t>> &out) {
   QMutexLocker l(&m_image_lock);
-  size_t res = m_images.size();
-  for (auto it = m_images.begin(); it != m_images.end(); ++it) {
-    out.push_back(*it);
+  
+  if(!m_images.empty()){
+    tuple<Mat *, Mat *, uint64_t> image = m_images.dequeue();
+    out.push_back(image);
   }
-  m_images.clear();
 
-  return res;
+  return 0;
 }
 
 void Pipeline::Stop() {
@@ -169,7 +169,7 @@ void Pipeline::run() {
         m_fps->GetValue( lFrameRateVal );
         m_bandwidth->GetValue( lBandwidthVal );
         timestamp = lBuffer-> GetTimestamp();
-
+        
         IPvImage *img0, *img1;
         switch ( lBuffer->GetPayloadType() ) {
           case PvPayloadTypeMultiPart:
@@ -186,7 +186,7 @@ void Pipeline::run() {
               QMutexLocker l(&m_image_lock);
               // See if there is chunk data attached
               
-              m_images.push_back(
+              m_images.enqueue(
                       make_tuple(
                               new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
                               new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer()),
@@ -211,7 +211,7 @@ void Pipeline::run() {
                 is_disparity = false;
               }
 
-              m_images.push_back( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()), 
+              m_images.enqueue( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()), 
                                              new Mat(), timestamp));
             }
             
@@ -219,15 +219,16 @@ void Pipeline::run() {
             break;
 
           default:
-            // Invalid buffer received
-            
+            // Invalid buffer received            
             cout << "FMT_ERR(" << consequitive_errors << ") :" << lResult.GetCodeString().GetAscii() << endl;
             consequitive_errors++;
+            emit onError(lResult.GetCodeString().GetAscii());
             break;
         }
       } else {
         // Non OK operational result, wait 100ms before retry
         consequitive_errors++;
+        emit onError(lOperationResult.GetCodeString().GetAscii());
         cout << "OP_ERR(" << consequitive_errors << ") :" << lOperationResult.GetCodeString().GetAscii() << endl;
         QThread::currentThread()->usleep(100*1000);
       }
@@ -238,11 +239,13 @@ void Pipeline::run() {
       // Retrieve buffer failure, wait 100ms before retry
       QThread::currentThread()->usleep(100*1000);
       consequitive_errors++;
+      emit onError(lResult.GetCodeString().GetAscii());
       cout << "BUF_ERR(" << consequitive_errors << ") :" << lResult.GetCodeString().GetAscii() << endl;
     }
-    if(consequitive_errors > MAX_CONS_ERRORS_IN_ACQUISITION) {
+
+    /*if(consequitive_errors > MAX_CONS_ERRORS_IN_ACQUISITION) {
       m_start_flag = false;
-    }
+    }*/
   }
 
   // Tell the device to stop sending images.
@@ -262,12 +265,7 @@ void Pipeline::run() {
 
   // Discard retrieved pairs
   {
-    QMutexLocker l(&m_image_lock);
-    for (auto it = m_images.begin(); it != m_images.end(); ++it) {
-      delete get<0>(*it);
-      delete get<1>(*it);
-    }
-    
+    QMutexLocker l(&m_image_lock);    
     m_images.clear();
   }
 
