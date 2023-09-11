@@ -73,7 +73,6 @@ private:
     bool m_stereo;
     bool m_abort;
     bool m_disparity;
-
 };
 }
 

@@ -85,7 +85,7 @@ private:
   std::chrono::time_point<std::chrono::system_clock> m_startTime;
   uint32_t m_payload;
   QString m_errorMsg;
-  void showStatusMessage();
+  void showStatusMessage(uint32_t received=1);
   void resetStatusCounters();
 };
 

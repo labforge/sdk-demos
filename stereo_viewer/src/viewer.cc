@@ -580,16 +580,16 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool s
 
 }
 
-void MainWindow::showStatusMessage(){
+void MainWindow::showStatusMessage(uint32_t rcv_images){
   auto end = std::chrono::system_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - m_startTime);
   float esecs = elapsed.count();
   float fps = (esecs > 0)? (m_frameCount/esecs): 0.00;
   float payload = (m_payload * fps)/1000000;  
 
-  QString message = "GVSP/UDP Stream: " + QString::number(m_frameCount) + " images" +
+  QString message = "GVSP/UDP Stream: " + QString::number(rcv_images * m_frameCount) + " images" +
                     "   " + QString::number(fps, 'f', 2) + " FPS" +
-                    "   " + QString::number(payload, 'f', 2) + " Mbps" +
+                    "   " + QString::number(rcv_images * payload, 'f', 2) + " Mbps" +
                     "   Error Count: " + QString::number(m_errorCount) + 
                     "   Last Error: " + m_errorMsg;
   this->statusBar()->showMessage(message);
@@ -616,7 +616,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
     m_data_thread->setStereoDisparity(true, is_disparity);
     
     m_frameCount += images.size();
-    showStatusMessage();
+    showStatusMessage(2);
 
     // Convert and display
     for (auto it = images.begin(); it != images.end(); ++it) {
@@ -644,7 +644,7 @@ void MainWindow::handleMonoData(bool is_disparity){
     m_data_thread->setStereoDisparity(false, is_disparity);
 
     m_frameCount += images.size();
-    showStatusMessage();
+    showStatusMessage(1);
 
     for (auto it = images.begin(); it != images.end(); ++it) {
       m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;   

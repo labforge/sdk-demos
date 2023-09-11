@@ -242,9 +242,10 @@ void Pipeline::run() {
       emit onError(lResult.GetCodeString().GetAscii());
       cout << "BUF_ERR(" << consequitive_errors << ") :" << lResult.GetCodeString().GetAscii() << endl;
     }
-    if(consequitive_errors > MAX_CONS_ERRORS_IN_ACQUISITION) {
+
+    /*if(consequitive_errors > MAX_CONS_ERRORS_IN_ACQUISITION) {
       m_start_flag = false;
-    }
+    }*/
   }
 
   // Tell the device to stop sending images.
