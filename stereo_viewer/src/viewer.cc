@@ -583,9 +583,7 @@ void MainWindow::showStatusMessage(){
   auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - m_startTime);
   float esecs = elapsed.count();
   float fps = (esecs > 0)? (m_frameCount/esecs): 0.00;
-  //float payload = (esecs > 0)? (m_frameCount * m_payload)/esecs : 0.00;
-  float payload = (m_payload * fps);
-  payload /= 1000*1000;  
+  float payload = (m_payload * fps)/1000000;  
 
   QString message = "GVSP/UDP Stream: " + QString::number(m_frameCount) + " images" +
                     "   " + QString::number(fps, 'f', 2) + " FPS" +
@@ -615,8 +613,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(true, is_disparity);
     
-    m_frameCount += 2*images.size();
-    //m_payload = (images.size() > 0)? get<0>(images[0]).cols * get<0>(images[0]).rows * 16:0;    
+    m_frameCount += images.size();
     showStatusMessage();
 
     // Convert and display
@@ -648,6 +645,7 @@ void MainWindow::handleMonoData(bool is_disparity){
     showStatusMessage();
 
     for (auto it = images.begin(); it != images.end(); ++it) {
+      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;   
       QImage q1; 
       QImage q2; 
 
