@@ -156,12 +156,13 @@ static void s_load_colormap(QComboBox *cbx, int default_cm=COLORMAP_JET){
   }
 }
 
-static void s_load_format(QComboBox *cbx){
+static void s_load_format(QComboBox *cbx, bool isVisible=true){
   cbx->addItem("BMP (Windows Bitmap)"); 
   cbx->addItem("PNG (Portable Network Graphics)"); 
   cbx->addItem("JPG (Joint Photographic Experts Group)");  
   cbx->addItem("PPM (Portable Pixmap)");
   cbx->setCurrentIndex(0);
+  cbx->setVisible(isVisible);
 }
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
@@ -188,7 +189,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.chkCalibrate->setChecked(true);
   cfg.chkCalibrate->setEnabled(true);
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
-  s_load_format(cfg.cbxFormat);
+  s_load_format(cfg.cbxFormat,false);
+  cfg.lblFormat->setVisible(false);
 
   cfg.btnDeviceControl->setEnabled(true);
   m_device_browser = new PvGenBrowserWnd;
