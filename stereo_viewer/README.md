@@ -39,3 +39,12 @@ build/src/stereo_viewer
 
 ----
 Back to [Home](../README.md)
+
+### Error: EBus Pro Driver not Loaded 
+The EBus Pro Driver not loaded error when the EBUS SDK is not (properly) installed or loaded.
+Make sure you followed the instructions described [here](https://github.com/labforge/sdk-demos) to install the SDK.
+For Linux, make sure you set the GEV environment by running the following script:
+```
+source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
+```
+We also recommend you add the script into you `.bashrc` file.
