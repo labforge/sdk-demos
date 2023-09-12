@@ -159,7 +159,7 @@ static void s_load_colormap(QComboBox *cbx, int default_cm=COLORMAP_JET){
 static void s_load_format(QComboBox *cbx, bool isVisible=true){
   cbx->addItem("BMP (Windows Bitmap)", "BMP"); 
   cbx->addItem("PNG (Portable Network Graphics)", "PNG"); 
-  cbx->addItem("JPG (Joint Photographic Experts Group)", "JPG");  
+  cbx->addItem("JPEG (Joint Photographic Experts Group)", "JPG");  
   cbx->addItem("PPM (Portable Pixmap)", "PPM");
   cbx->setCurrentIndex(0);
   cbx->setVisible(isVisible);
