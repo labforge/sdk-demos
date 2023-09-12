@@ -297,6 +297,7 @@ void MainWindow::OnConnected() {
   cfg.btnRecord->setEnabled(false);
   cfg.btnSave->setEnabled(false);
   cfg.btnDeviceControl->setEnabled(true);
+  showStatusMessage();
   // FIXME: Clear data canvases
 }
 
@@ -398,6 +399,8 @@ void MainWindow::handleDisconnect() {
 
   OnDisconnected();
   m_data_thread->stop();
+  resetStatusCounters();  
+  this->statusBar()->clearMessage();  
 }
 
 void MainWindow::handleColormap(){
@@ -600,7 +603,7 @@ void MainWindow::resetStatusCounters(){
   m_errorCount = 0;
   m_payload = 0;
   m_errorMsg = "";
-  m_startTime = std::chrono::system_clock::now();
+  m_startTime = std::chrono::system_clock::now();  
 }
 
 void MainWindow::handleError(QString msg){
