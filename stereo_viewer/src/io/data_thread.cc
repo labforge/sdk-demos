@@ -26,35 +26,35 @@ using namespace std;
 DataThread::DataThread(QObject *parent)
     : QThread(parent), m_abort(false)
 {
-    m_folder = "";
-    m_left_subfolder = "cam0";
-    m_right_subfolder = "cam1";  
-    m_disparity_subfolder = "disparity";  
-    m_frame_counter = 0;        
-    m_stereo = true;
-    m_disparity = false;
+  m_folder = "";
+  m_left_subfolder = "cam0";
+  m_right_subfolder = "cam1";  
+  m_disparity_subfolder = "disparity";  
+  m_frame_counter = 0;        
+  m_stereo = true;
+  m_disparity = false;
 }
 
 DataThread::~DataThread()
 {
-    m_mutex.lock();
-    m_abort = true;    
-    m_queue.clear();
-    m_mutex.unlock();
-    m_condition.wakeOne();
-    wait();
+  m_mutex.lock();
+  m_abort = true;    
+  m_queue.clear();
+  m_mutex.unlock();
+  m_condition.wakeOne();
+  wait();
 }
 
 void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image, QString format){
-    QMutexLocker locker(&m_mutex);
-    
-    m_queue.enqueue({timestamp, left_image, right_image, format});
-    
-    if (!isRunning()) {
-      start(HighPriority);
-    } else {        
-      m_condition.wakeOne();
-    }
+  QMutexLocker locker(&m_mutex);
+  
+  m_queue.enqueue({timestamp, left_image, right_image, format});
+  
+  if (!isRunning()) {
+    start(HighPriority);
+  } else {        
+    m_condition.wakeOne();
+  }
 }
 
 bool getFilename(QString &fname, const QString &new_folder, const QString &subfolder, QString file_prefix){
@@ -109,38 +109,39 @@ void DataThread::stop(){
 }  
 
 void DataThread::run() {    
-    while(!m_abort) {
-        m_mutex.lock();
-        while(m_queue.isEmpty() && !m_abort){
-           m_condition.wait(&m_mutex);
-        }
-        if(m_abort){
-          m_mutex.unlock();
-          break;
-        }
-        ImageData imdata = m_queue.dequeue();
-        m_mutex.unlock();
-
-        QString ext = imdata.format.left(imdata.format.indexOf(" ("));        
-        QString padded_cntr = QString("%1").arg(m_frame_counter, 4, 10, QChar('0')); 
-        QString suffix =  padded_cntr + "_" + QString::number(imdata.timestamp)  + "." + ext.toLower();                
-
-        if (m_stereo){
-          if(m_disparity){            
-            imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str());         
-            imdata.right.save(m_disparity_fname + suffix, ext.toStdString().c_str());               
-          } else {       
-            imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str());            
-            imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str());
-          }
-        } else {
-          if(m_disparity){
-            imdata.left.save(m_disparity_fname + suffix, ext.toStdString().c_str());
-          } else {
-            imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str());
-          }
-        }        
-        
-        m_frame_counter += 1;               
+  while(!m_abort) {
+    m_mutex.lock();
+    while(m_queue.isEmpty() && !m_abort){
+      m_condition.wait(&m_mutex);
     }
+    if(m_abort){
+      m_mutex.unlock();
+      break;
+    }
+    ImageData imdata = m_queue.dequeue();
+    m_mutex.unlock();
+
+    QString ext = imdata.format.toUpper();        
+    QString padded_cntr = QString("%1").arg(m_frame_counter, 4, 10, QChar('0')); 
+    QString suffix =  padded_cntr + "_" + QString::number(imdata.timestamp)  + "." + ext.toLower();                
+    int32_t quality = (ext == "JPG") ? 90 : -1;
+
+    if (m_stereo){
+      if(m_disparity){            
+        imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);         
+        imdata.right.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);               
+      } else {       
+        imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);            
+        imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str(), quality);
+      }
+    } else {
+      if(m_disparity){
+        imdata.left.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);
+      } else {
+        imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);
+      }
+    }        
+    
+    m_frame_counter += 1;               
+  }
 }

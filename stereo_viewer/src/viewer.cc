@@ -157,10 +157,10 @@ static void s_load_colormap(QComboBox *cbx, int default_cm=COLORMAP_JET){
 }
 
 static void s_load_format(QComboBox *cbx, bool isVisible=true){
-  cbx->addItem("BMP (Windows Bitmap)"); 
-  cbx->addItem("PNG (Portable Network Graphics)"); 
-  cbx->addItem("JPG (Joint Photographic Experts Group)");  
-  cbx->addItem("PPM (Portable Pixmap)");
+  cbx->addItem("BMP (Windows Bitmap)", "BMP"); 
+  cbx->addItem("PNG (Portable Network Graphics)", "PNG"); 
+  cbx->addItem("JPEG (Joint Photographic Experts Group)", "JPG");  
+  cbx->addItem("PPM (Portable Pixmap)", "PPM");
   cbx->setCurrentIndex(0);
   cbx->setVisible(isVisible);
 }
@@ -189,8 +189,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.chkCalibrate->setChecked(true);
   cfg.chkCalibrate->setEnabled(true);
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
-  s_load_format(cfg.cbxFormat,false);
-  cfg.lblFormat->setVisible(false);
+  s_load_format(cfg.cbxFormat,true);
+  cfg.lblFormat->setVisible(true);
 
   cfg.btnDeviceControl->setEnabled(true);
   m_device_browser = new PvGenBrowserWnd;
@@ -297,6 +297,7 @@ void MainWindow::OnConnected() {
   cfg.btnRecord->setEnabled(false);
   cfg.btnSave->setEnabled(false);
   cfg.btnDeviceControl->setEnabled(true);
+  showStatusMessage();
   // FIXME: Clear data canvases
 }
 
@@ -398,6 +399,8 @@ void MainWindow::handleDisconnect() {
 
   OnDisconnected();
   m_data_thread->stop();
+  resetStatusCounters();  
+  this->statusBar()->clearMessage();  
 }
 
 void MainWindow::handleColormap(){
@@ -561,8 +564,7 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool s
   bool is_saving = (!cfg.btnSave->isEnabled() && m_saving);
   bool is_recording = (!cfg.btnRecord->isEnabled() && !cfg.btnSave->isEnabled() && !m_saving);
   if(is_saving || is_recording){
-    m_data_thread->process(timestamp, left, right, cfg.cbxFormat->currentText());
-    
+    m_data_thread->process(timestamp, left, right, cfg.cbxFormat->currentData().toString());        
     if(is_saving){
       cfg.btnSave->setEnabled(true);
       cfg.btnRecord->setEnabled(true);
@@ -586,12 +588,13 @@ void MainWindow::showStatusMessage(uint32_t rcv_images){
   float esecs = elapsed.count();
   float fps = (esecs > 0)? (m_frameCount/esecs): 0.00;
   float payload = (m_payload * fps)/1000000;  
+  QString warn = ((m_errorMsg == "AUTO_ABORTED") || (m_errorMsg == "TIMEOUT"))?"   Warning: Skipping":((m_errorMsg == "MISSING_PACKETS")?"   Last Warning: Resends":"");
+  QString last_error = (m_errorCount > 0)?("   Last Error: " + m_errorMsg):"";
 
   QString message = "GVSP/UDP Stream: " + QString::number(rcv_images * m_frameCount) + " images" +
                     "   " + QString::number(fps, 'f', 2) + " FPS" +
                     "   " + QString::number(rcv_images * payload, 'f', 2) + " Mbps" +
-                    "   Error Count: " + QString::number(m_errorCount) + 
-                    "   Last Error: " + m_errorMsg;
+                    "   Error Count: " + QString::number(m_errorCount) + last_error + warn;
   this->statusBar()->showMessage(message);
 }
 
@@ -600,7 +603,7 @@ void MainWindow::resetStatusCounters(){
   m_errorCount = 0;
   m_payload = 0;
   m_errorMsg = "";
-  m_startTime = std::chrono::system_clock::now();
+  m_startTime = std::chrono::system_clock::now();  
 }
 
 void MainWindow::handleError(QString msg){
