@@ -190,7 +190,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.chkCalibrate->setEnabled(true);
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
   s_load_format(cfg.cbxFormat, false);
-  cfg.lblFormat->setVisible(true);
+  cfg.lblFormat->setVisible(false);
 
   cfg.btnDeviceControl->setEnabled(true);
   m_device_browser = new PvGenBrowserWnd;
