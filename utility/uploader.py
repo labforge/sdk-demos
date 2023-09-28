@@ -210,10 +210,10 @@ if __name__ == '__main__':
 
     if options.type.lower() == "firmware":
         flag = "EnableUpdate"
-        status = "UpdateStatus"
+        status = ["UpdateStatus"]
     elif options.type.lower() == "dnn":
         flag = "EnableWeightsUpdate"
-        status = "WeightsStatus"
+        status = ["WeightsStatus", "DNNStatus"]
     else:
         print("Invalid type specified", file=sys.stderr)
         sys.exit(-1)
