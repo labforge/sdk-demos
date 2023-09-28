@@ -189,7 +189,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.chkCalibrate->setChecked(true);
   cfg.chkCalibrate->setEnabled(true);
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
-  s_load_format(cfg.cbxFormat,true);
+  s_load_format(cfg.cbxFormat, false);
   cfg.lblFormat->setVisible(true);
 
   cfg.btnDeviceControl->setEnabled(true);
