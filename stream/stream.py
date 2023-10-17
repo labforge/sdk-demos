@@ -22,9 +22,14 @@ __copyright__ = "Copyright 2023, Labforge Inc."
 import sys
 import eBUS as eb
 import cv2
+import numpy as np
+from collections import namedtuple
 
 BUFFER_COUNT = 16
 LABFORGE_MAC_RANGE = '8c:1f:64:d0:e'
+
+#LABFORGE_MAC_RANGE = 'e0:d5:5e:e1:2e:13'
+#LABFORGE_MAC_RANGE = 'b4:2e:99:ef:23:bd'
 
 def find_bottlenose(mac = None):
     """
@@ -105,9 +110,100 @@ def configure_stream_buffers(device, stream):
     # Queue all buffers in the stream
     for pvbuffer in buffer_list:
         stream.QueueBuffer(pvbuffer)
-    print(f"Created {buffer_count} buffers")
+    print(f"Created {buffer_count} buffers with payload {size}")
     return buffer_list
 
+def activate_stereo(device:eb.PvDeviceGEV, value:bool=True):
+    multipart = device.GetParameters().Get("GevSCCFGMultiPartEnabled")
+    if multipart:
+        multipart.SetValue(value)
+    
+def read_chunkID(device:eb.PvDeviceGEV, chunkName:str):                         
+    chunk_selector = device.GetParameters().Get("ChunkSelector")
+    
+    chunk_id = -1
+    res, chunk_reg = chunk_selector.GetEntryByName(chunkName)
+
+    if res.IsOK():
+        res, id = chunk_reg.GetValue()
+        if res.IsOK():                
+            chunk_id = id
+    
+    return chunk_id
+
+def has_chunkData(buffer:eb.PvBuffer, chunkID:int):    
+    if not buffer:
+        return False  
+        
+    if not buffer.HasChunks() or chunkID < 0:
+        return False
+                
+    for i in range(buffer.GetChunkCount()):
+        rs, cid = buffer.GetChunkIDByIndex(i)
+        if rs.IsOK() and cid == chunkID:
+            return True
+                
+    return False  
+
+def decode_chunk(device:eb.PvDeviceGEV, buffer:eb.PvBuffer, chunk:str):        
+    chunkData = None
+    chunkID = read_chunkID(device=device, chunkName=chunk)
+    
+    payload = buffer.GetPayloadType()
+    if payload == eb.PvPayloadTypeImage:
+        
+        if chunkID != -1:
+            if has_chunkData(buffer=buffer, chunkID=chunkID):
+                
+                data = buffer.GetChunkRawDataByID(chunkID)
+                if chunk == 'FeaturePoints':
+                    fields = ['x', 'y']
+                    Keypoint = namedtuple('Keypoint', fields)
+
+                    num_keypoints = int.from_bytes(data[0:4], 'little')
+                    chunkData = [Keypoint(int.from_bytes(data[i:(i + 2)], 'little'), 
+                                int.from_bytes(data[(i + 2):(i + 4)], 'little')) 
+                                for i in range(4, (num_keypoints + 1) * 4, 4)]    
+                                
+                elif chunk == 'FeatureDescriptors':
+                    fields = ['nbits', 'nbytes', 'data']
+                    Descriptor = namedtuple('Descriptors', fields)
+
+                    num_descr = int.from_bytes(data[0:4], 'little')
+                    len_descr = int.from_bytes(data[4:8], 'little')
+
+                    nbytes = 1
+                    while nbytes < len_descr:
+                        nbytes <<= 1
+
+                    chunkData = [Descriptor(len_descr, nbytes, data[i:(i + nbytes)]) for i in range(8, num_descr * 64, 64)]
+                    
+                elif chunk == 'BoundingBoxes':
+                    num_boxes = int.from_bytes(data[0:4], 'little')
+                    
+                    fields = ['cid', 'score', 'left', 'top', 'right', 'bottom', 'label']
+                    BBox = namedtuple('BBox', fields)
+
+                    chunkData = []                    
+                    for i in range(4, num_boxes * 48, 48):                        
+                        cid = int.from_bytes(data[i:i+4], 'little')
+                        score = np.frombuffer(data[i+4:i+8], dtype=np.float32)[0]
+                        left = int.from_bytes(data[i+8:i+12], 'little')
+                        top = int.from_bytes(data[i+12:i+16], 'little')
+                        right = int.from_bytes(data[i+16:i+20], 'little')
+                        bottom = int.from_bytes(data[i+20:i+24], 'little')                        
+                        label = bytearray(data[i+24:i+48]).decode('ascii').split('\0')[0]                        
+                        box = BBox(cid, score, left, top, right, bottom, label)
+                        chunkData.append(box)
+                        
+    elif payload == eb.PvPayloadTypeMultiPart:
+        if buffer.GetMultiPartContainer().GetPartCount() == 3:
+            kp_chunkdata = buffer.GetMultiPartContainer().GetPart(2).GetChunkData().GetChunkRawDataByID(16385)
+            ds_chunkdata = buffer.GetMultiPartContainer().GetPart(2).GetChunkData().GetChunkRawDataByID(16386)
+            print(f"chk: {kp_chunkdata} {ds_chunkdata}")
+            import pdb; pdb.set_trace() #16385 16386
+    
+    return chunkData
 
 def acquire_images(device, stream, nframes=None):
     # Get device parameters need to control streaming
@@ -137,6 +233,7 @@ def acquire_images(device, stream, nframes=None):
     # Acquire images until the user instructs us to stop.
     if nframes is None:
         print("\n<press a key to stop streaming>")
+
     while (nframes is None) or (nframes > 0):
         # Retrieve next pvbuffer
         result, pvbuffer, operational_result = stream.RetrieveBuffer(1000)
@@ -160,6 +257,18 @@ def acquire_images(device, stream, nframes=None):
                     image_data = image.GetDataPointer()
                     print(f" W: {image.GetWidth()} H: {image.GetHeight()} ", end='')
                     
+                    keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
+                    if keypoints is not None:
+                        print(f"Keypoints: {len(keypoints)} data: {keypoints[0]}")
+
+                    descriptors = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
+                    if descriptors is not None:
+                        print(f"Descriptors: {len(descriptors)} data: {descriptors[0]}")
+
+                    bboxes = decode_chunk(device=device, buffer=pvbuffer, chunk='BoundingBoxes')
+                    if bboxes is not None:
+                        print(f"BBoxes: {len(bboxes)} data: {bboxes[0]}")
+
                     if image.GetPixelType() == eb.PvPixelMono8:
                         display_image = True
 
@@ -191,6 +300,43 @@ def acquire_images(device, stream, nframes=None):
                     print(f" Raw Data with {pvbuffer.GetRawData().GetPayloadLength()} bytes", end='')
 
                 elif payload_type == eb.PvPayloadTypeMultiPart:
+                    image0 = pvbuffer.GetMultiPartContainer().GetPart(0).GetImage()
+                    image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
+                    image_data0 = image0.GetDataPointer()
+                    image_data1 = image1.GetDataPointer()
+                    print(f" W: {image0.GetWidth()} H: {image1.GetHeight()} ", end='')
+                    
+                    keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
+                    if keypoints is not None:
+                        print(f"Keypoints: {len(keypoints)} data: {keypoints[0]}")
+
+                    descriptors = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
+                    if descriptors is not None:
+                        print(f"Descriptors: {len(descriptors)} data: {descriptors[0]}")
+
+                    # Bottlenose sends as YUV422
+                    if image0.GetPixelType() == eb.PvPixelYUV422_8:
+                        image_data0 = cv2.cvtColor(image_data0, cv2.COLOR_YUV2BGR_YUY2)
+                        image_data1 = cv2.cvtColor(image_data1, cv2.COLOR_YUV2BGR_YUY2)
+                        display_image = True
+
+                    if nframes is None:
+                        if display_image:
+                            cv2.imshow("stream0", image_data0)
+                            cv2.imshow("stream1", image_data1)
+
+                    else:
+                        if not warning_issued:
+                            # display a message that video only display for Mono8 / RGB8 images
+                            print(f" ")
+                            print(f" Currently only Mono8 / RGB8 images are displayed", end='\r')
+                            print(f"")
+                            warning_issued = True
+
+                    if nframes is None:
+                        if cv2.waitKey(1) & 0xFF != 0xFF:
+                            break
+
                     print(f" Multi Part with {pvbuffer.GetMultiPartContainer().GetPartCount()} parts", end='')
 
                 else:
@@ -239,7 +385,8 @@ if __name__ == '__main__':
     connection_ID = find_bottlenose(mac_address)
     if connection_ID:
         device = connect_to_device(connection_ID)
-        if device:
+        if device:             
+            #activate_stereo(device=device, value=True)           
             stream = open_stream(connection_ID)
             if stream:
                 configure_stream(device, stream)
