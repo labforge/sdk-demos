@@ -166,7 +166,7 @@ def decode_chunk(device:eb.PvDeviceGEV, buffer:eb.PvBuffer, chunk:str):
                                 for i in range(4, (num_keypoints + 1) * 4, 4)]    
                                 
                 elif chunk == 'FeatureDescriptors':
-                    fields = ['nbits', 'nbytes', 'data']
+                    fields = ['nbits', 'nbytes', 'size', 'data']
                     Descriptor = namedtuple('Descriptors', fields)
 
                     num_descr = int.from_bytes(data[0:4], 'little')
@@ -175,8 +175,10 @@ def decode_chunk(device:eb.PvDeviceGEV, buffer:eb.PvBuffer, chunk:str):
                     nbytes = 1
                     while nbytes < len_descr:
                         nbytes <<= 1
-
-                    chunkData = [Descriptor(len_descr, nbytes, data[i:(i + nbytes)]) for i in range(8, num_descr * 64, 64)]
+                    nbytes //= 8
+                    
+                    descrData = [data[i:(i + nbytes)] for i in range(8, num_descr * 64, 64)]
+                    chunkData = Descriptor(len_descr, nbytes, num_descr, descrData)
                     
                 elif chunk == 'BoundingBoxes':
                     num_boxes = int.from_bytes(data[0:4], 'little')
@@ -255,18 +257,18 @@ def acquire_images(device, stream, nframes=None):
                 if payload_type == eb.PvPayloadTypeImage:
                     image = pvbuffer.GetImage()
                     image_data = image.GetDataPointer()
-                    print(f" W: {image.GetWidth()} H: {image.GetHeight()} ", end='')
+                    print(f" W: {image.GetWidth()} H: {image.GetHeight()} ")
                     
                     keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
-                    if keypoints is not None:
+                    if keypoints:
                         print(f"Keypoints: {len(keypoints)} data: {keypoints[0]}")
 
                     descriptors = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
                     if descriptors is not None:
-                        print(f"Descriptors: {len(descriptors)} data: {descriptors[0]}")
+                        print(f"Descriptors: {descriptors.size} len: {descriptors.nbits} data: {descriptors.data[0]}")
 
                     bboxes = decode_chunk(device=device, buffer=pvbuffer, chunk='BoundingBoxes')
-                    if bboxes is not None:
+                    if bboxes:
                         print(f"BBoxes: {len(bboxes)} data: {bboxes[0]}")
 
                     if image.GetPixelType() == eb.PvPixelMono8:
@@ -313,6 +315,10 @@ def acquire_images(device, stream, nframes=None):
                     descriptors = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
                     if descriptors is not None:
                         print(f"Descriptors: {len(descriptors)} data: {descriptors[0]}")
+
+                    bboxes = decode_chunk(device=device, buffer=pvbuffer, chunk='BoundingBoxes')
+                    if bboxes is not None:
+                        print(f"BBoxes: {len(bboxes)} data: {bboxes[0]}")
 
                     # Bottlenose sends as YUV422
                     if image0.GetPixelType() == eb.PvPixelYUV422_8:
