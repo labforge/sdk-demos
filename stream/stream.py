@@ -16,7 +16,8 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = "Thomas Reidemeister <thomas@labforge.ca>"
+__author__ = ("Thomas Reidemeister <thomas@labforge.ca>"
+              "G. M. Tchamgoue <martin@labforge.ca>")
 __copyright__ = "Copyright 2023, Labforge Inc."
 
 import sys
@@ -28,10 +29,8 @@ from collections import namedtuple
 BUFFER_COUNT = 16
 LABFORGE_MAC_RANGE = '8c:1f:64:d0:e'
 
-#LABFORGE_MAC_RANGE = 'e0:d5:5e:e1:2e:13'
-#LABFORGE_MAC_RANGE = 'b4:2e:99:ef:23:bd'
 
-def find_bottlenose(mac = None):
+def find_bottlenose(mac=None):
     """
     Finds a running Bottlenose sensor on the network.
     :param mac: Optional, provide the mac address of the Bottlenose to connect to
@@ -65,7 +64,7 @@ def connect_to_device(connection_id):
     # Connect to the GigE Vision or USB3 Vision device
     print("Connecting to device.")
     result, device = eb.PvDevice.CreateAndConnect(connection_id)
-    if device == None:
+    if device is None:
         print(f"Unable to connect to device: {result.GetCodeString()} ({result.GetDescription()})")
     return device
 
@@ -74,7 +73,7 @@ def open_stream(connection_ID):
     # Open stream to the GigE Vision or USB3 Vision device
     print("Opening stream from device.")
     result, stream = eb.PvStream.CreateAndOpen(connection_ID)
-    if stream == None:
+    if stream is None:
         print(f"Unable to stream from device. {result.GetCodeString()} ({result.GetDescription()})")
     return stream
 
@@ -106,106 +105,251 @@ def configure_stream_buffers(device, stream):
         pvbuffer.Alloc(size)
         # Add to external list - used to eventually release the buffers
         buffer_list.append(pvbuffer)
-    
+
     # Queue all buffers in the stream
     for pvbuffer in buffer_list:
         stream.QueueBuffer(pvbuffer)
     print(f"Created {buffer_count} buffers with payload {size}")
     return buffer_list
 
-def activate_stereo(device:eb.PvDeviceGEV, value:bool=True):
+
+def activate_stereo(device: eb.PvDeviceGEV, value: bool = True):
+    """
+    Turns on/off stereo transmission
+    """
     multipart = device.GetParameters().Get("GevSCCFGMultiPartEnabled")
     if multipart:
         multipart.SetValue(value)
-    
-def read_chunkID(device:eb.PvDeviceGEV, chunkName:str):                         
+
+
+def read_chunk_id(device: eb.PvDeviceGEV, chunk_name: str):
+    """
+    Given a chunk_name, returns the associated chunkID if found
+    return -1 otherwise
+    """
     chunk_selector = device.GetParameters().Get("ChunkSelector")
-    
+
     chunk_id = -1
-    res, chunk_reg = chunk_selector.GetEntryByName(chunkName)
+    res, chunk_reg = chunk_selector.GetEntryByName(chunk_name)
 
     if res.IsOK():
-        res, id = chunk_reg.GetValue()
-        if res.IsOK():                
-            chunk_id = id
-    
+        res, reg_id = chunk_reg.GetValue()
+        if res.IsOK():
+            chunk_id = reg_id
+
     return chunk_id
 
-def has_chunkData(buffer:eb.PvBuffer, chunkID:int):    
+
+def has_chunk_data(buffer: eb.PvBuffer, chunk_id: int):
+    """
+    Returns true if the input buffer has a chunk that matches the ID
+    """
     if not buffer:
-        return False  
-        
-    if not buffer.HasChunks() or chunkID < 0:
         return False
-                
+
+    if not buffer.HasChunks() or chunk_id < 0:
+        return False
+
     for i in range(buffer.GetChunkCount()):
         rs, cid = buffer.GetChunkIDByIndex(i)
-        if rs.IsOK() and cid == chunkID:
+        if rs.IsOK() and cid == chunk_id:
             return True
-                
-    return False  
 
-def decode_chunk(device:eb.PvDeviceGEV, buffer:eb.PvBuffer, chunk:str):        
-    chunkData = None
-    chunkID = read_chunkID(device=device, chunkName=chunk)
-    
+    return False
+
+
+def decode_chunk_keypoint(data):
+    """
+    decode the input buffer as keypoints.
+    each keypoint (x:uint16, y:uint16)
+    each set of keypoints comes from a designated frame
+    fid 0: LEFT_ONLY, 1: RIGHT_ONLY, 2: LEFT_STEREO, 3: RIGHT_STEREO
+    """
+    if len(data) == 0:
+        return None, 0
+
+    fields = ['x', 'y']
+    Keypoint = namedtuple('Keypoint', fields)
+
+    num_keypoints = int.from_bytes(data[0:2], 'little')
+    frame_id = int.from_bytes(data[2:4], 'little')
+    if num_keypoints <= 0 or num_keypoints > 0xFFFF:
+        return None, 0
+    if frame_id not in [0, 1, 2, 3]:
+        return None, 0
+
+    chunkdata = [Keypoint(int.from_bytes(data[i:(i + 2)], 'little'),
+                          int.from_bytes(data[(i + 2):(i + 4)], 'little'))
+                 for i in range(4, (num_keypoints + 1) * 4, 4)]
+
+    offset = 0
+    if frame_id in [2, 3]:
+        offset = (num_keypoints + 1) * 4
+
+    return {'fid': frame_id, 'data': chunkdata}, offset
+
+
+def decode_chunk_descriptor(data):
+    """
+    decode the input buffer as descriptor.
+    each descriptor can be up to 64 bytes long
+    each set of descriptor corresponds to a set of keypoints and comes from a designated frame
+    fid 0: LEFT_ONLY, 1: RIGHT_ONLY, 2: LEFT_STEREO, 3: RIGHT_STEREO
+    """
+    if len(data) == 0:
+        return None, 0
+
+    fields = ['fid', 'nbits', 'nbytes', 'size', 'data']
+    Descriptor = namedtuple('Descriptors', fields)
+
+    num_descr = int.from_bytes(data[0:2], 'little')
+    frame_id = int.from_bytes(data[2:4], 'little')
+    if num_descr <= 0 or num_descr > 0xFFFF:
+        return None, 0
+    if frame_id not in [0, 1, 2, 3]:
+        return None, 0
+
+    len_descr = int.from_bytes(data[4:8], 'little')
+
+    nbytes = 1
+    while nbytes < len_descr:
+        nbytes <<= 1
+    nbytes //= 8
+
+    descr_data = [data[i:(i + nbytes)] for i in range(8, num_descr * 64, 64)]
+    chunkdata = Descriptor(frame_id, len_descr, nbytes, num_descr, descr_data)
+
+    offset = 0
+    if frame_id in [2, 3]:
+        offset = (num_descr * 64) + 8
+
+    return chunkdata, offset
+
+
+def decode_chunk_bbox(data):
+    """
+    decode the input buffer as bounding boxes.
+    each set of boxes comes from a designated frame
+    fid 0: LEFT_ONLY, 1: RIGHT_ONLY, 2: LEFT_STEREO, 3: RIGHT_STEREO
+    """
+    if len(data) == 0:
+        return None, 0
+
+    frame_id = int.from_bytes(data[0:4], 'little')
+    num_boxes = int.from_bytes(data[4:8], 'little')
+    if num_boxes <= 0 or (num_boxes * 48 + 8) > len(data):
+        return None, 0
+    if frame_id not in [0, 1, 2, 3]:
+        return None, 0
+
+    fields = ['cid', 'score', 'left', 'top', 'right', 'bottom', 'label']
+    BBox = namedtuple('BBox', fields)
+
+    chunkdata = []
+    for i in range(8, num_boxes * 48, 48):
+        cid = int.from_bytes(data[i:i + 4], 'little')
+        score = np.frombuffer(data[i + 4:i + 8], dtype=np.float32)[0]
+        left = int.from_bytes(data[i + 8:i + 12], 'little')
+        top = int.from_bytes(data[i + 12:i + 16], 'little')
+        right = int.from_bytes(data[i + 16:i + 20], 'little')
+        bottom = int.from_bytes(data[i + 20:i + 24], 'little')
+        label = bytearray(data[i + 24:i + 48]).decode('ascii').split('\0')[0]
+        box = BBox(cid, score, left, top, right, bottom, label)
+        chunkdata.append(box)
+
+    return chunkdata, frame_id
+
+
+def decode_chunk_data(data: np.ndarray, chunk: str):
+    """
+    Decode the input data as a BN chunk data.
+    Returns the decoded chunk data. 
+    An empty array is returned is data can't be decoded.
+    """
+
+    chunk_data = None
+    if data is None:
+        return chunk_data
+
+    if chunk == 'FeaturePoints':
+        chunk_data = []
+        kp, offset = decode_chunk_keypoint(data)
+        if kp is not None:
+            chunk_data.append(kp)
+
+            if offset > 0:
+                data = data[offset:]
+                kp2, _ = decode_chunk_keypoint(data)
+                if kp2 is not None:
+                    chunk_data.append(kp2)
+
+    elif chunk == 'FeatureDescriptors':
+        chunk_data = []
+        descr, offset = decode_chunk_descriptor(data)
+        if descr is not None:
+            chunk_data.append(descr)
+            if offset > 0:
+                data = data[offset:]
+                descr2, _ = decode_chunk_descriptor(data)
+                if descr2 is not None:
+                    chunk_data.append(descr2)
+
+    elif chunk == 'BoundingBoxes':
+        chunk_data, _ = decode_chunk_bbox(data)
+
+    return chunk_data
+
+
+def get_chunkdata_by_id(rawdata: np.ndarray, chunk_id: int = 0):
+    """
+    In case of multipart transmission, returns the buffer attached to each ID.
+    """
+    chunk_data = []
+    if rawdata is None or len(rawdata) == 0 or chunk_id < 0:
+        return chunk_data
+
+    pos = len(rawdata) - 4
+    while pos >= 0:
+        chunk_len = int.from_bytes(rawdata[pos:(pos + 4)], 'big')  # transmitted as big-endian
+        if chunk_len > 0 and (pos - 4 - chunk_len) > 0:
+            pos -= 4
+            chunk_id = int.from_bytes(rawdata[pos:(pos + 4)], 'big')  # transmitted as big-endian   
+
+            pos -= chunk_len
+            if chunk_id == chunk_id:
+                chunk_data = rawdata[
+                             pos:(pos + chunk_len)]  # transmitted as little-endian
+                break
+
+        pos -= 4
+
+    return chunk_data
+
+
+def decode_chunk(device: eb.PvDeviceGEV, buffer: eb.PvBuffer, chunk: str):
+    """
+    Decode the chunk data attached to the input buffer.
+    Decoding happens only if the chunk corresponds to the requested chunk
+    """
+    rawdata = None
     payload = buffer.GetPayloadType()
+
+    chunk_id = read_chunk_id(device=device, chunk_name=chunk)
     if payload == eb.PvPayloadTypeImage:
-        
-        if chunkID != -1:
-            if has_chunkData(buffer=buffer, chunkID=chunkID):
-                
-                data = buffer.GetChunkRawDataByID(chunkID)
-                if chunk == 'FeaturePoints':
-                    fields = ['x', 'y']
-                    Keypoint = namedtuple('Keypoint', fields)
+        if has_chunk_data(buffer=buffer, chunk_id=chunk_id):
+            rawdata = buffer.GetChunkRawDataByID(chunk_id)
 
-                    num_keypoints = int.from_bytes(data[0:4], 'little')
-                    chunkData = [Keypoint(int.from_bytes(data[i:(i + 2)], 'little'), 
-                                int.from_bytes(data[(i + 2):(i + 4)], 'little')) 
-                                for i in range(4, (num_keypoints + 1) * 4, 4)]    
-                                
-                elif chunk == 'FeatureDescriptors':
-                    fields = ['nbits', 'nbytes', 'size', 'data']
-                    Descriptor = namedtuple('Descriptors', fields)
-
-                    num_descr = int.from_bytes(data[0:4], 'little')
-                    len_descr = int.from_bytes(data[4:8], 'little')
-
-                    nbytes = 1
-                    while nbytes < len_descr:
-                        nbytes <<= 1
-                    nbytes //= 8
-                    
-                    descrData = [data[i:(i + nbytes)] for i in range(8, num_descr * 64, 64)]
-                    chunkData = Descriptor(len_descr, nbytes, num_descr, descrData)
-                    
-                elif chunk == 'BoundingBoxes':
-                    num_boxes = int.from_bytes(data[0:4], 'little')
-                    
-                    fields = ['cid', 'score', 'left', 'top', 'right', 'bottom', 'label']
-                    BBox = namedtuple('BBox', fields)
-
-                    chunkData = []                    
-                    for i in range(4, num_boxes * 48, 48):                        
-                        cid = int.from_bytes(data[i:i+4], 'little')
-                        score = np.frombuffer(data[i+4:i+8], dtype=np.float32)[0]
-                        left = int.from_bytes(data[i+8:i+12], 'little')
-                        top = int.from_bytes(data[i+12:i+16], 'little')
-                        right = int.from_bytes(data[i+16:i+20], 'little')
-                        bottom = int.from_bytes(data[i+20:i+24], 'little')                        
-                        label = bytearray(data[i+24:i+48]).decode('ascii').split('\0')[0]                        
-                        box = BBox(cid, score, left, top, right, bottom, label)
-                        chunkData.append(box)
-                        
     elif payload == eb.PvPayloadTypeMultiPart:
         if buffer.GetMultiPartContainer().GetPartCount() == 3:
-            kp_chunkdata = buffer.GetMultiPartContainer().GetPart(2).GetChunkData().GetChunkRawDataByID(16385)
-            ds_chunkdata = buffer.GetMultiPartContainer().GetPart(2).GetChunkData().GetChunkRawDataByID(16386)
-            print(f"chk: {kp_chunkdata} {ds_chunkdata}")
-            import pdb; pdb.set_trace() #16385 16386
-    
-    return chunkData
+            chkbuffer = buffer.GetMultiPartContainer().GetPart(2).GetChunkData()
+            if chkbuffer.HasChunks():
+                dataptr = buffer.GetMultiPartContainer().GetPart(2).GetDataPointer()
+                rawdata = get_chunkdata_by_id(rawdata=dataptr, chunk_id=chunk_id)
+
+    chunk_data = decode_chunk_data(data=rawdata, chunk=chunk)
+
+    return chunk_data
+
 
 def acquire_images(device, stream, nframes=None):
     # Get device parameters need to control streaming
@@ -220,7 +364,7 @@ def acquire_images(device, stream, nframes=None):
 
     # Map a few GenICam stream stats counters
     frame_rate = stream_params.Get("AcquisitionRate")
-    bandwidth = stream_params[ "Bandwidth" ]
+    bandwidth = stream_params["Bandwidth"]
 
     # Enable streaming and send the AcquisitionStart command
     print("Enabling streaming and sending AcquisitionStart command.")
@@ -258,17 +402,17 @@ def acquire_images(device, stream, nframes=None):
                     image = pvbuffer.GetImage()
                     image_data = image.GetDataPointer()
                     print(f" W: {image.GetWidth()} H: {image.GetHeight()} ")
-                    
+
                     keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
-                    if keypoints:
-                        print(f"Keypoints: {len(keypoints)} data: {keypoints[0]}")
+                    for kp in keypoints:
+                        print(f"Keypoints: fid: {kp['fid']} len: {len(kp['data'])} data: {kp['data'][0]}")
 
                     descriptors = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
-                    if descriptors is not None:
-                        print(f"Descriptors: {descriptors.size} len: {descriptors.nbits} data: {descriptors.data[0]}")
+                    for descr in descriptors:
+                        print(f"Descriptors: fid: {descr.fid} {descr.size} len: {descr.nbits} data: {descr.data[10]}")
 
                     bboxes = decode_chunk(device=device, buffer=pvbuffer, chunk='BoundingBoxes')
-                    if bboxes:
+                    if bboxes is not None:
                         print(f"BBoxes: {len(bboxes)} data: {bboxes[0]}")
 
                     if image.GetPixelType() == eb.PvPixelMono8:
@@ -307,14 +451,14 @@ def acquire_images(device, stream, nframes=None):
                     image_data0 = image0.GetDataPointer()
                     image_data1 = image1.GetDataPointer()
                     print(f" W: {image0.GetWidth()} H: {image1.GetHeight()} ", end='')
-                    
+
                     keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
-                    if keypoints is not None:
-                        print(f"Keypoints: {len(keypoints)} data: {keypoints[0]}")
+                    for kp in keypoints:
+                        print(f"Keypoints: fid: {kp['fid']} len: {len(kp['data'])} data: {kp['data'][0]}")
 
                     descriptors = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
-                    if descriptors is not None:
-                        print(f"Descriptors: {len(descriptors)} data: {descriptors[0]}")
+                    for descr in descriptors:
+                        print(f"Descriptors: fid: {descr.fid} {descr.size} len: {descr.nbits} data: {descr.data[0]}")
 
                     bboxes = decode_chunk(device=device, buffer=pvbuffer, chunk='BoundingBoxes')
                     if bboxes is not None:
@@ -351,13 +495,13 @@ def acquire_images(device, stream, nframes=None):
                 print(f" {frame_rate_val:.1f} FPS  {bandwidth_val / 1000000.0:.1f} Mb/s     ", end='\r')
             else:
                 # Non OK operational result
-                print(f"{doodle[ doodle_index ]} {operational_result.GetCodeString()}       ", end='\r')
+                print(f"{doodle[doodle_index]} {operational_result.GetCodeString()}       ", end='\r')
             # Re-queue the pvbuffer in the stream object
             stream.QueueBuffer(pvbuffer)
 
         else:
             # Retrieve pvbuffer failure
-            print(f"{doodle[ doodle_index ]} {result.GetCodeString()}      ", end='\r')
+            print(f"{doodle[doodle_index]} {result.GetCodeString()}      ", end='\r')
 
         doodle_index = (doodle_index + 1) % 6
 
@@ -391,8 +535,8 @@ if __name__ == '__main__':
     connection_ID = find_bottlenose(mac_address)
     if connection_ID:
         device = connect_to_device(connection_ID)
-        if device:             
-            #activate_stereo(device=device, value=True)           
+        if device:
+            activate_stereo(device=device, value=True)
             stream = open_stream(connection_ID)
             if stream:
                 configure_stream(device, stream)
