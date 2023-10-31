@@ -313,10 +313,10 @@ def get_chunkdata_by_id(rawdata: np.ndarray, chunk_id: int = 0):
         chunk_len = int.from_bytes(rawdata[pos:(pos + 4)], 'big')  # transmitted as big-endian
         if chunk_len > 0 and (pos - 4 - chunk_len) > 0:
             pos -= 4
-            chunk_id = int.from_bytes(rawdata[pos:(pos + 4)], 'big')  # transmitted as big-endian   
+            chkid = int.from_bytes(rawdata[pos:(pos + 4)], 'big')  # transmitted as big-endian
 
             pos -= chunk_len
-            if chunk_id == chunk_id:
+            if chkid == chunk_id:
                 chunk_data = rawdata[
                              pos:(pos + chunk_len)]  # transmitted as little-endian
                 break
