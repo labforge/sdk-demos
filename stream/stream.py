@@ -199,7 +199,7 @@ def decode_chunk_descriptor(data):
     if len(data) == 0:
         return None, 0
 
-    fields = ['fid', 'nbits', 'nbytes', 'size', 'data']
+    fields = ['fid', 'nbits', 'nbytes', 'num', 'data']
     Descriptor = namedtuple('Descriptors', fields)
 
     num_descr = int.from_bytes(data[0:2], 'little')
@@ -409,7 +409,7 @@ def acquire_images(device, stream, nframes=None):
 
                     descriptors = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
                     for descr in descriptors:
-                        print(f"Descriptors: fid: {descr.fid} {descr.size} len: {descr.nbits} data: {descr.data[10]}")
+                        print(f"Descriptors: fid: {descr.fid} num: {descr.num} len: {descr.nbits} data: {descr.data[10]}")
 
                     bboxes = decode_chunk(device=device, buffer=pvbuffer, chunk='BoundingBoxes')
                     if bboxes is not None:
@@ -458,7 +458,7 @@ def acquire_images(device, stream, nframes=None):
 
                     descriptors = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
                     for descr in descriptors:
-                        print(f"Descriptors: fid: {descr.fid} {descr.size} len: {descr.nbits} data: {descr.data[0]}")
+                        print(f"Descriptors: fid: {descr.fid} num: {descr.num} len: {descr.nbits} data: {descr.data[0]}")
 
                     bboxes = decode_chunk(device=device, buffer=pvbuffer, chunk='BoundingBoxes')
                     if bboxes is not None:
