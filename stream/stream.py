@@ -117,6 +117,15 @@ def activate_stereo(device: eb.PvDeviceGEV, value: bool = True):
     """
     Turns on/off stereo transmission
     """
+
+    is_stereo = False
+    model = device.GetParameters().Get("DeviceModelName")
+
+    if model:
+        res, name = model.GetValue()
+        is_stereo = (res.IsOK() and name.endswith('_ST'))
+
+    value &= is_stereo
     multipart = device.GetParameters().Get("GevSCCFGMultiPartEnabled")
     if multipart:
         multipart.SetValue(value)
