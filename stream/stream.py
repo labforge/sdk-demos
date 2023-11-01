@@ -345,7 +345,6 @@ def decode_chunk(device: eb.PvDeviceGEV, buffer: eb.PvBuffer, chunk: str):
             if chkbuffer.HasChunks():
                 dataptr = buffer.GetMultiPartContainer().GetPart(2).GetDataPointer()
                 rawdata = get_chunkdata_by_id(rawdata=dataptr, chunk_id=chunk_id)
-
     chunk_data = decode_chunk_data(data=rawdata, chunk=chunk)
 
     return chunk_data
