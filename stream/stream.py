@@ -27,6 +27,8 @@ import numpy as np
 from collections import namedtuple
 from chunk_parser import decode_chunk
 
+import draw_chunkdata as chk
+
 BUFFER_COUNT = 16
 LABFORGE_MAC_RANGE = '8c:1f:64:d0:e'
 
@@ -205,6 +207,8 @@ def acquire_images(device, stream, nframes=None):
 
                     if nframes is None:
                         if display_image:
+                            if len(keypoints):
+                                image_data = chk.draw_keypoints(image_data, keypoints[0])
                             cv2.imshow("stream", image_data)
 
                     else:
@@ -248,6 +252,10 @@ def acquire_images(device, stream, nframes=None):
                     if matches is not None:
                         print(f"Matches: {len(matches.points)} data: ({matches.points[0].x}, {matches.points[0].y})")
 
+                    pointcloud = decode_chunk(device=device, buffer=pvbuffer, chunk='SparsePointCloud')
+                    if pointcloud is not None:
+                        print(f"PointCloud: {len(pointcloud)} data: ({pointcloud[0].x}, {pointcloud[0].y}, {pointcloud[0].z})")
+
                     # Bottlenose sends as YUV422
                     if image0.GetPixelType() == eb.PvPixelYUV422_8:
                         image_data0 = cv2.cvtColor(image_data0, cv2.COLOR_YUV2BGR_YUY2)
@@ -256,6 +264,10 @@ def acquire_images(device, stream, nframes=None):
 
                     if nframes is None:
                         if display_image:
+                            if len(keypoints):
+                                image_data0 = chk.draw_keypoints(image_data0, keypoints[0])
+                                image_data1 = chk.draw_keypoints(image_data1, keypoints[1])
+
                             cv2.imshow("stream0", image_data0)
                             cv2.imshow("stream1", image_data1)
 

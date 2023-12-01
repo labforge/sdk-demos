@@ -23,6 +23,7 @@ import eBUS as eb
 import numpy as np
 from collections import namedtuple
 
+
 def read_chunk_id(device: eb.PvDeviceGEV, chunk_name: str):
     """
     Given a chunk_name, returns the associated chunkID if found
@@ -66,7 +67,7 @@ def decode_chunk_keypoint(data):
     each set of keypoints comes from a designated frame
     fid 0: LEFT_ONLY, 1: RIGHT_ONLY, 2: LEFT_STEREO, 3: RIGHT_STEREO
     """
-    if len(data) == 0:
+    if data is None or len(data) == 0:
         return None, 0
 
     fields = ['x', 'y']
@@ -97,7 +98,7 @@ def decode_chunk_descriptor(data):
     each set of descriptor corresponds to a set of keypoints and comes from a designated frame
     fid 0: LEFT_ONLY, 1: RIGHT_ONLY, 2: LEFT_STEREO, 3: RIGHT_STEREO
     """
-    if len(data) == 0:
+    if data is None or len(data) == 0:
         return None, 0
 
     fields = ['fid', 'nbits', 'nbytes', 'num', 'data']
@@ -133,7 +134,7 @@ def decode_chunk_bbox(data):
     each set of boxes comes from a designated frame
     fid 0: LEFT_ONLY, 1: RIGHT_ONLY, 2: LEFT_STEREO, 3: RIGHT_STEREO
     """
-    if len(data) == 0:
+    if data is None or len(data) == 0:
         return None, 0
 
     frame_id = int.from_bytes(data[0:4], 'little')
@@ -160,6 +161,7 @@ def decode_chunk_bbox(data):
 
     return chunkdata, frame_id
 
+
 def decode_chunk_matches(data):
     """
     decode the input buffer as matched keypoints.
@@ -168,7 +170,7 @@ def decode_chunk_matches(data):
     0: COORDINATE_ONLY, 1: INDEX_ONLY
     2: COORDINATE_DETAILED, 3: INDEX_DETAILED
     """
-    if len(data) == 0:
+    if data is None or len(data) == 0:
         return None
 
     match_fields = ['layout', 'unmatched', 'points']
@@ -179,7 +181,7 @@ def decode_chunk_matches(data):
     unmatched = int.from_bytes(data[8:12], 'little')
     points = []
 
-    if layout < 2:
+    if 0 <= layout < 2:
         point_fields = ['x', 'y']
         Point = namedtuple('Point', point_fields)
         for i in range(12, 12 + count * 4, 4):
@@ -187,7 +189,7 @@ def decode_chunk_matches(data):
             y = int.from_bytes(data[i + 2:i + 4], 'little')
             pt = Point(x, y)
             points.append(pt)
-    else:
+    elif 1 < layout < 4:
         point_fields = ['x', 'y', 'x2', 'y2', 'd2', 'd1', 'n2', 'n1']
         PointDetailed = namedtuple('PointDetailed', point_fields)
         for i in range(12, 12 + count * 16, 16):
@@ -201,10 +203,37 @@ def decode_chunk_matches(data):
             n1 = int.from_bytes(data[i + 14:i + 16], 'little')
             pt = PointDetailed(x, y, x2, y2, d2, d1, n2, n1)
             points.append(pt)
+    else:
+        return None
 
     chunkdata = Matches(layout, unmatched, points)
 
     return chunkdata
+
+
+def decode_chunk_pointcloud(data):
+    """
+    decode the input buffer as set of 3D data.
+    """
+    if data is None or len(data) == 0:
+        return None
+
+    count = int.from_bytes(data[0:4], 'little')
+    points = []
+
+    Point3D = namedtuple('Point3D', ['x', 'y', 'z'])
+    dt = np.dtype(np.float32)
+    dt = dt.newbyteorder('<')
+    for i in range(4, 4 + count * 12, 12):
+        x = np.frombuffer(data[i:i + 4], dtype=dt)
+        y = np.frombuffer(data[i + 4:i + 8], dtype=dt)
+        z = np.frombuffer(data[i + 8:i + 12], dtype=dt)
+
+        pt = Point3D(x[0], y[0], z[0])
+        points.append(pt)
+
+    return points
+
 
 def decode_chunk_data(data: np.ndarray, chunk: str):
     """
@@ -214,9 +243,6 @@ def decode_chunk_data(data: np.ndarray, chunk: str):
     """
 
     chunk_data = None
-    if data is None:
-        return chunk_data
-
     if chunk == 'FeaturePoints':
         chunk_data = []
         kp, offset = decode_chunk_keypoint(data)
@@ -246,6 +272,9 @@ def decode_chunk_data(data: np.ndarray, chunk: str):
     elif chunk == 'FeatureMatches':
         chunk_data = decode_chunk_matches(data)
 
+    elif chunk == 'SparsePointCloud':
+        chunk_data = decode_chunk_pointcloud(data)
+
     return chunk_data
 
 
@@ -266,8 +295,7 @@ def get_chunkdata_by_id(rawdata: np.ndarray, chunk_id: int = 0):
 
             pos -= chunk_len
             if chkid == chunk_id:
-                chunk_data = rawdata[
-                             pos:(pos + chunk_len)]  # transmitted as little-endian
+                chunk_data = rawdata[pos:(pos + chunk_len)]  # transmitted as little-endian
                 break
 
         pos -= 4
@@ -279,6 +307,37 @@ def decode_chunk(device: eb.PvDeviceGEV, buffer: eb.PvBuffer, chunk: str):
     """
     Decode the chunk data attached to the input buffer.
     Decoding happens only if the chunk corresponds to the requested chunk
+
+    Keypoints:
+      returns a list of maximum two (for stereo) keypoint objects.
+      Each keypoint object contains all the feature points detected for a single frames
+      Each keypoint object has the following fields:
+
+      fid: the frameID with the following description:
+        0: LEFT_ONLY, for MONO camera or a stereo transmitting only the left image
+
+        1: RIGHT_ONLY, for a stereo camera transmitting only the right image
+
+        2: LEFT_STEREO, for the left image in a stereo transmission
+
+        3: RIGHT_STEREO, for the left image in a stereo transmission
+
+      data: a list of (x,y) feature points from the corresponding image
+
+    Descriptors:
+      returns a list of maximum two (for stereo) descriptor objects.
+      Each descriptor object has the following fields:
+
+      fid: the frame ID, same as Keypoint above
+
+      nbits: the number of bits of the AKAZE descriptor, varies from 128 to 486 bits.
+
+      nbytes: the number of bytes used to represent each descriptor, can be up to 64 bytes.
+      num: the number of descriptors in the object
+
+      data: a list containing the AKAZE descriptors, each descriptor occupies nbytes and is nbits long. This list
+      assumes the order in which the corresponding keypoint data is generated.
+
     """
     rawdata = None
     payload = buffer.GetPayloadType()
@@ -297,4 +356,3 @@ def decode_chunk(device: eb.PvDeviceGEV, buffer: eb.PvBuffer, chunk: str):
     chunk_data = decode_chunk_data(data=rawdata, chunk=chunk)
 
     return chunk_data
-
