@@ -15,9 +15,9 @@
 ::    limitations under the License.
 :: build utility and viewer as non-signed executables
 
-::CD ..\stereo_viewer\
-::CALL bundle.bat
-::IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
+CD ..\stereo_viewer\
+CALL bundle.bat
+IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
 
 :: build driver installer
 CD ..\driver\
