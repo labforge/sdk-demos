@@ -22,6 +22,8 @@ __copyright__ = "Copyright 2023, Labforge Inc."
 import eBUS as eb
 import numpy as np
 from collections import namedtuple
+import struct
+from datetime import datetime, timedelta
 
 
 def read_chunk_id(device: eb.PvDeviceGEV, chunk_name: str):
@@ -235,6 +237,28 @@ def decode_chunk_pointcloud(data):
     return points
 
 
+def decode_chunk_meta(data):
+    """
+    Decode the input buffer as meta data.
+    """
+    if data is None or len(data) == 0:
+        return None
+
+    fmt = '<QIff'
+    expected_size = struct.calcsize(fmt)
+
+    try:
+        real_time, count, gain, exposure = struct.unpack(fmt, data[:expected_size])
+    except:
+        return None
+
+    # Transform real_time to datetime
+    seconds = real_time // 1000
+    milliseconds = real_time % 1000
+    real_date = datetime.utcfromtimestamp(seconds) + timedelta(milliseconds=milliseconds)
+    return namedtuple('Meta', ['real_time', 'count', 'gain', 'exposure'])(real_date, count, gain, exposure)
+
+
 def decode_chunk_data(data: np.ndarray, chunk: str):
     """
     Decode the input data as a BN chunk data.
@@ -274,6 +298,9 @@ def decode_chunk_data(data: np.ndarray, chunk: str):
 
     elif chunk == 'SparsePointCloud':
         chunk_data = decode_chunk_pointcloud(data)
+
+    elif chunk == 'FrameInformation':
+        chunk_data = decode_chunk_meta(data)
 
     return chunk_data
 
