@@ -19,7 +19,6 @@
 __author__ = "G. M. Tchamgoue <martin@labforge.ca>"
 __copyright__ = "Copyright 2023, Labforge Inc."
 
-import numpy as np
 import cv2
 
 

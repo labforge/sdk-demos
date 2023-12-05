@@ -256,6 +256,10 @@ def acquire_images(device, stream, nframes=None):
                     if pointcloud is not None:
                         print(f"PointCloud: {len(pointcloud)} data: ({pointcloud[0].x}, {pointcloud[0].y}, {pointcloud[0].z})")
 
+                    meta = decode_chunk(device=device, buffer=pvbuffer, chunk='FrameInformation')
+                    if meta is not None:
+                        print(f"FrameInformation: {meta.real_time}, exposure = {meta.exposure:.2f} ms, gain = {meta.gain:.1f}")
+
                     # Bottlenose sends as YUV422
                     if image0.GetPixelType() == eb.PvPixelYUV422_8:
                         image_data0 = cv2.cvtColor(image_data0, cv2.COLOR_YUV2BGR_YUY2)
