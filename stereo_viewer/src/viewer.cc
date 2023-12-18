@@ -488,7 +488,7 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
           ).arg(MIN_MTU_REQUIRED);
           QMessageBox::warning(this, "Interface Error",
                                contents);
-          error = true;
+          //error = true;
         }
 
         if(error) {

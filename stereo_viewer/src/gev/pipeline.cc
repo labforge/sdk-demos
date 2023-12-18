@@ -22,6 +22,7 @@
 #include "gev/util.hpp"
 #include <stdexcept>
 #include <iostream>
+#include <bottlenose_chunk_parser.hpp>
 
 using namespace labforge::gev;
 using namespace std;
@@ -32,10 +33,35 @@ using namespace cv;
 Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * parent) : QThread(parent) {
   m_stream = stream_gev;
   m_device = device_gev;
+  PvResult res;
 
   // Enable Multipart
   if(!SetParameter(m_device, m_stream, "GevSCCFGMultiPartEnabled", true)) {
     throw runtime_error("Could not set multipart for stereo transfer");
+  }
+  // Enable meta information chunk for reliable timestamping
+  if(!SetParameter(m_device, m_stream, "ChunkModeActive", true)) {
+    throw runtime_error("Could not enable chunk data transfer");
+  }
+  // Select the appropriate enumerator for chunk
+  PvGenParameterArray *lDeviceParams = m_device->GetParameters();
+  PvGenParameter *param = lDeviceParams->Get("ChunkSelector");
+  if (param == nullptr) {
+    throw runtime_error("Could not enable access chunk selector");
+  }
+  PvGenType t;
+  res = param->GetType(t);
+  if (!res.IsOK()) {
+    throw runtime_error("Could not enable access chunk selector");
+  }
+  if(t == PvGenTypeEnum){
+    res = static_cast<PvGenEnum *>( param )->SetValue( "FrameInformation" );
+    if(!res.IsOK()) {
+      throw runtime_error("Could not select frame information chunk");
+    }
+  }
+  if(!SetParameter(m_device, m_stream, "ChunkEnable", true)) {
+    throw runtime_error("Could not enable frame information chunk");
   }
   CreateStreamBuffers(m_device, m_stream, &m_buffers, 16);
   if(m_buffers.empty()) {
@@ -43,7 +69,6 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
   }
  
   // Map start and stop and status commands
-  PvGenParameterArray *lDeviceParams = m_device->GetParameters();
   m_start = dynamic_cast<PvGenCommand *>( lDeviceParams->Get( "AcquisitionStart" ) );
   m_stop = dynamic_cast<PvGenCommand *>( lDeviceParams->Get( "AcquisitionStop" ) );
   m_pixformat = dynamic_cast<PvGenEnum *>( lDeviceParams->Get( "PixelFormat" ) );
@@ -155,6 +180,7 @@ void Pipeline::run() {
     double lFrameRateVal = 0.0;
     double lBandwidthVal = 0.0;
     uint64_t timestamp;
+    info_t info = {};
 
     // Retrieve next buffer
     PvResult lResult = m_stream->RetrieveBuffer( &lBuffer, &lOperationResult, 1500 );
@@ -169,6 +195,12 @@ void Pipeline::run() {
         m_fps->GetValue( lFrameRateVal );
         m_bandwidth->GetValue( lBandwidthVal );
         timestamp = lBuffer-> GetTimestamp();
+        if(chunkDecodeMetaInformation(lBuffer, &info)) {
+          std::cout << "Bottlenose time: " << ms_to_date_string(info.real_time) << endl;
+          timestamp = info.real_time;
+        } else {
+          cerr << "Could not decode meta information" << endl;
+        }
         
         IPvImage *img0, *img1;
         switch ( lBuffer->GetPayloadType() ) {
