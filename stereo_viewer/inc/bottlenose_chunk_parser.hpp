@@ -37,7 +37,11 @@ typedef enum {
 /**
  * @brief Meta information chunk data to decode timestamps.
  */
+#ifdef __GNUC__
 typedef struct __attribute__((packed, aligned(4))) {
+#else
+typedef struct {
+#endif // __GNUC__
   uint64_t real_time;
   uint32_t count;
 } info_t;
