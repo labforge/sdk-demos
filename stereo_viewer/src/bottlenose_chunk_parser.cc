@@ -21,6 +21,7 @@
 #include "bottlenose_chunk_parser.hpp"
 #include <cstring>
 #include <chrono>
+#include <sstream>
 
 /**
  * Check if a defined chunk ID is present.
