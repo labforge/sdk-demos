@@ -25,6 +25,7 @@ qtprocessed = qt5.preprocess(moc_headers: qt_app_headers,
 
 source_files = files([
   'viewer.cc',
+  'bottlenose_chunk_parser.cc',
   'io/util.cc',
   'gev/pipeline.cc',
   'gev/util.cc',
