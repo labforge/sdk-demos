@@ -70,13 +70,12 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 
 ## Python Code Samples
 
-| ***Sample***                            | ***Applicable Device(s)*** |
-|-----------------------------------------|----------------------------|
-| [Stream](stream/README.md)              | Mono, Stereo               |
-| [Keypoints](keypoints/README.md)        | Mono, Stereo               |
-| [Utility](utility/README.md)            | Mono, Stereo               |
-| [Driver](driver/README.md)              | Mono, Stereo               |
-| [distribution](distribution/README.md)  | Mono, Stereo               |
+| ***Sample***                             | ***Description***                                        | ***Applicable Device(s)*** |
+|------------------------------------------|----------------------------------------------------------|----------------------------|
+| [Stream](stream/README.md)               | Simple Streaming Example                                 | Mono, Stereo               |
+| [Keypoints](keypoints/README.md)         | Simple Keypoint Detection Demo                           | Mono, Stereo               |
+| [Utility](utility/README.md)             | Sources of the update utility for firmware and AI models | Mono, Stereo               |
+| [distribution](distribution/README.md)   | Sources of the utility distribution build                | Mono, Stereo               |
 
 ## Python API Documentation
 
@@ -86,7 +85,6 @@ in ```api_docs.zip``` the [releases section of this repository](https://github.c
 ## C++ Code Samples
 
 A comprehensive example on how to use the C++ API is our [ROS2 driver](https://github.com/labforge/bottlenose-ros2).
-
 
 ## License
 This project is licensed under the [Apache License, Version 2.0](LICENSE).
