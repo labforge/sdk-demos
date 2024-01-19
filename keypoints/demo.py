@@ -67,6 +67,14 @@ def enable_feature_points(device):
 
 
 def configure_fast9(device, max_num=1000, threshold=20, useNonMaxSuppression=True):
+    """
+    Configure the Fast9n keypoint detector
+    :param device: Device to configure
+    :param max_num: Maximum number of features to consider.
+    :param threshold: Quality threshold 0...100
+    :param useNonMaxSuppression:  Use non-maximum suppression
+    :return: None
+    """
     # Get device parameters
     device_params = device.GetParameters()
     KPCornerType = device_params.Get("KPCornerType")
