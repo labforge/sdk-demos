@@ -23,115 +23,12 @@ __copyright__ = "Copyright 2023, Labforge Inc."
 import sys
 import eBUS as eb
 import cv2
-import numpy as np
-from collections import namedtuple
+
+# reference common utility files
+sys.path.insert(1, '../common')
 from chunk_parser import decode_chunk
+from connection import init_bottlenose, deinit_bottlenose
 
-import draw_chunkdata as chk
-
-BUFFER_COUNT = 16
-LABFORGE_MAC_RANGE = '8c:1f:64:d0:e'
-
-
-def find_bottlenose(mac=None):
-    """
-    Finds a running Bottlenose sensor on the network.
-    :param mac: Optional, provide the mac address of the Bottlenose to connect to
-    :return: The connection ID of the bottlenose camera, if multiple cameras are found, the first one is returned
-    """
-    system = eb.PvSystem()
-    system.Find()
-
-    # Detect, select Bottlenose.
-    device_vector = []
-    for i in range(system.GetInterfaceCount()):
-        interface = system.GetInterface(i)
-        print(f"   {interface.GetDisplayID()}")
-        for j in range(interface.GetDeviceCount()):
-            device_info = interface.GetDeviceInfo(j)
-            if device_info.GetMACAddress().GetUnicode().find(LABFORGE_MAC_RANGE) == 0:
-                device_vector.append(device_info)
-                print(f"[{len(device_vector) - 1}]\t{device_info.GetDisplayID()}")
-                if mac is not None and mac == device_info.GetMACAddress().GetUnicode():
-                    return device_info.GetConnectionID()
-
-    if len(device_vector) == 0:
-        print(f"No Bottlenose camera found!")
-        return None
-
-    # Return first Bottlenose found
-    return device_vector[0].GetConnectionID()
-
-
-def connect_to_device(connection_id):
-    # Connect to the GigE Vision or USB3 Vision device
-    print("Connecting to device.")
-    result, device = eb.PvDevice.CreateAndConnect(connection_id)
-    if device is None:
-        print(f"Unable to connect to device: {result.GetCodeString()} ({result.GetDescription()})")
-    return device
-
-
-def open_stream(connection_ID):
-    # Open stream to the GigE Vision or USB3 Vision device
-    print("Opening stream from device.")
-    result, stream = eb.PvStream.CreateAndOpen(connection_ID)
-    if stream is None:
-        print(f"Unable to stream from device. {result.GetCodeString()} ({result.GetDescription()})")
-    return stream
-
-
-def configure_stream(device, stream):
-    # If this is a GigE Vision device, configure GigE Vision specific streaming parameters
-    if isinstance(device, eb.PvDeviceGEV):
-        # Negotiate packet size
-        device.NegotiatePacketSize()
-        # Configure device streaming destination
-        device.SetStreamDestination(stream.GetLocalIPAddress(), stream.GetLocalPort())
-
-
-def configure_stream_buffers(device, stream):
-    buffer_list = []
-    # Reading payload size from device
-    size = device.GetPayloadSize()
-
-    # Use BUFFER_COUNT or the maximum number of buffers, whichever is smaller
-    buffer_count = stream.GetQueuedBufferMaximum()
-    if buffer_count > BUFFER_COUNT:
-        buffer_count = BUFFER_COUNT
-
-    # Allocate buffers
-    for i in range(buffer_count):
-        # Create new pvbuffer object
-        pvbuffer = eb.PvBuffer()
-        # Have the new pvbuffer object allocate payload memory
-        pvbuffer.Alloc(size)
-        # Add to external list - used to eventually release the buffers
-        buffer_list.append(pvbuffer)
-
-    # Queue all buffers in the stream
-    for pvbuffer in buffer_list:
-        stream.QueueBuffer(pvbuffer)
-    print(f"Created {buffer_count} buffers with payload {size}")
-    return buffer_list
-
-
-def activate_stereo(device: eb.PvDeviceGEV, value: bool = True):
-    """
-    Turns on/off stereo transmission
-    """
-
-    is_stereo = False
-    model = device.GetParameters().Get("DeviceModelName")
-
-    if model:
-        res, name = model.GetValue()
-        is_stereo = (res.IsOK() and name.endswith('_ST'))
-
-    value &= is_stereo
-    multipart = device.GetParameters().Get("GevSCCFGMultiPartEnabled")
-    if multipart:
-        multipart.SetValue(value)
 
 def acquire_images(device, stream, nframes=None):
     # Get device parameters need to control streaming
@@ -207,8 +104,6 @@ def acquire_images(device, stream, nframes=None):
 
                     if nframes is None:
                         if display_image:
-                            if len(keypoints):
-                                image_data = chk.draw_keypoints(image_data, keypoints[0])
                             cv2.imshow("stream", image_data)
 
                     else:
@@ -268,10 +163,6 @@ def acquire_images(device, stream, nframes=None):
 
                     if nframes is None:
                         if display_image:
-                            if len(keypoints):
-                                image_data0 = chk.draw_keypoints(image_data0, keypoints[0])
-                                image_data1 = chk.draw_keypoints(image_data1, keypoints[1])
-
                             cv2.imshow("stream0", image_data0)
                             cv2.imshow("stream1", image_data1)
 
@@ -312,16 +203,6 @@ def acquire_images(device, stream, nframes=None):
     print("\nSending AcquisitionStop command to the Bottlenose")
     stop.Execute()
 
-    # Disable streaming on the Bottlenose
-    print("Disable streaming on the controller.")
-    device.StreamDisable()
-
-    # Abort all buffers from the stream and dequeue
-    print("Aborting buffers still in stream")
-    stream.AbortQueuedBuffers()
-    while stream.GetQueuedBufferCount() > 0:
-        result, pvbuffer, lOperationalResult = stream.RetrieveBuffer()
-
 
 if __name__ == '__main__':
     mac_address = None
@@ -332,24 +213,6 @@ if __name__ == '__main__':
         nframes = int(sys.argv[2])
 
     print("Simple Streaming Sample")
-    connection_ID = find_bottlenose(mac_address)
-    if connection_ID:
-        device = connect_to_device(connection_ID)
-        if device:
-            activate_stereo(device=device, value=True)
-            stream = open_stream(connection_ID)
-            if stream:
-                configure_stream(device, stream)
-                buffer_list = configure_stream_buffers(device, stream)
-                acquire_images(device, stream, nframes)
-                buffer_list.clear()
-
-                # Close the stream
-                print("Closing stream")
-                stream.Close()
-                eb.PvStream.Free(stream)
-
-            # Disconnect the device
-            print("Disconnecting Bottlenose")
-            device.Disconnect()
-            eb.PvDevice.Free(device)
+    device, stream, buffers = init_bottlenose(mac_address, stereo=True)
+    acquire_images(device, stream, nframes)
+    deinit_bottlenose(device, stream, buffers)
