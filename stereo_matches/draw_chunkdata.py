@@ -20,16 +20,8 @@ __author__ = "G. M. Tchamgoue <martin@labforge.ca>"
 __copyright__ = "Copyright 2023, Labforge Inc."
 
 import cv2
+import numpy as np
 
-
-def draw_keypoints(image, keypoints: dict = None):
-    if keypoints is None:
-        return
-
-    # convert to opencv KeyPoint datatype
-    kp = [cv2.KeyPoint(x=point.x, y=point.y, size=15) for point in keypoints['data']]
-    image = cv2.drawKeypoints(image, kp, 0, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    return image
 
 def draw_matches(image1: np.ndarray, image2: np.ndarray, keypoints1: dict, keypoints2: dict, matches):
     """
@@ -41,31 +33,29 @@ def draw_matches(image1: np.ndarray, image2: np.ndarray, keypoints1: dict, keypo
     """
 
     def find_index(point, keypoints: dict, mtype: int, bad_value=65535):    
-        if((mtype == 0) or (mtype == 2)):
+        if (mtype == 0) or (mtype == 2):
             for idx, kp in enumerate(keypoints['data']):
                 if point.x == kp.x and point.y == kp.y:
                     return idx, True
-        elif((mtype == 1) or (mtype == 3)):
+        elif (mtype == 1) or (mtype == 3):
             return point.x, point.x != bad_value
 
         return 0, False
 
-
-    if keypoints1 is None or keypoints2 is None or matches is None:
-        return
-    
     matching_indexes = []
-    for idx in range(len(keypoints1['data'])):
-        matched_point = matches.points[idx]
+    kp1 = []
+    kp2 = []
+    if len(keypoints1) > 0 and len(keypoints2) > 0 and len(matches) > 0:
+        for idx in range(len(keypoints1['data'])):
+            matched_point = matches.points[idx]
 
-        mindex, found = find_index(point=matched_point, keypoints=keypoints2, mtype=matches.layout, bad_value=matches.unmatched)
-        if found:
-            matching_indexes.append((idx, mindex))
-            #print('Index found {0} at {1}'.format(match_point,mindex))
-    # print(matching_indexes)
+            mindex, found = find_index(point=matched_point, keypoints=keypoints2, mtype=matches.layout,
+                                       bad_value=matches.unmatched)
+            if found:
+                matching_indexes.append((idx, mindex))
 
-    kp1 = [cv2.KeyPoint(x=pt.x, y=pt.y, size=1) for pt in keypoints1['data']]
-    kp2 = [cv2.KeyPoint(x=pt[0], y=pt[1], size=1) for pt in keypoints2['data']]
+        kp1 = [cv2.KeyPoint(x=pt.x, y=pt.y, size=1) for pt in keypoints1['data']]
+        kp2 = [cv2.KeyPoint(x=pt[0], y=pt[1], size=1) for pt in keypoints2['data']]
 
     good = [cv2.DMatch(_imgIdx=0, _queryIdx=sidx, _trainIdx=midx, _distance=0)
             for (sidx, midx) in matching_indexes]
@@ -73,7 +63,4 @@ def draw_matches(image1: np.ndarray, image2: np.ndarray, keypoints1: dict, keypo
     results = cv2.drawMatches(image1, kp1, image2, kp2, matches1to2=good,
                               outImg=results, flags=cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
 
-    #save_file = save_file.replace(
-    #    '_matches', '_matches_' + left_corners['type'].lower())
-    #cv2.imwrite(save_file, results)
     return results

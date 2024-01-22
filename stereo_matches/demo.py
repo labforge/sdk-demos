@@ -16,7 +16,7 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = ("Thomas Reidemeister <thomas@labforge.ca>"
+__author__ = ("Thomas Reidemeister <thomas@labforge.ca>",
               "G. M. Tchamgoue <martin@labforge.ca>")
 __copyright__ = "Copyright 2024, Labforge Inc."
 
@@ -50,27 +50,26 @@ def handle_buffer(pvbuffer, device):
                 cvimage.append(image_data)
 
         keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
-        if len(keypoints) > 0:
-            for i in range(len(idata)):
-                cvimage[i] = chk.draw_keypoints(cvimage[i], keypoints[i])
+        # Mark missing keypoints as missing keypoints l, r
+        if len(keypoints) == 0:
+            keypoints = [[], []]
+            matches = []
+            print("No key points found")
         else:
-            print("No keypoints found")
+            matches = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureMatches')
+            # Optional check if matches are found
+            found = False
+            if len(matches) > 0:
+                for pt in matches.points:
+                    if (pt.x != matches.unmatched) and (pt.y != matches.unmatched):
+                        found = True
+            if not found:
+                print("No matches found")
 
-        for i in range(len(idata)):
-            cv2.imshow(f"Camera {i}", cvimage[i])
-
-        matches = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureMatches')
-        found = False
-        if matches is not None:
-            print(f"Matches: {len(matches.points)} data: ({matches.points[0].x}, {matches.points[0].y})")
-            for i, pt in enumerate(matches.points):
-                if (pt.x != matches.unmatched) and (pt.y != matches.unmatched):
-                    print(f"Match {i}: ({pt.x}, {pt.y})")
-                    found = True
-        if not found:
-            print("No matches found")
-        else:
-            import pdb; pdb.set_trace()
+        matches = chk.draw_matches(cvimage[0], cvimage[1], keypoints[0], keypoints[1], matches)
+        cv2.imshow("Matches", matches)
+        # Optional resize output window to fit screen
+        cv2.resizeWindow("Matches", 1600, 960)
 
 
 def enable_feature_points_and_matches(device):
@@ -173,6 +172,8 @@ if __name__ == '__main__':
     if len(sys.argv) >= 2:
         mac_address = sys.argv[1]
 
+    cv2.namedWindow("Matches", cv2.WINDOW_NORMAL)
+    cv2.moveWindow("Matches", 0, 0)
     device, stream, buffers = init_bottlenose(mac_address, True)
     if device is not None:
         run_demo(device, stream)
