@@ -78,7 +78,7 @@ def decode_chunk_keypoint(data):
     each set of keypoints comes from a designated frame
     fid 0: LEFT_ONLY, 1: RIGHT_ONLY, 2: LEFT_STEREO, 3: RIGHT_STEREO
     """
-    if data is None or len(data) == 0:
+    if data is None or len(data) == 0:        
         return None, 0
 
     fields = ['x', 'y']
@@ -86,9 +86,10 @@ def decode_chunk_keypoint(data):
 
     num_keypoints = int.from_bytes(data[0:2], 'little')
     frame_id = int.from_bytes(data[2:4], 'little')
-    if num_keypoints <= 0 or num_keypoints > 0xFFFF:
+    
+    if num_keypoints <= 0 or num_keypoints > 0xFFFF:        
         return None, 0
-    if frame_id not in [0, 1, 2, 3]:
+    if frame_id not in [0, 1, 2, 3]:        
         return None, 0
 
     chunkdata = [Keypoint(int.from_bytes(data[i:(i + 2)], 'little'),
@@ -181,10 +182,10 @@ def decode_chunk_matches(data):
     0: COORDINATE_ONLY, 1: INDEX_ONLY
     2: COORDINATE_DETAILED, 3: INDEX_DETAILED
     :return Empty list in case of no matches, or a Match type
-    """
+    """    
     if data is None or len(data) == 0:
         return []
-
+    
     match_fields = ['layout', 'unmatched', 'points']
     Matches = namedtuple('Matches', match_fields)
 
@@ -192,7 +193,7 @@ def decode_chunk_matches(data):
     layout = int.from_bytes(data[4:8], 'little')
     unmatched = int.from_bytes(data[8:12], 'little')
     points = []
-
+        
     if 0 <= layout < 2:
         point_fields = ['x', 'y']
         Point = namedtuple('Point', point_fields)
@@ -215,11 +216,10 @@ def decode_chunk_matches(data):
             n1 = int.from_bytes(data[i + 14:i + 16], 'little')
             pt = PointDetailed(x, y, x2, y2, d2, d1, n2, n1)
             points.append(pt)
-    else:
+    else:        
         return []
 
-    chunkdata = Matches(layout, unmatched, points)
-
+    chunkdata = Matches(layout, unmatched, points)    
     return chunkdata
 
 
@@ -283,9 +283,8 @@ def decode_chunk_data(data: np.ndarray, chunk: str):
         if kp is not None:
             chunk_data.append(kp)
 
-            if offset > 0:
-                data = data[offset:]
-                kp2, _ = decode_chunk_keypoint(data)
+            if offset > 0:                
+                kp2, _ = decode_chunk_keypoint(data[offset:])
                 if kp2 is not None:
                     chunk_data.append(kp2)
 
@@ -294,9 +293,8 @@ def decode_chunk_data(data: np.ndarray, chunk: str):
         descr, offset = decode_chunk_descriptor(data)
         if descr is not None:
             chunk_data.append(descr)
-            if offset > 0:
-                data = data[offset:]
-                descr2, _ = decode_chunk_descriptor(data)
+            if offset > 0:                
+                descr2, _ = decode_chunk_descriptor(data[offset:])
                 if descr2 is not None:
                     chunk_data.append(descr2)
 

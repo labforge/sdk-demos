@@ -41,10 +41,11 @@ def draw_matches(image1: np.ndarray, image2: np.ndarray, keypoints1: dict, keypo
             return point.x, point.x != bad_value
 
         return 0, False
-
+    
     matching_indexes = []
     kp1 = []
     kp2 = []
+
     if len(keypoints1) > 0 and len(keypoints2) > 0 and len(matches) > 0:
         for idx in range(len(keypoints1['data'])):
             matched_point = matches.points[idx]
@@ -61,6 +62,6 @@ def draw_matches(image1: np.ndarray, image2: np.ndarray, keypoints1: dict, keypo
             for (sidx, midx) in matching_indexes]
     results = np.array([])
     results = cv2.drawMatches(image1, kp1, image2, kp2, matches1to2=good,
-                              outImg=results, flags=cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
+                              outImg=results, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
     return results

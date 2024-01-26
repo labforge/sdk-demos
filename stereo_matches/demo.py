@@ -57,14 +57,15 @@ def handle_buffer(pvbuffer, device):
             print("No key points found")
         else:
             matches = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureMatches')
-            # Optional check if matches are found
+            
+            # Optional check if matches are found            
             found = False
-            if len(matches) > 0:
+            if len(matches) > 0:                
                 for pt in matches.points:
                     if (pt.x != matches.unmatched) and (pt.y != matches.unmatched):
                         found = True
             if not found:
-                print("No matches found")
+                print("No matches found", len(keypoints), len(matches))
 
         matches = chk.draw_matches(cvimage[0], cvimage[1], keypoints[0], keypoints[1], matches)
         cv2.imshow("Matches", matches)
