@@ -73,6 +73,7 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 | ***Sample***                                 | ***Description***                                        | ***Applicable Device(s)*** |
 |----------------------------------------------|----------------------------------------------------------|----------------------------|
 | [Stream](stream/README.md)                   | Simple Streaming Example                                 | Mono, Stereo               |
+| [Focus](focus/README.md)                     | Simple Utility to focus Lenses                           | Mono, Stereo               |
 | [Keypoints](keypoints/README.md)             | Simple Keypoint Detection Demo                           | Mono, Stereo               |
 | [Stereo Matching](stereo_matching/README.md) | Simple Stereo Matching Example                           | Stereo only                |
 | [AI Model](ai_model/README.md)               | Simple Bounding Box Detection Demo                       | Mono, Stereo               |
