@@ -1,7 +1,7 @@
 # coding: utf-8
 """
 ******************************************************************************
-*  Copyright 2023 Labforge Inc.                                              *
+*  Copyright 2024 Labforge Inc.                                              *
 *                                                                            *
 * Licensed under the Apache License, Version 2.0 (the "License");            *
 * you may not use this project except in compliance with the License.        *
@@ -16,8 +16,11 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = "G. M. Tchamgoue <martin@labforge.ca>"
-__copyright__ = "Copyright 2023, Labforge Inc."
+__author__ = ("G. M. Tchamgoue <martin@labforge.ca>",
+              "Thomas Reidemeister <thomas@labforge.ca>")
+__copyright__ = "Copyright 2024, Labforge Inc."
+
+import warnings
 
 import eBUS as eb
 import numpy as np
@@ -28,25 +31,31 @@ from datetime import datetime, timedelta
 
 def read_chunk_id(device: eb.PvDeviceGEV, chunk_name: str):
     """
-    Given a chunk_name, returns the associated chunkID if found
-    return -1 otherwise
+    Read a particular chunk ID.
+    :param device: the device to read the chunk from
+    :param chunk_name: the name of the chunk to read
+    :return: Given a chunk_name, returns the associated chunkID if found, return -1 otherwise
     """
-    chunk_selector = device.GetParameters().Get("ChunkSelector")
-
     chunk_id = -1
-    res, chunk_reg = chunk_selector.GetEntryByName(chunk_name)
-
-    if res.IsOK():
-        res, reg_id = chunk_reg.GetValue()
+    chunk_selector = device.GetParameters().Get("ChunkSelector")
+    if chunk_selector is None:
+        warnings.warn("ChunkSelector not found! Please update the device firmware", RuntimeWarning)
+    else:
+        res, chunk_reg = chunk_selector.GetEntryByName(chunk_name)
         if res.IsOK():
-            chunk_id = reg_id
+            res, reg_id = chunk_reg.GetValue()
+            if res.IsOK():
+                chunk_id = reg_id
 
     return chunk_id
 
 
 def has_chunk_data(buffer: eb.PvBuffer, chunk_id: int):
     """
-    Returns true if the input buffer has a chunk that matches the ID
+    Returns true if the input buffer has a chunk that matches the ID.
+    :param buffer: the buffer to check
+    :param chunk_id: the chunk ID to look for
+    :return: True if the buffer has a chunk that matches the ID, False otherwise
     """
     if not buffer:
         return False
@@ -64,12 +73,12 @@ def has_chunk_data(buffer: eb.PvBuffer, chunk_id: int):
 
 def decode_chunk_keypoint(data):
     """
-    decode the input buffer as keypoints.
+    Decode the input buffer as keypoints.
     each keypoint (x:uint16, y:uint16)
     each set of keypoints comes from a designated frame
     fid 0: LEFT_ONLY, 1: RIGHT_ONLY, 2: LEFT_STEREO, 3: RIGHT_STEREO
     """
-    if data is None or len(data) == 0:
+    if data is None or len(data) == 0:        
         return None, 0
 
     fields = ['x', 'y']
@@ -77,9 +86,10 @@ def decode_chunk_keypoint(data):
 
     num_keypoints = int.from_bytes(data[0:2], 'little')
     frame_id = int.from_bytes(data[2:4], 'little')
-    if num_keypoints <= 0 or num_keypoints > 0xFFFF:
+    
+    if num_keypoints <= 0 or num_keypoints > 0xFFFF:        
         return None, 0
-    if frame_id not in [0, 1, 2, 3]:
+    if frame_id not in [0, 1, 2, 3]:        
         return None, 0
 
     chunkdata = [Keypoint(int.from_bytes(data[i:(i + 2)], 'little'),
@@ -171,10 +181,11 @@ def decode_chunk_matches(data):
     [0,1] = point16, [2,3] point16x8
     0: COORDINATE_ONLY, 1: INDEX_ONLY
     2: COORDINATE_DETAILED, 3: INDEX_DETAILED
-    """
+    :return Empty list in case of no matches, or a Match type
+    """    
     if data is None or len(data) == 0:
-        return None
-
+        return []
+    
     match_fields = ['layout', 'unmatched', 'points']
     Matches = namedtuple('Matches', match_fields)
 
@@ -182,7 +193,7 @@ def decode_chunk_matches(data):
     layout = int.from_bytes(data[4:8], 'little')
     unmatched = int.from_bytes(data[8:12], 'little')
     points = []
-
+        
     if 0 <= layout < 2:
         point_fields = ['x', 'y']
         Point = namedtuple('Point', point_fields)
@@ -205,11 +216,10 @@ def decode_chunk_matches(data):
             n1 = int.from_bytes(data[i + 14:i + 16], 'little')
             pt = PointDetailed(x, y, x2, y2, d2, d1, n2, n1)
             points.append(pt)
-    else:
-        return None
+    else:        
+        return []
 
-    chunkdata = Matches(layout, unmatched, points)
-
+    chunkdata = Matches(layout, unmatched, points)    
     return chunkdata
 
 
@@ -273,9 +283,8 @@ def decode_chunk_data(data: np.ndarray, chunk: str):
         if kp is not None:
             chunk_data.append(kp)
 
-            if offset > 0:
-                data = data[offset:]
-                kp2, _ = decode_chunk_keypoint(data)
+            if offset > 0:                
+                kp2, _ = decode_chunk_keypoint(data[offset:])
                 if kp2 is not None:
                     chunk_data.append(kp2)
 
@@ -284,9 +293,8 @@ def decode_chunk_data(data: np.ndarray, chunk: str):
         descr, offset = decode_chunk_descriptor(data)
         if descr is not None:
             chunk_data.append(descr)
-            if offset > 0:
-                data = data[offset:]
-                descr2, _ = decode_chunk_descriptor(data)
+            if offset > 0:                
+                descr2, _ = decode_chunk_descriptor(data[offset:])
                 if descr2 is not None:
                     chunk_data.append(descr2)
 
