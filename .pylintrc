@@ -109,7 +109,7 @@ disable=
     import-error,
     # Ignore warnings for imports placed after sys path modification
     C0413,
-    # Too complex
+    # FIXME: Don't complain about Too complex functions
     R1260,
     # Parameter override
     W0621,
@@ -121,10 +121,14 @@ disable=
     W0707,
     # Don't complain about deprecated modules as we need to back support older python versions
     W4901,
-    # Don't complain about implicit encoding
+    # FIXME: Don't complain about implicit encoding
     W1514,
-    # Don't complain about legacy format strings
+    # FIXME: Don't complain about legacy format strings
     C0209,
+    # FIXME: Don't complain about too many local variables
+    R0914,
+    # FIXME: Don't complain about complex nesting and branching
+    R1702, R0912
 
 
 [REPORTS]
