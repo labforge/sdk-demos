@@ -121,6 +121,10 @@ disable=
     W0707,
     # Don't complain about deprecated modules as we need to back support older python versions
     W4901,
+    # Unused args
+    W0613,
+    # FIXME: Override buildin
+    W0622,
     # FIXME: Don't complain about implicit encoding
     W1514,
     # FIXME: Don't complain about legacy format strings
@@ -128,7 +132,9 @@ disable=
     # FIXME: Don't complain about too many local variables
     R0914,
     # FIXME: Don't complain about complex nesting and branching, and too many statements
-    R1702, R0912, R0915
+    R1702, R0912, R0915,
+    # FIXME: Too generic exceptions
+    W0718,W0719
 
 
 [REPORTS]
@@ -383,7 +389,7 @@ ignored-classes=SQLObject, optparse.Values, thread._local, _thread._local
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular
 # expressions are accepted.
-generated-members=REQUEST,acl_users,aq_parent,argparse.Namespace,cv2
+generated-members=REQUEST,acl_users,aq_parent,argparse.Namespace,cv2,PySide6
 
 # List of decorators that create context managers from functions, such as
 # contextlib.contextmanager.

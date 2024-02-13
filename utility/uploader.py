@@ -114,11 +114,11 @@ class Uploader(QThread):
         if not QFile.exists(self.filename):
             self.error.emit(f"Cannot read {path.basename(self.filename)}")
             self.finished.emit(False)
-            return
+            return None
         
         if self.calibrate:
             self.__upload_calibration(self.filename)
-            return
+            return None
 
         # Sanity check to prevent firmware corruption
         if not self.reset_flag:
@@ -132,18 +132,18 @@ class Uploader(QThread):
         if self.flag is None or self.status is None:
             self.error.emit("Function not supported by device ... please update the firmware")
             self.finished.emit(False)
-            return
+            return None
 
         self.flag.SetValue(True)
         trials = 10
         status = ""
-        while not status.lower() == "ftp running" and trials > 0:
+        while status.lower() != 'ftp running' and trials > 0:
             res, status = self.status.GetValue()
             if not res.IsOK():
                 self.flag.SetValue(False)
                 self.error.emit(f"Unable to communicate with device: {res.GetDescription().GetUnicode()}")
                 self.finished.emit(False)
-                return
+                return None
             time.sleep(0.1)
             trials = trials - 1
 
@@ -151,14 +151,14 @@ class Uploader(QThread):
             self.flag.SetValue(False)
             self.error.emit(f"Unable to communicate with device: {status}")
             self.finished.emit(False)
-            return
+            return None
 
         try:
             ftp = ftplib.FTP(self.address)
             ftp.login()
             ftp.storbinary(f"STORE {path.basename(self.filename)}", fp=open(self.filename, "rb"))
             ftp.close()
-        except Exception as e:
+        except Exception:
             time.sleep(0.1)
 
             if self.reset_flag:
@@ -166,7 +166,7 @@ class Uploader(QThread):
             _, status = self.status.GetValue()
             self.error.emit(f"Unable to communicate with device: {status}")
             self.finished.emit(False)
-            return
+            return None
 
         while True:
             time.sleep(0.5)
