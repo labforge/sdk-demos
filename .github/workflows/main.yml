@@ -38,6 +38,43 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint_python_samples:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Install OS dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy libopencv-dev
+      - name: Check out Pleora SDK backing
+        uses: actions/checkout@v3
+        with:
+          repository: labforge/pleora_backing
+          lfs: true
+          token: ${{ secrets.CITOKEN }}
+          submodules: true
+          path: pleora
+      - name: Install Pleora 22.04 SDK
+        run: |
+          sudo dpkg -i pleora/eBUS_SDK_Ubuntu-22.04-x86_64-6.3.0-6343.deb
+      - name: Check out samples
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          submodules: true
+          path: samples
+      - name: Lint modules
+        run: |
+          pip install pylint==3.0.3
+          for dir in ai_model focus keypoints parameters stereo_matches stream utility
+          do
+            pushd ${dir}
+            echo "Linting ${dir}"
+            pip install -r requirements.txt
+            pylint **/*.py
+            popd
+          done
+          
+
   build_cpp_samples_linux:
     runs-on: HIL
     steps:

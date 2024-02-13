@@ -16,7 +16,7 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = ("Thomas Reidemeister <thomas@labforge.ca>")
+__author__ = "Thomas Reidemeister <thomas@labforge.ca>"
 __copyright__ = "Copyright 2024, Labforge Inc."
 
 import sys
