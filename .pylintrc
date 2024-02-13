@@ -115,6 +115,10 @@ disable=
     W0621,
     # Don't complain about missing types
     W9016,
+    # Don't complain about explicit resource calling
+    R1732,
+    # Don't complain about reraising exceptions
+    W0707,
 
 
 [REPORTS]
