@@ -390,7 +390,6 @@ ignored-classes=SQLObject, optparse.Values, thread._local, _thread._local
 # system, and so shouldn't trigger E1101 when accessed. Python regular
 # expressions are accepted.
 generated-members=REQUEST,acl_users,aq_parent,argparse.Namespace,cv2
-extension-pkg-whitelist=PyQt5,Pyside6,cv2
 
 # List of decorators that create context managers from functions, such as
 # contextlib.contextmanager.

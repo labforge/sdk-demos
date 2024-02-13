@@ -44,7 +44,7 @@ jobs:
       - name: Install OS dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy libopencv-dev
+          sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy libopencv-dev xorg libxkbcommon0
       - name: Check out Pleora SDK backing
         uses: actions/checkout@v4
         with:
