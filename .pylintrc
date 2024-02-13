@@ -5,7 +5,7 @@
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-init-hook='import sys; sys.path.extend(["focus", "ai_model", "keypoints", "parameters", "stereo_matches", "stereo_viewer", "stream", "utility"])'
+#init-hook='import sys; sys.path.extend(["focus", "ai_model", "keypoints", "parameters", "stereo_matches", "stereo_viewer", "stream", "utility"])'
 
 # Files or directories to be skipped. They should be base names, not
 # paths.
