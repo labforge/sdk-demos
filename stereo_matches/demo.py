@@ -63,7 +63,7 @@ def handle_buffer(pvbuffer, device):
             found = False
             if len(matches) > 0:                
                 for pt in matches.points:
-                    if (pt.x != matches.unmatched) and (pt.y != matches.unmatched):
+                    if matches.unmatched not in {pt.x, pt.y}:
                         found = True
             if not found:
                 print("No matches found", len(keypoints), len(matches))
