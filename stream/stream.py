@@ -106,13 +106,12 @@ def acquire_images(device, stream, nframes=None):
                         if display_image:
                             cv2.imshow("stream", image_data)
 
-                    else:
-                        if not warning_issued:
-                            # display a message that video only display for Mono8 / RGB8 images
-                            print(f" ")
-                            print(f" Currently only Mono8 / RGB8 images are displayed", end='\r')
-                            print(f"")
-                            warning_issued = True
+                    elif not warning_issued:
+                        # display a message that video only display for Mono8 / RGB8 images
+                        print(" ")
+                        print(" Currently only Mono8 / RGB8 images are displayed", end='\r')
+                        print("")
+                        warning_issued = True
 
                     if nframes is None:
                         if cv2.waitKey(1) & 0xFF != 0xFF:
@@ -166,13 +165,12 @@ def acquire_images(device, stream, nframes=None):
                             cv2.imshow("stream0", image_data0)
                             cv2.imshow("stream1", image_data1)
 
-                    else:
-                        if not warning_issued:
-                            # display a message that video only display for Mono8 / RGB8 images
-                            print(f" ")
-                            print(f" Currently only Mono8 / RGB8 images are displayed", end='\r')
-                            print(f"")
-                            warning_issued = True
+                    elif not warning_issued:
+                        # display a message that video only display for Mono8 / RGB8 images
+                        print(" ")
+                        print(" Currently only Mono8 / RGB8 images are displayed", end='\r')
+                        print("")
+                        warning_issued = True
 
                     if nframes is None:
                         if cv2.waitKey(1) & 0xFF != 0xFF:

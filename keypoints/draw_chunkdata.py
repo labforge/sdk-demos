@@ -24,7 +24,7 @@ import cv2
 
 def draw_keypoints(image, keypoints: dict = None):
     if keypoints is None:
-        return
+        return None
 
     # convert to opencv KeyPoint datatype
     kp = [cv2.KeyPoint(x=point.x, y=point.y, size=15) for point in keypoints['data']]

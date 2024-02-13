@@ -28,12 +28,13 @@ import warnings
 
 import eBUS as eb
 import cv2
-import draw_chunkdata as chk
 
 # reference common utility files
 sys.path.insert(1, '../common')
 from chunk_parser import decode_chunk
 from connection import init_bottlenose, deinit_bottlenose
+
+import draw_chunkdata as chk
 
 
 def handle_buffer(pvbuffer, device):
@@ -105,7 +106,7 @@ def upload_weights(device, file_name):
         ftp.close()
 
     valid = False
-    for i in range(100):
+    for _ in range(100):
         res, status = weights_status.GetValue()
         if res.IsOK():
             if status.find('Loaded') >= 0:
@@ -162,6 +163,7 @@ def run_demo(device, stream, weights_file):
     Run the demo
     :param device: The device to stream from
     :param stream: The stream to use for streaming
+    :param weights_file: The path to the AI model weights file to upload.
     """
     # Get device parameters need to control streaming
     device_params = device.GetParameters()

@@ -33,11 +33,11 @@ def draw_matches(image1: np.ndarray, image2: np.ndarray, keypoints1: dict, keypo
     """
 
     def find_index(point, keypoints: dict, mtype: int, bad_value=65535):    
-        if (mtype == 0) or (mtype == 2):
+        if mtype in {0, 2}:
             for idx, kp in enumerate(keypoints['data']):
                 if point.x == kp.x and point.y == kp.y:
                     return idx, True
-        elif (mtype == 1) or (mtype == 3):
+        elif mtype in {1, 3}:
             return point.x, point.x != bad_value
 
         return 0, False

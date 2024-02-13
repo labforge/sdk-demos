@@ -25,12 +25,13 @@ import warnings
 
 import eBUS as eb
 import cv2
-import draw_chunkdata as chk
 
 # reference common utility files
 sys.path.insert(1, '../common')
 from chunk_parser import decode_chunk
 from connection import init_bottlenose, deinit_bottlenose
+
+import draw_chunkdata as chk
 
 
 def handle_buffer(pvbuffer, device):
@@ -73,7 +74,6 @@ def configure_fast9(device, max_num=1000, threshold=20, useNonMaxSuppression=Tru
     :param max_num: Maximum number of features to consider.
     :param threshold: Quality threshold 0...100
     :param useNonMaxSuppression:  Use non-maximum suppression
-    :return: None
     """
     # Get device parameters
     device_params = device.GetParameters()
@@ -95,6 +95,9 @@ def run_demo(device, stream, max_fast_features=1000, fast_threshold=10, use_non_
     Run the demo
     :param device: The device to stream from
     :param stream: The stream to use for streaming
+    :param max_fast_features: The maximum number of features to extract from the image.
+    :param fast_threshold: The threshold to use for the Fast9 extractor
+    :param use_non_max_suppression: Use non-maximum suppression for the Fast9 extractor
     """
     # Get device parameters need to control streaming
     device_params = device.GetParameters()

@@ -38,11 +38,75 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint_python_samples:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Install OS dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+                      meson \
+                      build-essential \
+                      qtbase5-dev \
+                      python3-numpy \
+                      libopencv-dev \
+                      xorg \
+                      libxkbcommon0 \
+                      qt6-base-dev \
+                      libfontconfig1-dev \
+                      libfreetype6-dev \
+                      libx11-dev \
+                      libx11-xcb-dev \
+                      libxext-dev \
+                      libxfixes-dev \
+                      libxi-dev \
+                      libxrender-dev \
+                      libxkbcommon-dev \
+                      libxkbcommon-x11-dev \
+                      libatspi2.0-dev \
+                      '^libxcb.*-dev'
+      - name: Check out Pleora SDK backing
+        uses: actions/checkout@v4
+        with:
+          repository: labforge/pleora_backing
+          lfs: true
+          token: ${{ secrets.CITOKEN }}
+          submodules: true
+          path: pleora
+      - name: Install Pleora 22.04 SDK
+        run: |
+          sudo dpkg -i pleora/eBUS_SDK_Ubuntu-22.04-x86_64-6.3.0-6343.deb
+      - name: Check out samples
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          submodules: true
+          path: samples
+      - name: Lint Python Modules
+        run: |
+          pushd samples
+          pip install pylint==3.0.3
+          for dir in */
+          do
+            if [ -d "$dir" ]
+            then
+              if [[ -f "${dir}requirements.txt" ]]; then
+                pushd ${dir}
+                echo "=== Linting ${dir} ==="
+                pip install -r requirements.txt
+                pylint --rcfile=../.pylintrc **/*.py **/*.py
+                popd
+              fi
+            fi
+          done
+          popd
+          
+
   build_cpp_samples_linux:
     runs-on: HIL
     steps:
       - name: Check out samples
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           lfs: true
           submodules: true
@@ -62,7 +126,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson build-essential qtbase5-dev python3-numpy libopencv-dev
       - name: Check out Pleora SDK backing
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: labforge/pleora_backing
           lfs: true
@@ -73,7 +137,7 @@ jobs:
         run: |
           sudo dpkg -i pleora/eBUS_SDK_Ubuntu-20.04-x86_64-6.3.0-6343.deb
       - name: Check out samples
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           lfs: true
           submodules: true
@@ -86,9 +150,10 @@ jobs:
 
   publish_sdk:
     runs-on: HIL
+    needs: [ lint_python_samples ]
     steps:
     - name: Checkout head for release notes
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         lfs: true
         submodules: true
@@ -96,7 +161,7 @@ jobs:
       run: |
         git describe --tags --abbrev=0 HEAD | xargs git log -1 --pretty=%B > release.txt
     - name: Stage backing files
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         lfs: true
         submodules: true
@@ -131,9 +196,10 @@ jobs:
 
   build_python_samples_and_installer:
     runs-on: W64HIL
+    needs: [ lint_python_samples ]
     steps:
     - name: Check out samples
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         lfs: true
         submodules: true

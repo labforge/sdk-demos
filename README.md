@@ -1,6 +1,7 @@
 ![Labforge logo](doc/img/logo-2-300x212.png)
 
 ![CI](https://github.com/labforge/sdk-demos/actions/workflows/main.yml/badge.svg)
+[![linting: pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
 
 ## Overview
 
@@ -70,15 +71,16 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 
 ## Python Code Samples
 
-| ***Sample***                                 | ***Description***                                        | ***Applicable Device(s)*** |
-|----------------------------------------------|----------------------------------------------------------|----------------------------|
-| [Stream](stream/README.md)                   | Simple Streaming Example                                 | Mono, Stereo               |
-| [Focus](focus/README.md)                     | Simple Utility to focus Lenses                           | Mono, Stereo               |
-| [Keypoints](keypoints/README.md)             | Simple Keypoint Detection Demo                           | Mono, Stereo               |
-| [Stereo Matching](stereo_matching/README.md) | Simple Stereo Matching Example                           | Stereo only                |
-| [AI Model](ai_model/README.md)               | Simple Bounding Box Detection Demo                       | Mono, Stereo               |
-| [Utility](utility/README.md)                 | Sources of the update utility for firmware and AI models | Mono, Stereo               |
-| [distribution](distribution/README.md)       | Sources of the utility distribution build                | Mono, Stereo               |
+| ***Sample***                                | ***Description***                                        | ***Applicable Device(s)*** |
+|---------------------------------------------|----------------------------------------------------------|----------------------------|
+| [Stream](stream/README.md)                  | Simple Streaming Example                                 | Mono, Stereo               |
+| [Focus](parameters/README.md)                    | Simple Utility to focus Lenses                           | Mono, Stereo               |
+| [Keypoints](keypoints/README.md)            | Simple Keypoint Detection Demo                           | Mono, Stereo               |
+| [Stereo Matching](stereo_matches/README.md) | Simple Stereo Matching Example                           | Stereo only                |
+| [AI Model](ai_model/README.md)              | Simple Bounding Box Detection Demo                       | Mono, Stereo               |
+| [Utility](utility/README.md)                | Sources of the update utility for firmware and AI models | Mono, Stereo               |
+| [distribution](distribution/README.md)      | Sources of the utility distribution build                | Mono, Stereo               |
+| [Parameters](parameters/README.md)          | List all parameters exposed by your Bottlenose camera    | Mono, Stereo               |
 
 ## Python API Documentation
 
