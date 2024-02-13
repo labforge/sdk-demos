@@ -64,6 +64,7 @@ jobs:
           path: samples
       - name: Lint modules
         run: |
+          pushd samples
           pip install pylint==3.0.3
           for dir in ai_model focus keypoints parameters stereo_matches stream utility
           do
@@ -73,6 +74,7 @@ jobs:
             pylint **/*.py
             popd
           done
+          popd
           
 
   build_cpp_samples_linux:
