@@ -188,6 +188,7 @@ class Uploader(QThread):
                 self.error.emit(f"Unknown error: {status}")
                 self.finished.emit(False)
                 break
+        return None
 
 
 if __name__ == '__main__':
