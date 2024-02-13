@@ -94,13 +94,12 @@ jobs:
                 pushd ${dir}
                 echo "=== Linting ${dir} ==="
                 pip install -r requirements.txt
-                #pylint --rcfile=../.pylintrc **/*.py **/*.py
+                pylint --rcfile=../.pylintrc **/*.py **/*.py
                 popd
               fi
             fi
           done
           popd
-          ldd /home/runner/.local/lib/python3.10/site-packages/
           
 
   build_cpp_samples_linux:
