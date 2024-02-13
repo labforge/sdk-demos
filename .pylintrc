@@ -119,6 +119,12 @@ disable=
     R1732,
     # Don't complain about reraising exceptions
     W0707,
+    # Don't complain about deprecated modules as we need to back support older python versions
+    W4901,
+    # Don't complain about implicit encoding
+    W1514,
+    # Don't complain about legacy format strings
+    C0209,
 
 
 [REPORTS]
