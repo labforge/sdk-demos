@@ -127,8 +127,8 @@ disable=
     C0209,
     # FIXME: Don't complain about too many local variables
     R0914,
-    # FIXME: Don't complain about complex nesting and branching
-    R1702, R0912
+    # FIXME: Don't complain about complex nesting and branching, and too many statements
+    R1702, R0912, R0915
 
 
 [REPORTS]

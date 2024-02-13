@@ -130,6 +130,7 @@ jobs:
 
   publish_sdk:
     runs-on: HIL
+    needs: [ lint_python_samples ]
     steps:
     - name: Checkout head for release notes
       uses: actions/checkout@v4
@@ -175,6 +176,7 @@ jobs:
 
   build_python_samples_and_installer:
     runs-on: W64HIL
+    needs: [ lint_python_samples ]
     steps:
     - name: Check out samples
       uses: actions/checkout@v4
