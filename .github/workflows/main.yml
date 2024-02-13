@@ -62,16 +62,16 @@ jobs:
           lfs: true
           submodules: true
           path: samples
-      - name: Lint modules
+      - name: Lint Python Modules
         run: |
           pushd samples
           pip install pylint==3.0.3
           for dir in ai_model focus keypoints parameters stereo_matches stream utility
           do
             pushd ${dir}
-            echo "Linting ${dir}"
+            echo "=== Linting ${dir} ==="
             pip install -r requirements.txt
-            pylint **/*.py
+            pylint --rcfile=../.pylintrc **/*.py **/*.py
             popd
           done
           popd
