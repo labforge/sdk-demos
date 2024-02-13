@@ -28,14 +28,13 @@ from connection import init_bottlenose, deinit_bottlenose
 def to_visibility(num):
     if num == 0:
         return "Beginner"
-    elif num == 1:
+    if num == 1:
         return "Expert"
-    elif num == 2:
+    if num == 2:
         return "Guru"
-    elif num == 3:
+    if num == 3:
         return "Invisible"
-    else:
-        return "Undefined"
+    return "Undefined"
 
 
 def to_csv_file(params, csv_file):
@@ -51,7 +50,7 @@ def to_csv_file(params, csv_file):
             visibility = to_visibility(visibility)
 
             # Store parameter values in the dictionary
-            if visibility != "Undefined" and visibility != "Invisible":
+            if visibility not in ["Undefined", "Invisible"]:
                 param_data.append((category, name, dname, description, tooltip, visibility))
         else:
             break

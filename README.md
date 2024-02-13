@@ -1,6 +1,7 @@
 ![Labforge logo](doc/img/logo-2-300x212.png)
 
 ![CI](https://github.com/labforge/sdk-demos/actions/workflows/main.yml/badge.svg)
+[![linting: pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
 
 ## Overview
 
