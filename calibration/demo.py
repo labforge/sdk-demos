@@ -19,22 +19,23 @@
 __author__ = "G. M. Tchamgoue <martin@labforge.ca>"
 __copyright__ = "Copyright 2024, Labforge Inc."
 
-import sys
-
 import eBUS as eb
 import argparse
 import yaml
 from os import path
 
 # reference common utility files
+import sys
 sys.path.insert(1, '../common')
 from connection import init_bottlenose, deinit_bottlenose
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mac", default=None, help="MAC address of the Bottlenose camera")
     parser.add_argument("-f", "--kfile", help="path to YAML calibration file")
     return parser.parse_args()
+
 
 def get_num_cameras(device: eb.PvDeviceGEV):
     """
@@ -50,6 +51,7 @@ def get_num_cameras(device: eb.PvDeviceGEV):
         num_cameras = 1 if model[-1].upper() == 'M' else 2
 
     return num_cameras
+
 
 def load_calibration(kfile: str, num_cameras: int):
     """
@@ -73,7 +75,7 @@ def load_calibration(kfile: str, num_cameras: int):
                     height: 1440
 
     :param num_cameras: The number of calibrated camera nodes to expect from the file.              
-    :return a dict of all parameters, each key corresponds to a register name on the camera.
+    return a dict of all parameters, each key corresponds to a register name on the camera.
     """   
     assert path.isfile(kfile), 'Invalid input file'
     assert 0 < num_cameras < 3, 'Invalid number of camera'
@@ -94,24 +96,24 @@ def load_calibration(kfile: str, num_cameras: int):
             raise Exception('Mismatching width and height')
             
         for cam in calib.keys():                                             
-            id = cam[-1]            
-            kdata["fx" + id] = calib[cam]['fx']
-            kdata["fy" + id] = calib[cam]['fy']
-            kdata["cx" + id] = calib[cam]['cx']
-            kdata["cy" + id] = calib[cam]['cy']
+            cam_id = cam[-1]
+            kdata["fx" + cam_id] = calib[cam]['fx']
+            kdata["fy" + cam_id] = calib[cam]['fy']
+            kdata["cx" + cam_id] = calib[cam]['cx']
+            kdata["cy" + cam_id] = calib[cam]['cy']
             
-            kdata["k1" + id] = calib[cam]['k1']
-            kdata["k2" + id] = calib[cam]["k2"] if "k2" in calib[cam].keys() else 0.0
-            kdata["k3" + id] = calib[cam]["k3"] if "k3" in calib[cam].keys() else 0.0    
-            kdata["p1" + id] = calib[cam]["p1"] if "p1" in calib[cam].keys() else 0.0
-            kdata["p2" + id] = calib[cam]["p2"] if "p2" in calib[cam].keys() else 0.0
+            kdata["k1" + cam_id] = calib[cam]['k1']
+            kdata["k2" + cam_id] = calib[cam]["k2"] if "k2" in calib[cam].keys() else 0.0
+            kdata["k3" + cam_id] = calib[cam]["k3"] if "k3" in calib[cam].keys() else 0.0
+            kdata["p1" + cam_id] = calib[cam]["p1"] if "p1" in calib[cam].keys() else 0.0
+            kdata["p2" + cam_id] = calib[cam]["p2"] if "p2" in calib[cam].keys() else 0.0
             
-            kdata["tx" + id] = calib[cam]['tvec'][0]
-            kdata["ty" + id] = calib[cam]['tvec'][1]
-            kdata["tz" + id] = calib[cam]['tvec'][2]             
-            kdata["rx" + id] = calib[cam]['rvec'][0]
-            kdata["ry" + id] = calib[cam]['rvec'][1] 
-            kdata["rz" + id] = calib[cam]['rvec'][2]
+            kdata["tx" + cam_id] = calib[cam]['tvec'][0]
+            kdata["ty" + cam_id] = calib[cam]['tvec'][1]
+            kdata["tz" + cam_id] = calib[cam]['tvec'][2]
+            kdata["rx" + cam_id] = calib[cam]['rvec'][0]
+            kdata["ry" + cam_id] = calib[cam]['rvec'][1]
+            kdata["rz" + cam_id] = calib[cam]['rvec'][2]
             
             kdata["kWidth"] = calib[cam]['width']
             kdata["kHeight"] = calib[cam]['height']
@@ -122,13 +124,14 @@ def load_calibration(kfile: str, num_cameras: int):
      
     return kdata
 
-def set_register(device: eb.PvDeviceGEV, regname: str, regvalue: float|int|bool):
+
+def set_register(device: eb.PvDeviceGEV, regname: str, regvalue: float | int | bool):
     """
     set register on the device
     :param device: The Bottlenose device
     :param regname: the register name to be set.
     :param regvalue: the value to be set into register.
-    :return True if register properly set, False otherwise
+    return True if register properly set, False otherwise
     """
 
     reg = device.GetParameters().Get(regname)
@@ -151,12 +154,13 @@ def set_register(device: eb.PvDeviceGEV, regname: str, regvalue: float|int|bool)
         return False
     return res.IsOK()
 
+
 def set_calibration_parameters(device: eb.PvDeviceGEV, kparams: dict):
     """
     set the calibration parameters on a Bottlenose device
     :param device: The Bottlenose device
     :param kparams: A dictionary of parameters. Each key is a register name on the device.
-    :return True if calibration data loaded, False otherwise
+    return True if calibration data loaded, False otherwise
     """
 
     for regname, regvalue in kparams.items():
@@ -176,6 +180,6 @@ if __name__ == '__main__':
 
         kparams = load_calibration(args.kfile, num_cameras)
         if not set_calibration_parameters(device, kparams):
-            print('Calibration Failes!')
+            print('Calibration Failed!')
     
     deinit_bottlenose(device, stream, buffers)
