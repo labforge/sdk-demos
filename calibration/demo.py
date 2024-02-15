@@ -19,18 +19,23 @@
 __author__ = "G. M. Tchamgoue <martin@labforge.ca>"
 __copyright__ = "Copyright 2024, Labforge Inc."
 
-import eBUS as eb
-import argparse
-import yaml
-from os import path
-
 # reference common utility files
 import sys
+
+import argparse
+from os import path
+import yaml
+
 sys.path.insert(1, '../common')
 from connection import init_bottlenose, deinit_bottlenose
 
+import eBUS as eb
+
 
 def parse_args():
+    """
+    parses and return the command-line arguments
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mac", default=None, help="MAC address of the Bottlenose camera")
     parser.add_argument("-f", "--kfile", help="path to YAML calibration file")
@@ -76,52 +81,52 @@ def load_calibration(kfile: str, num_cameras: int):
 
     :param num_cameras: The number of calibrated camera nodes to expect from the file.              
     return a dict of all parameters, each key corresponds to a register name on the camera.
-    """   
+    """
     assert path.isfile(kfile), 'Invalid input file'
     assert 0 < num_cameras < 3, 'Invalid number of camera'
-    
-    kdata = dict()    
+
+    kdata = {}
     try:
-        with open(kfile, "r") as f:
+        with open(kfile, "r", encoding='UTF-8') as f:
             calib = yaml.safe_load(f)
-                
+
         if len(calib.keys()) != num_cameras:
             raise Exception('Invalid number of cameras')
-                    
+
         if list(calib.keys()) != ['cam0', 'cam1']:
             raise Exception('Invalid calibration file: Camera node not found')
-                   
+
         if calib['cam0']['width'] != calib['cam1']['width'] or \
            calib['cam0']['height'] != calib['cam1']['height']:
             raise Exception('Mismatching width and height')
-            
-        for cam in calib.keys():                                             
+
+        for cam in calib.keys():
             cam_id = cam[-1]
             kdata["fx" + cam_id] = calib[cam]['fx']
             kdata["fy" + cam_id] = calib[cam]['fy']
             kdata["cx" + cam_id] = calib[cam]['cx']
             kdata["cy" + cam_id] = calib[cam]['cy']
-            
+
             kdata["k1" + cam_id] = calib[cam]['k1']
             kdata["k2" + cam_id] = calib[cam]["k2"] if "k2" in calib[cam].keys() else 0.0
             kdata["k3" + cam_id] = calib[cam]["k3"] if "k3" in calib[cam].keys() else 0.0
             kdata["p1" + cam_id] = calib[cam]["p1"] if "p1" in calib[cam].keys() else 0.0
             kdata["p2" + cam_id] = calib[cam]["p2"] if "p2" in calib[cam].keys() else 0.0
-            
+
             kdata["tx" + cam_id] = calib[cam]['tvec'][0]
             kdata["ty" + cam_id] = calib[cam]['tvec'][1]
             kdata["tz" + cam_id] = calib[cam]['tvec'][2]
             kdata["rx" + cam_id] = calib[cam]['rvec'][0]
             kdata["ry" + cam_id] = calib[cam]['rvec'][1]
             kdata["rz" + cam_id] = calib[cam]['rvec'][2]
-            
+
             kdata["kWidth"] = calib[cam]['width']
             kdata["kHeight"] = calib[cam]['height']
-                
+
     except Exception as e:
         print(e)
         return kdata.clear()
-     
+
     return kdata
 
 
@@ -141,15 +146,16 @@ def set_register(device: eb.PvDeviceGEV, regname: str, regvalue: float | int | b
     if not res.IsOK():
         return False
     if regtype == eb.PvGenTypeFloat:
-        assert isinstance(regvalue, float) or isinstance(regvalue, int), 'Invalid float register datatype'
+        assert isinstance(regvalue, float) or \
+               isinstance(regvalue, int), 'Invalid float register datatype'
         res = reg.SetValue(regvalue)
     elif regtype == eb.PvGenTypeInteger:
         assert isinstance(regvalue, int), 'Invalid integer register datatype'
-        res = reg.SetValue(int(regvalue))     
+        res = reg.SetValue(int(regvalue))
     elif regtype == eb.PvGenTypeCommand:
         assert isinstance(regvalue, bool), 'Invalid boolean register'
         if regvalue:
-            res = reg.Execute()            
+            res = reg.Execute()
     else:
         return False
     return res.IsOK()
@@ -164,11 +170,11 @@ def set_calibration_parameters(device: eb.PvDeviceGEV, kparams: dict):
     """
 
     for regname, regvalue in kparams.items():
-        if not set_register(device, regname, regvalue):            
-            return False    
-        
+        if not set_register(device, regname, regvalue):
+            return False
+
     return set_register(device, 'saveCalibrationData', True)
-    
+
 
 if __name__ == '__main__':
     args = parse_args()
@@ -181,5 +187,5 @@ if __name__ == '__main__':
         kparams = load_calibration(args.kfile, num_cameras)
         if not set_calibration_parameters(device, kparams):
             print('Calibration Failed!')
-    
+
     deinit_bottlenose(device, stream, buffers)
