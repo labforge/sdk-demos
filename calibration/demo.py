@@ -185,7 +185,9 @@ if __name__ == '__main__':
         print(num_cameras)
 
         kparams = load_calibration(args.kfile, num_cameras)
-        if not set_calibration_parameters(device, kparams):
+        if set_calibration_parameters(device, kparams):
+            print('Camera Calibration parameters loaded!')
+        else:
             print('Calibration Failed!')
 
     deinit_bottlenose(device, stream, buffers)
