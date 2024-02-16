@@ -464,6 +464,16 @@
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="cbxFocus">
+               <property name="toolTip">
+                <string>Visualize focus in the camera views ...</string>
+               </property>
+               <property name="text">
+                <string>Focus Aid</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QLabel" name="lblFormat">
                <property name="text">
                 <string>Format</string>
