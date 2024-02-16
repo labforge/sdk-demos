@@ -28,6 +28,8 @@
 #include <QThread>
 #include <QMutex>
 #include <variant>
+#include <QQueue>
+#include <QString>
 
 namespace labforge::gev {
 
@@ -41,13 +43,14 @@ namespace labforge::gev {
     bool Start(bool calibrate);
     void Stop();
     bool IsStarted() { return m_start_flag; }
-    size_t GetPairs(std::list<std::tuple<cv::Mat*, cv::Mat*>> &out);
+    size_t GetPairs(std::list<std::tuple<cv::Mat*, cv::Mat*, uint64_t>> &out);
     void run() override;
 
   Q_SIGNALS:
     void pairReceived(bool is_disparity);
     void monoReceived(bool is_disparity);
     void terminated(bool fatal = false);
+    void onError(QString msg);
 
   private:
     PvStreamGEV * m_stream;
@@ -66,7 +69,7 @@ namespace labforge::gev {
     PvString m_pixfmt_init;
 
     std::list<PvBuffer*> m_buffers;
-    std::list<std::tuple<cv::Mat*, cv::Mat* >> m_images;    
+    QQueue<std::tuple<cv::Mat*, cv::Mat*, uint64_t >> m_images;    
     volatile bool m_start_flag;
     QMutex m_image_lock;
   };

@@ -27,10 +27,12 @@
 #include <PvPipeline.h>
 #include <PvDevice.h>
 #include <PvStreamGEV.h>
+#include <chrono>
 
 #include "ui_stereo_viewer.h"
 #include "gev/pipeline.hpp"
 #include "io/data_thread.hpp"
+#include <cstdint>
 
 class PvGenBrowserWnd;
 
@@ -50,7 +52,8 @@ public Q_SLOTS:
   void handleRecording();
   void handleStereoData(bool is_disparity);
   void handleMonoData(bool is_disparity);
-  void newData(QImage &left, QImage &right, bool stereo=true, bool disparity=true);
+  void handleError(QString msg);
+  void newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo=true, bool disparity=true);
   void onFolderSelect();
   void handleSave();
   void handleColormap();
@@ -75,6 +78,15 @@ private:
 
   std::unique_ptr<labforge::io::DataThread> m_data_thread;
   PvGenBrowserWnd *m_device_browser;
+
+  //Status counters
+  uint32_t m_frameCount;
+  uint32_t m_errorCount;
+  std::chrono::time_point<std::chrono::system_clock> m_startTime;
+  uint32_t m_payload;
+  QString m_errorMsg;
+  void showStatusMessage(uint32_t received=1);
+  void resetStatusCounters();
 };
 
 }

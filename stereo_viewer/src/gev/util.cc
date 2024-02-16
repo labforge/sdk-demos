@@ -62,35 +62,39 @@ bool labforge::gev::SetParameter(PvDeviceGEV *aDevice, PvStream *aStream, const 
 }
 
 bool labforge::gev::TweakParameters(PvDeviceGEV *aDevice, PvStream *aStream) {
+  // Leave it to the User to configure these, they are highly topology dependent
+  (void)aDevice;
+  (void)aStream;
+
   // Avoid TOO_MANY_RESENDS
   // see: https://supportcenter.pleora.com/s/article/TOO-MANY-CONSECUTIVE-RESENDS
   // and: https://supportcenter.pleora.com/servlet/fileField?id=0BE34000000CegX
-  if(!SetParameter(aDevice, aStream, "ResetOnIdle", (int64_t)2000)) {
-    cout << "NO ResetOnIdle" << endl;
-  }
-  if(!SetParameter(aDevice, aStream, "ResendDelay", (int64_t)2000)) {
-    cout << "NO ResendDelay" << endl;
-  }
-  if(!SetParameter(aDevice, aStream, "MaximumResendGroupSize", (int64_t)60)) {
-    cout << "NO MaximumResendGroupSize" << endl;
-  }
+//  if(!SetParameter(aDevice, aStream, "ResetOnIdle", (int64_t)2000)) {
+//    cout << "NO ResetOnIdle" << endl;
+//  }
+//  if(!SetParameter(aDevice, aStream, "ResendDelay", (int64_t)2000)) {
+//    cout << "NO ResendDelay" << endl;
+//  }
+//  if(!SetParameter(aDevice, aStream, "MaximumResendGroupSize", (int64_t)60)) {
+//    cout << "NO MaximumResendGroupSize" << endl;
+//  }
 //  if(!SetParameter(aDevice, aStream, "GevSCPD", 100)) {
 //    cout << "NO GevSCPD" << endl;
 //  }
-  if(!SetParameter(aDevice, aStream, "MaximumPendingResends", (int64_t)0)) {
-    return false;
-  }
-  if(!SetParameter(aDevice, aStream, "MaximumResendRequestRetryByPacket", (int64_t)0)) {
-    return false;
-  }
-  // 1.5s for 1 FPS
-  if(!SetParameter(aDevice, aStream, "GevMCTT", (int64_t)1500)) {
-    return false;
-  }
-  // 3s for 1 FPS
-  if(!SetParameter(aDevice, aStream, "RequestTimeout", (int64_t)3000)) {
-    return false;
-  }
+//  if(!SetParameter(aDevice, aStream, "MaximumPendingResends", (int64_t)0)) {
+//    return false;
+//  }
+//  if(!SetParameter(aDevice, aStream, "MaximumResendRequestRetryByPacket", (int64_t)0)) {
+//    return false;
+//  }
+//  // 1.5s for 1 FPS
+//  if(!SetParameter(aDevice, aStream, "GevMCTT", (int64_t)1500)) {
+//    return false;
+//  }
+//  // 3s for 1 FPS
+//  if(!SetParameter(aDevice, aStream, "RequestTimeout", (int64_t)3000)) {
+//    return false;
+//  }
   return true;
 }
 

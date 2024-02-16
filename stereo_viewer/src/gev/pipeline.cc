@@ -22,6 +22,7 @@
 #include "gev/util.hpp"
 #include <stdexcept>
 #include <iostream>
+#include <bottlenose_chunk_parser.hpp>
 
 using namespace labforge::gev;
 using namespace std;
@@ -32,10 +33,35 @@ using namespace cv;
 Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * parent) : QThread(parent) {
   m_stream = stream_gev;
   m_device = device_gev;
+  PvResult res;
 
   // Enable Multipart
   if(!SetParameter(m_device, m_stream, "GevSCCFGMultiPartEnabled", true)) {
     throw runtime_error("Could not set multipart for stereo transfer");
+  }
+  // Enable meta information chunk for reliable timestamping
+  if(!SetParameter(m_device, m_stream, "ChunkModeActive", true)) {
+    throw runtime_error("Could not enable chunk data transfer");
+  }
+  // Select the appropriate enumerator for chunk
+  PvGenParameterArray *lDeviceParams = m_device->GetParameters();
+  PvGenParameter *param = lDeviceParams->Get("ChunkSelector");
+  if (param == nullptr) {
+    throw runtime_error("Could not enable access chunk selector");
+  }
+  PvGenType t;
+  res = param->GetType(t);
+  if (!res.IsOK()) {
+    throw runtime_error("Could not enable access chunk selector");
+  }
+  if(t == PvGenTypeEnum){
+    res = static_cast<PvGenEnum *>( param )->SetValue( "FrameInformation" );
+    if(!res.IsOK()) {
+      throw runtime_error("Could not select frame information chunk");
+    }
+  }
+  if(!SetParameter(m_device, m_stream, "ChunkEnable", true)) {
+    throw runtime_error("Could not enable frame information chunk");
   }
   CreateStreamBuffers(m_device, m_stream, &m_buffers, 16);
   if(m_buffers.empty()) {
@@ -43,7 +69,6 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
   }
  
   // Map start and stop and status commands
-  PvGenParameterArray *lDeviceParams = m_device->GetParameters();
   m_start = dynamic_cast<PvGenCommand *>( lDeviceParams->Get( "AcquisitionStart" ) );
   m_stop = dynamic_cast<PvGenCommand *>( lDeviceParams->Get( "AcquisitionStop" ) );
   m_pixformat = dynamic_cast<PvGenEnum *>( lDeviceParams->Get( "PixelFormat" ) );
@@ -90,7 +115,7 @@ Pipeline::~Pipeline() {
   }
   if(!m_buffers.empty()) {
     FreeStreamBuffers(&m_buffers);
-  }
+  }  
 }
 
 bool Pipeline::Start(bool calibrate) {  
@@ -121,15 +146,15 @@ bool Pipeline::Start(bool calibrate) {
   return true;
 }
 
-size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *>> &out) {
+size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t>> &out) {
   QMutexLocker l(&m_image_lock);
-  size_t res = m_images.size();
-  for (auto it = m_images.begin(); it != m_images.end(); ++it) {
-    out.push_back(*it);
+  
+  if(!m_images.empty()){
+    tuple<Mat *, Mat *, uint64_t> image = m_images.dequeue();
+    out.push_back(image);
   }
-  m_images.clear();
 
-  return res;
+  return 0;
 }
 
 void Pipeline::Stop() {
@@ -154,6 +179,8 @@ void Pipeline::run() {
     bool is_disparity = true;
     double lFrameRateVal = 0.0;
     double lBandwidthVal = 0.0;
+    uint64_t timestamp;
+    info_t info = {};
 
     // Retrieve next buffer
     PvResult lResult = m_stream->RetrieveBuffer( &lBuffer, &lOperationResult, 1500 );
@@ -167,7 +194,14 @@ void Pipeline::run() {
 
         m_fps->GetValue( lFrameRateVal );
         m_bandwidth->GetValue( lBandwidthVal );
-
+        timestamp = lBuffer-> GetTimestamp();
+        if(chunkDecodeMetaInformation(lBuffer, &info)) {
+          std::cout << "Bottlenose time: " << ms_to_date_string(info.real_time) << endl;
+          timestamp = info.real_time;
+        } else {
+          cerr << "Could not decode meta information" << endl;
+        }
+        
         IPvImage *img0, *img1;
         switch ( lBuffer->GetPayloadType() ) {
           case PvPayloadTypeMultiPart:
@@ -184,10 +218,11 @@ void Pipeline::run() {
               QMutexLocker l(&m_image_lock);
               // See if there is chunk data attached
               
-              m_images.push_back(
+              m_images.enqueue(
                       make_tuple(
                               new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
-                              new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer())
+                              new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer()),
+                              timestamp
                               )
                               );
             }
@@ -208,22 +243,24 @@ void Pipeline::run() {
                 is_disparity = false;
               }
 
-              m_images.push_back( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()), new Mat()));
+              m_images.enqueue( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()), 
+                                             new Mat(), timestamp));
             }
             
             emit monoReceived(is_disparity);
             break;
 
           default:
-            // Invalid buffer received
-            
+            // Invalid buffer received            
             cout << "FMT_ERR(" << consequitive_errors << ") :" << lResult.GetCodeString().GetAscii() << endl;
             consequitive_errors++;
+            emit onError(lResult.GetCodeString().GetAscii());
             break;
         }
       } else {
         // Non OK operational result, wait 100ms before retry
         consequitive_errors++;
+        emit onError(lOperationResult.GetCodeString().GetAscii());
         cout << "OP_ERR(" << consequitive_errors << ") :" << lOperationResult.GetCodeString().GetAscii() << endl;
         QThread::currentThread()->usleep(100*1000);
       }
@@ -234,11 +271,13 @@ void Pipeline::run() {
       // Retrieve buffer failure, wait 100ms before retry
       QThread::currentThread()->usleep(100*1000);
       consequitive_errors++;
+      emit onError(lResult.GetCodeString().GetAscii());
       cout << "BUF_ERR(" << consequitive_errors << ") :" << lResult.GetCodeString().GetAscii() << endl;
     }
-    if(consequitive_errors > MAX_CONS_ERRORS_IN_ACQUISITION) {
+
+    /*if(consequitive_errors > MAX_CONS_ERRORS_IN_ACQUISITION) {
       m_start_flag = false;
-    }
+    }*/
   }
 
   // Tell the device to stop sending images.
@@ -258,12 +297,7 @@ void Pipeline::run() {
 
   // Discard retrieved pairs
   {
-    QMutexLocker l(&m_image_lock);
-    for (auto it = m_images.begin(); it != m_images.end(); ++it) {
-      delete get<0>(*it);
-      delete get<1>(*it);
-    }
-    
+    QMutexLocker l(&m_image_lock);    
     m_images.clear();
   }
 

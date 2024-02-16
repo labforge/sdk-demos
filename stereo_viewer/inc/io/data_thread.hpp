@@ -23,6 +23,7 @@
 #include <QQueue>
 #include <QMutex>
 #include <QWaitCondition>
+#include <cstdint>
 
 #ifndef __IO_DATA_THREAD_HPP__
 #define __IO_DATA_THREAD_HPP__
@@ -30,8 +31,10 @@
 namespace labforge::io {
 struct ImageData
 {
+    uint64_t timestamp;
     QImage left;
     QImage right;
+    QString format;
 };
 
 class DataThread : public QThread
@@ -42,9 +45,10 @@ public:
     DataThread(QObject *parent = nullptr);
     ~DataThread();
 
-    void process(const QImage &left, const QImage &right);
+    void process(uint64_t timestamp, const QImage &left, const QImage &right, QString format);
     bool setFolder(QString new_folder);
     void setStereoDisparity(bool is_stereo, bool is_disparity);
+    void stop();   
 
 signals:
     void dataReceived();

@@ -22,9 +22,9 @@ __copyright__ = "Copyright 2023, Labforge Inc."
 import sys
 import time
 from PySide6.QtWidgets import QApplication, QMainWindow, QStyle, QFileDialog, QDialog, QFormLayout, QListView, \
-    QDialogButtonBox, QMessageBox, QAbstractItemView, QLineEdit
-from PySide6.QtGui import QIcon, QStandardItemModel, QStandardItem, QPalette
-from PySide6.QtCore import QDir, QFileInfo, Qt, Signal, QThread, QFile, QIODevice
+    QDialogButtonBox, QMessageBox, QAbstractItemView
+from PySide6.QtGui import QIcon, QStandardItemModel, QStandardItem
+from PySide6.QtCore import QDir, QFileInfo, Qt, Signal, QThread, QFile
 from widgets import Ui_MainWindow
 
 # Note eBUS seems to have issues with COM initialization, import only after QApplication is initialised
@@ -61,7 +61,7 @@ class BottlenoseFinderWorker(QThread):
 
 class BottlenoseSelector(QDialog):
     def __init__(self,  title, parent=None):
-        super(BottlenoseSelector, self).__init__(parent=parent)
+        super().__init__(parent=parent)
         form = QFormLayout(self)
         self.listView = QListView(self)
         form.addRow(self.listView)
@@ -105,7 +105,7 @@ class BottlenoseSelector(QDialog):
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super().__init__()
         self.ui = Ui_MainWindow()
 
         # Event handler registration
@@ -162,10 +162,10 @@ class MainWindow(QMainWindow):
                                  f"Unable to connect to device: {description}")
             self.disconnect()
             return None
-        else:
-            self.device = device
-            self.ui.txtIP.setText(device.GetIPAddress().GetUnicode())
-            self.ui.txtMAC.setText(device.GetMACAddress().GetUnicode())            
+
+        self.device = device
+        self.ui.txtIP.setText(device.GetIPAddress().GetUnicode())
+        self.ui.txtMAC.setText(device.GetMACAddress().GetUnicode())
         return device
 
     def disconnect(self):
@@ -218,10 +218,9 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def validate_transfer(fname, ftype):
-        if (ftype == "Firmware") or (ftype == "DNN Weights"):
+        if ftype in {"Firmware", "DNN Weights"}:
             return fname.lower().endswith(".tar")
-        else:
-            return fname.lower().endswith(".json") or fname.lower().endswith(".yml") or fname.lower().endswith(".yaml")
+        return fname.lower().endswith(".json") or fname.lower().endswith(".yml") or fname.lower().endswith(".yaml")
         
 
     def handle_upload(self):

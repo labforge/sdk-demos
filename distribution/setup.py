@@ -19,12 +19,12 @@
 __author__ = "Thomas Reidemeister <thomas@labforge.ca>"
 __copyright__ = "Copyright 2023, Labforge Inc."
 
-from setuptools import setup, find_packages, Extension
-from setuptools.command.build_ext import build_ext
-from distutils.cmd import Command
-import pkg_resources
 import subprocess
 import os
+from distutils.cmd import Command
+from setuptools import setup, find_packages, Extension
+from setuptools.command.build_ext import build_ext
+from jinja2 import Environment, FileSystemLoader
 
 # Definitions used to generate distribution
 NAME = "Bottlenose Utilities"
@@ -51,7 +51,6 @@ class BuildApp(Command):
         self.spec = 'install.spec'
 
     def render_version(self):
-        from jinja2 import Environment, FileSystemLoader
         env = Environment(loader=FileSystemLoader(self.src))
         template = env.get_template('version.j2')
         output = template.render(company=COMPANY,

@@ -156,6 +156,15 @@ static void s_load_colormap(QComboBox *cbx, int default_cm=COLORMAP_JET){
   }
 }
 
+static void s_load_format(QComboBox *cbx, bool isVisible=true){
+  cbx->addItem("BMP (Windows Bitmap)", "BMP"); 
+  cbx->addItem("PNG (Portable Network Graphics)", "PNG"); 
+  cbx->addItem("JPEG (Joint Photographic Experts Group)", "JPG");  
+  cbx->addItem("PPM (Portable Pixmap)", "PPM");
+  cbx->setCurrentIndex(0);
+  cbx->setVisible(isVisible);
+}
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   // Will apply UI file changes
   cfg.setupUi(this);
@@ -180,6 +189,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.chkCalibrate->setChecked(true);
   cfg.chkCalibrate->setEnabled(true);
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
+  s_load_format(cfg.cbxFormat, false);
+  cfg.lblFormat->setVisible(false);
 
   cfg.btnDeviceControl->setEnabled(true);
   m_device_browser = new PvGenBrowserWnd;
@@ -212,6 +223,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   }
 
   m_data_thread = std::make_unique<labforge::io::DataThread>();
+
+  //status
+  resetStatusCounters();
+  showStatusMessage();
 }
 
 MainWindow::~MainWindow(){
@@ -226,6 +241,10 @@ MainWindow::~MainWindow(){
     PvDevice::Free(m_device);
     m_device = nullptr;
   }
+
+  if(m_data_thread){
+    m_data_thread.reset();    
+  }
 }
 
 void MainWindow::handleStart() {
@@ -237,11 +256,14 @@ void MainWindow::handleStart() {
       cfg.btnRecord->setEnabled(true);
       
       cfg.chkCalibrate->setEnabled(false);
+      resetStatusCounters();
     }
   }
 }
 
 void MainWindow::handleStop(bool fatal) {
+  cfg.cbxFormat->setEnabled(true);
+  m_data_thread->stop();
   if(!cfg.btnRecord->isEnabled()){
     cfg.btnSave->setEnabled(true);
     cfg.btnRecord->setEnabled(true);
@@ -258,7 +280,7 @@ void MainWindow::handleStop(bool fatal) {
   cfg.widgetLeftSensor->reset();
   cfg.widgetRightSensor->reset();
   cfg.chkCalibrate->setEnabled(true);
-  
+
   // Check if we lost connection
   if(!m_device || !m_device->IsConnected() || fatal) {
     handleDisconnect();
@@ -275,6 +297,7 @@ void MainWindow::OnConnected() {
   cfg.btnRecord->setEnabled(false);
   cfg.btnSave->setEnabled(false);
   cfg.btnDeviceControl->setEnabled(true);
+  showStatusMessage();
   // FIXME: Clear data canvases
 }
 
@@ -292,8 +315,7 @@ void MainWindow::OnDisconnected() {
   cfg.editMAC->setText(""); 
   cfg.editModel->setText("");
   cfg.chkCalibrate->setEnabled(true);
-  cfg.btnDeviceControl->setEnabled(false);
-  // FIXME: Clear data canvases
+  cfg.btnDeviceControl->setEnabled(false);  
 }
 
 void MainWindow::handleRecording(){  
@@ -302,6 +324,7 @@ void MainWindow::handleRecording(){
   cfg.btnSave->setEnabled(false);
   cfg.editFolder->setEnabled(false);
   cfg.btnFolder->setEnabled(false);
+  cfg.cbxFormat->setEnabled(false);
   m_saving = false;
 
   if(!m_data_thread->setFolder(cfg.editFolder->text())){
@@ -313,7 +336,8 @@ void MainWindow::handleRecording(){
 void MainWindow::handleSave(){  
   cfg.btnSave->setEnabled(false);
   cfg.btnRecord->setEnabled(false);
-  m_saving = true;
+  cfg.cbxFormat->setEnabled(false);
+  m_saving = true;  
 
   if(!m_data_thread->setFolder(cfg.editFolder->text())){
     QMessageBox::critical(this, "Folder Error", "Could not create or find folder. Make sure you have appropriate write permission to the destination folder.");
@@ -372,7 +396,11 @@ void MainWindow::handleDisconnect() {
     PvDevice::Free(m_device);
     m_device = nullptr;
   }
+
   OnDisconnected();
+  m_data_thread->stop();
+  resetStatusCounters();  
+  this->statusBar()->clearMessage();  
 }
 
 void MainWindow::handleColormap(){
@@ -460,7 +488,7 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
           ).arg(MIN_MTU_REQUIRED);
           QMessageBox::warning(this, "Interface Error",
                                contents);
-          error = true;
+          //error = true;
         }
 
         if(error) {
@@ -492,6 +520,11 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
                   this,
                   &MainWindow::handleStop,
                   Qt::QueuedConnection);
+          connect(m_pipeline.get(),
+                  &Pipeline::onError,
+                  this,
+                  &MainWindow::handleError,
+                  Qt::QueuedConnection);
           return true;
         }
       } else {
@@ -505,7 +538,7 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
   return false;
 }
 
-void MainWindow::newData(QImage &left, QImage &right, bool stereo, bool disparity) {
+void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo, bool disparity) {
   // Set the image
   cfg.widgetLeftSensor->setImage(left, false);
   cfg.widgetRightSensor->setVisible(stereo);
@@ -531,11 +564,11 @@ void MainWindow::newData(QImage &left, QImage &right, bool stereo, bool disparit
   bool is_saving = (!cfg.btnSave->isEnabled() && m_saving);
   bool is_recording = (!cfg.btnRecord->isEnabled() && !cfg.btnSave->isEnabled() && !m_saving);
   if(is_saving || is_recording){
-    m_data_thread->process(left, right);
-    
+    m_data_thread->process(timestamp, left, right, cfg.cbxFormat->currentData().toString());        
     if(is_saving){
       cfg.btnSave->setEnabled(true);
       cfg.btnRecord->setEnabled(true);
+      cfg.cbxFormat->setEnabled(true);
       m_saving = false;
     }
   }
@@ -549,14 +582,48 @@ void MainWindow::newData(QImage &left, QImage &right, bool stereo, bool disparit
 
 }
 
+void MainWindow::showStatusMessage(uint32_t rcv_images){
+  auto end = std::chrono::system_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - m_startTime);
+  float esecs = elapsed.count();
+  float fps = (esecs > 0)? (m_frameCount/esecs): 0.00;
+  float payload = (m_payload * fps)/1000000;  
+  QString warn = ((m_errorMsg == "AUTO_ABORTED") || (m_errorMsg == "TIMEOUT"))?"   Warning: Skipping":((m_errorMsg == "MISSING_PACKETS")?"   Last Warning: Resends":"");
+  QString last_error = (m_errorCount > 0)?("   Last Error: " + m_errorMsg):"";
+
+  QString message = "GVSP/UDP Stream: " + QString::number(rcv_images * m_frameCount) + " images" +
+                    "   " + QString::number(fps, 'f', 2) + " FPS" +
+                    "   " + QString::number(rcv_images * payload, 'f', 2) + " Mbps" +
+                    "   Error Count: " + QString::number(m_errorCount) + last_error + warn;
+  this->statusBar()->showMessage(message);
+}
+
+void MainWindow::resetStatusCounters(){
+  m_frameCount = 0;
+  m_errorCount = 0;
+  m_payload = 0;
+  m_errorMsg = "";
+  m_startTime = std::chrono::system_clock::now();  
+}
+
+void MainWindow::handleError(QString msg){
+  m_errorCount += 1;
+  m_errorMsg = msg;
+  showStatusMessage();
+}
+
 void MainWindow::handleStereoData(bool is_disparity) {
   if(m_pipeline) {
-    list<tuple<Mat*, Mat*>> images;
+    list<tuple<Mat*, Mat*, uint64_t>> images;
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(true, is_disparity);
     
+    m_frameCount += images.size();
+    showStatusMessage(2);
+
     // Convert and display
     for (auto it = images.begin(); it != images.end(); ++it) {
+      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;   
       QImage q1 = s_yuv2_to_qimage(get<0>(*it));
       QImage q2;
 
@@ -566,7 +633,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
         q2 = s_yuv2_to_qimage(get<1>(*it));
       }
       
-      newData(q1, q2, true, is_disparity);
+      newData(get<2>(*it), q1, q2, true, is_disparity);
       delete get<0>(*it);
       delete get<1>(*it);
     }
@@ -575,11 +642,15 @@ void MainWindow::handleStereoData(bool is_disparity) {
 
 void MainWindow::handleMonoData(bool is_disparity){
   if(m_pipeline){
-    list<tuple<Mat*, Mat*>> images;
+    list<tuple<Mat*, Mat*, uint64_t>> images;
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(false, is_disparity);
 
+    m_frameCount += images.size();
+    showStatusMessage(1);
+
     for (auto it = images.begin(); it != images.end(); ++it) {
+      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;   
       QImage q1; 
       QImage q2; 
 
@@ -590,7 +661,7 @@ void MainWindow::handleMonoData(bool is_disparity){
         q1 = s_yuv2_to_qimage(get<0>(*it));
       }
 
-      newData(q1, q2, false, is_disparity);
+      newData(get<2>(*it), q1, q2, false, is_disparity);
       delete get<0>(*it);
       delete get<1>(*it);
     }

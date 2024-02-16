@@ -24,7 +24,7 @@ import yaml
 import numpy as np
 
 def LoadCalibIOParameters(fname='', sensors=0):
-    kdata = dict()
+    kdata = {}
     
     if not path.isfile(fname) or not fname.lower().endswith(".json"):
         return kdata
@@ -70,13 +70,13 @@ def LoadCalibIOParameters(fname='', sensors=0):
             kdata["ty" + id] = t["y"] 
             kdata["tz" + id] = t["z"]   
 
-    except Exception as e:
+    except Exception:
         return kdata.clear()
 
     return kdata
 
 def LoadFlatJSONParameters(fname='', sensors=0):
-    kdata = dict()
+    kdata = {}
     
     if not path.isfile(fname) or not fname.lower().endswith(".json"):
         return kdata
@@ -124,7 +124,7 @@ def LoadFlatJSONParameters(fname='', sensors=0):
             return kdata.clear()
         
 
-    except Exception as e:
+    except Exception:
         return kdata.clear()
 
     return kdata
@@ -155,7 +155,7 @@ def rodrigues(matrix):
     return rotation_vector
 
 def LoadKalibrParameters(fname='', sensors=0):
-    kdata = dict()
+    kdata = {}
     
     if not path.isfile(fname) or (\
        not fname.lower().endswith(".yaml") and \
@@ -210,13 +210,13 @@ def LoadKalibrParameters(fname='', sensors=0):
             kdata["kWidth"] = width
             kdata["kHeight"] = height
 
-    except Exception as e:
+    except Exception:
         return kdata.clear()
      
     return kdata
 
 def LoadFlatYamlParameters(fname='', sensors=0):
-    kdata = dict()
+    kdata = {}
     
     if not path.isfile(fname) or (\
        not fname.lower().endswith(".yaml") and \
@@ -270,7 +270,7 @@ def LoadFlatYamlParameters(fname='', sensors=0):
             
         if tvec_count < (sensors - 1) or rvec_count < (sensors - 1) :
             return kdata.clear()            
-    except Exception as e:
+    except Exception:
         return kdata.clear()
      
     return kdata
