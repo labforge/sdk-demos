@@ -186,7 +186,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.cbxColormap->setVisible(false);
   cfg.chkColormap->setChecked(true);  
   cfg.chkCalibrate->setVisible(true);
-  cfg.chkCalibrate->setChecked(true);
+  cfg.chkCalibrate->setChecked(false);
   cfg.chkCalibrate->setEnabled(true);
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
   s_load_format(cfg.cbxFormat, false);
