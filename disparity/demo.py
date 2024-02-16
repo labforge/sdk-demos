@@ -92,6 +92,14 @@ def check_stereo(device: eb.PvDeviceGEV, image: bool):
     multipart = device_params.Get('GevSCCFGMultiPartEnabled')
     multipart.SetValue(image)
 
+    # Turn on rectification
+    rectify = device_params.Get("Rectification")
+    rectify.SetValue(True)
+
+    # Turn on undistortion
+    undistort = device_params.Get("Undistortion")
+    undistort.SetValue(True)
+
 
 def enable_disparity(device: eb.PvDeviceGEV):
     """
