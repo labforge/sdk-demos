@@ -11,13 +11,13 @@ Change the following demo parameters to your desired settings in the ```demo.py`
 |-------------------------------|-------------------------------------------------|
 | ```-mac```                    | (optional) The MAC address of the camera. Assumes the first available camera if not specified.|
 | ```-kfile```                  | A YAML file containing calibration data.        |
-| 
+
 ## Usage
 
 ```bash
 python demo.py -m <MAC> -f path/to/calibration.yaml
-# -m  - (optional) mac address of a Bottlenose or connect to the first one available if not specified
-#  -f calibration file
+# -m (optional) mac address of a Bottlenose or connect to the first one available if not specified
+# -f calibration file
 ```
 
 ----
