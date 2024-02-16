@@ -21,6 +21,7 @@
 #include <QPen>
 
 #include "ui/cameraview.hpp"
+#include "focus.hpp"
 
 using namespace std;
 using namespace labforge::ui;
@@ -153,13 +154,12 @@ void CameraView::reset() {
 }
 
 void CameraView::redrawPixmap() {
+  QPixmap m;
   if(m_scaled && m_last_frame) {
-    setPixmap(m_last_frame->copy(m_crop).scaled(size(),
-                                                Qt::KeepAspectRatio,
-                                                Qt::FastTransformation));
+    m = m_last_frame->copy(m_crop).scaled(size(), Qt::KeepAspectRatio, Qt::FastTransformation);
   } else if(m_last_frame) {
-    setPixmap(m_last_frame->scaled(size(),
-                                   Qt::KeepAspectRatio,
-                                   Qt::FastTransformation));
+    m = m_last_frame->scaled(size(), Qt::KeepAspectRatio, Qt::FastTransformation);
   }
+  focusValue(m);
+  setPixmap(m);
 }
