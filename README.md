@@ -82,7 +82,7 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 | [Distribution](distribution/README.md)      | Sources of the utility distribution build                              | Mono, Stereo               |
 | [Calibration](calibration/README.md)        | Shows how to upload calibration parameters into your Bottlenose Camera | Mono, Stereo               |
 | [Sparse PointCloud](sparse3d/README.md)     | Shows how to stream out sparse pointcloud from a Bottlenose camera     | Stereo only                |
-| [Disparity](disparity/README.md)            | Shows how to strean disparity data from a Bottlenose camera            | Stereo only                |
+| [Disparity](disparity/README.md)            | Shows how to stream disparity data from a Bottlenose camera            | Stereo only                |
 | [Parameters](parameters/README.md)          | List all parameters exposed by your Bottlenose camera                  | Mono, Stereo               |
 
 ## Python API Documentation
