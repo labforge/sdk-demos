@@ -122,6 +122,9 @@
                  <height>1</height>
                 </size>
                </property>
+               <property name="toolTip">
+                <string/>
+               </property>
                <property name="styleSheet">
                 <string notr="true">background-color:black; border: 2px solid red;</string>
                </property>
@@ -228,6 +231,9 @@
              </property>
              <item>
               <widget class="QPushButton" name="btnConnect">
+               <property name="toolTip">
+                <string>Connect to Bottlenose ...</string>
+               </property>
                <property name="text">
                 <string>Connect</string>
                </property>
@@ -237,6 +243,9 @@
               <widget class="QPushButton" name="btnDisconnect">
                <property name="enabled">
                 <bool>false</bool>
+               </property>
+               <property name="toolTip">
+                <string>Disconnect the current connection ...</string>
                </property>
                <property name="text">
                 <string>Disconnect</string>
@@ -308,6 +317,9 @@
            </item>
            <item>
             <widget class="QPushButton" name="btnDeviceControl">
+             <property name="toolTip">
+              <string>Configure the Bottlenose parameters ...</string>
+             </property>
              <property name="text">
               <string>Device Control</string>
              </property>
@@ -372,6 +384,9 @@
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string>Start aquirining images...</string>
+               </property>
                <property name="text">
                 <string>Start</string>
                </property>
@@ -387,6 +402,9 @@
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="toolTip">
+                <string>Stop acquiring images ...</string>
                </property>
                <property name="text">
                 <string>Stop</string>
@@ -404,6 +422,9 @@
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string>Save the current image...</string>
+               </property>
                <property name="text">
                 <string>Save</string>
                </property>
@@ -416,6 +437,9 @@
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="toolTip">
+                <string>Record all received images during the life-stream...</string>
                </property>
                <property name="text">
                 <string>Record</string>
@@ -431,6 +455,9 @@
              </property>
              <item>
               <widget class="QCheckBox" name="chkCalibrate">
+               <property name="toolTip">
+                <string>Put Bottlenose in calibration mode to save unconditioned images ...</string>
+               </property>
                <property name="text">
                 <string>Acquire Calibration Data</string>
                </property>
@@ -480,6 +507,9 @@
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string>Type of color map to apply to disparity images ...</string>
+               </property>
               </widget>
              </item>
              <item>
@@ -489,6 +519,9 @@
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="toolTip">
+                <string>Apply chosen color map ...</string>
                </property>
                <property name="text">
                 <string>Apply Colormap</string>
