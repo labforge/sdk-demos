@@ -1,5 +1,5 @@
 /******************************************************************************
- *  Copyright 2023 Labforge Inc.                                              *
+ *  Copyright 2024 Labforge Inc.                                              *
  *                                                                            *
  * Licensed under the Apache License, Version 2.0 (the "License");            *
  * you may not use this project except in compliance with the License.        *
@@ -14,47 +14,41 @@
  * limitations under the License.                                             *
  ******************************************************************************
 
-@file camera_view.hpp CameraView class definition
+@file focus.hpp Utility functions for computing focus target value.
 @author Thomas Reidemeister <thomas@labforge.ca>
 */
-#ifndef __CAMERAVIEW_HPP__
-#define __CAMERAVIEW_HPP__
+#ifndef __FOCUS_HPP__
+#define __FOCUS_HPP__
 
-#include <memory>
-#include <QtWidgets/QLabel>
-#include <QtWidgets/QRubberBand>
-#include <QMouseEvent>
-#include "focus.hpp"
+#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <QImage>
+#include <QPixmap>
 
-namespace labforge::ui {
-
-class CameraView : public QLabel {
-  Q_OBJECT
+/**
+ * Focus class. This class is used to compute the focus value of an image.
+ */
+class Focus {
 public:
-  explicit CameraView(QWidget *parent = nullptr);
-  virtual ~CameraView() {};
-
-  void resizeEvent(QResizeEvent* event) override;
-  void mousePressEvent(QMouseEvent* event) override;
-  void mouseReleaseEvent(QMouseEvent* event) override;
-  void mouseMoveEvent(QMouseEvent* event) override;
-  void setImage(QImage &img, bool redraw);
-  void addTarget(QRect &pos, QString &label, QColor &color, int width);
-  void addFeature(QPoint &pos, QColor &color, int width);
-  void reset();
-  void redrawPixmap();
-  void enableFocus(bool value);
-
+  /**
+   * Constructor
+   * @param maxValues Maximum number of focus values to display in image stream.
+   * @param lineColor Line color of focus annotation to use.
+   * @param lineWidth Line with of focus annotation to use.
+   */
+  explicit Focus(size_t maxValues = 100, QColor lineColor = Qt::green, size_t lineWidth = 3);
+  ~Focus() = default;
+  void enable(bool enable);
+  void process(QPixmap &pixmap);
 private:
-  QPoint m_origin;
-  QRect m_crop;
-  Focus m_focus;
-  std::unique_ptr<QRubberBand> m_rubberband;
-  std::unique_ptr<QPixmap> m_last_frame;
-  bool m_scaled;
-
+  static cv::Mat to_mat(const QImage &image);
+  static double focusValue(const cv::Mat &img);
+  void paint(QPixmap &img);
+  size_t m_maxValues;
+  QColor m_lineColor;
+  size_t m_lineWidth;
+  bool m_enabled;
+  std::vector<double> m_last_values;
 };
 
-} // namespace labforge::ui
-
-#endif // #define __CAMERAVIEW_HPP__
+#endif // __FOCUS_HPP__

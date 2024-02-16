@@ -57,6 +57,7 @@ public Q_SLOTS:
   void onFolderSelect();
   void handleSave();
   void handleColormap();
+  void handleFocus();
   void handleDeviceControl();
 
 protected:
