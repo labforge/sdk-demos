@@ -25,6 +25,30 @@
 #include <QImage>
 #include <QPixmap>
 
-double focusValue(const QPixmap &pixmap);
+/**
+ * Focus class. This class is used to compute the focus value of an image.
+ */
+class Focus {
+public:
+  /**
+   * Constructor
+   * @param maxValues Maximum number of focus values to display in image stream.
+   * @param lineColor Line color of focus annotation to use.
+   * @param lineWidth Line with of focus annotation to use.
+   */
+  explicit Focus(size_t maxValues = 100, QColor lineColor = Qt::green, size_t lineWidth = 3);
+  ~Focus() = default;
+  void enable(bool enable);
+  void process(QPixmap &pixmap);
+private:
+  static cv::Mat to_mat(const QImage &image);
+  static double focusValue(const cv::Mat &img);
+  void paint(QPixmap &img);
+  size_t m_maxValues;
+  QColor m_lineColor;
+  size_t m_lineWidth;
+  bool m_enabled;
+  std::vector<double> m_last_values;
+};
 
 #endif // __FOCUS_HPP__

@@ -21,13 +21,11 @@
 #include <QPen>
 
 #include "ui/cameraview.hpp"
-#include "focus.hpp"
 
 using namespace std;
 using namespace labforge::ui;
 
 CameraView::CameraView(QWidget *parent) : QLabel(parent), m_scaled(false) {
-
 }
 
 void CameraView::resizeEvent(QResizeEvent *event) {
@@ -85,11 +83,9 @@ void CameraView::mouseReleaseEvent(QMouseEvent *event) {
                                   scaled_pixmap_rect.width(),
                                   scaled_pixmap_rect.height());
       QRectF selection = m_rubberband->geometry();
-//      cout << "Input: " << selection.x() << ", " << selection.y() << ", " << selection.width() << ", " << selection.height() << endl;
 
       // Make sure we do not cross boundaries
       selection = scaled_pixmap_rect.intersected(selection);
-//      cout << "InputS: " << selection.x() << ", " << selection.y() << ", " << selection.width() << ", " << selection.height() << endl;
 
       // Find origin coordinate in scaled pixmap
       selection = QRectF(selection.x() - scaled_pixmap_rect.x(),
@@ -98,19 +94,11 @@ void CameraView::mouseReleaseEvent(QMouseEvent *event) {
                          selection.height());
 
       double scale = m_last_frame->width() / scaled_pixmap_rect.width();
-//      cout << "Scale: " << scale << endl;
       m_crop = QRect(selection.x()*scale,
                      selection.y()*scale,
                      selection.width()*scale,
                      selection.height()*scale);
-//      if(m_crop.width()*m_crop.height() <= 0) {
-//        QLabel::mouseReleaseEvent(event);
-//        return;
-//      }
-//
-//      cout << "Result" << m_crop.x() << ", " << m_crop.y()
-//      << ", " << m_crop.width()
-//      << ", " << m_crop.height() << endl;
+
       m_scaled = true;
       redrawPixmap();
     }
@@ -160,6 +148,10 @@ void CameraView::redrawPixmap() {
   } else if(m_last_frame) {
     m = m_last_frame->scaled(size(), Qt::KeepAspectRatio, Qt::FastTransformation);
   }
-  focusValue(m);
+  m_focus.process(m);
   setPixmap(m);
+}
+
+void CameraView::enableFocus(bool value) {
+  m_focus.enable(value);
 }

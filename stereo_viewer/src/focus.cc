@@ -20,25 +20,88 @@
 #include "focus.hpp"
 
 #include <iostream>
+#include <utility>
+#include <QPainter>
 
 using namespace cv;
 using namespace std;
 
-double focusValue(const QPixmap &pixmap) {
-  // Convert QPixmap to QImage
-  QImage qimage = pixmap.toImage();
+Focus::Focus(size_t maxValues, QColor lineColor, size_t lineWidth)
+: m_maxValues(maxValues), m_lineColor(std::move(lineColor)), m_lineWidth(lineWidth), m_enabled(false) {
+  m_last_values.reserve(maxValues);
+}
 
-  // Convert QImage to Mat
+void Focus::enable(bool enable) {
+  m_enabled = enable;
+  // Reset values every time this gets touched
+  m_last_values.clear();
+}
+
+void Focus::process(QPixmap &pixmap) {
+  if(m_enabled) {
+    QImage image = pixmap.toImage();
+    Mat mat = to_mat(image);
+    if(!mat.empty()) {
+      double value = focusValue(mat);
+      m_last_values.push_back(value);
+      // Overflow
+      if(m_last_values.size() > m_maxValues) {
+        m_last_values.erase(m_last_values.begin());
+      }
+      // Front fill
+      if(m_last_values.size() < m_maxValues) {
+        m_last_values.insert(m_last_values.begin(), m_maxValues - m_last_values.size(), value);
+      }
+      // Draw focus helper
+      paint(pixmap);
+    }
+  }
+}
+
+cv::Mat Focus::to_mat(const QImage &image) {
   Mat mat;
-  switch (qimage.format()) {
+  switch (image.format()) {
     case QImage::Format_RGB32:
     case QImage::Format_ARGB32:
     case QImage::Format_ARGB32_Premultiplied:
-      mat = Mat(qimage.height(), qimage.width(), CV_8UC4, const_cast<uchar*>(qimage.bits()), qimage.bytesPerLine());
+      mat = Mat(image.height(), image.width(), CV_8UC4, const_cast<uchar*>(image.bits()), image.bytesPerLine());
       break;
     default:
-      return -1.0;
+      return mat;
   }
+  return mat;
+}
 
-  return 0.0;
+double Focus::focusValue(const cv::Mat &img) {
+  Mat gray;
+  cvtColor(img, gray, COLOR_BGR2GRAY);
+  Mat lap;
+  Laplacian(gray, lap, CV_64F);
+  Scalar mu, sigma;
+  meanStdDev(lap, mu, sigma);
+  return sigma.val[0] * sigma.val[0];
+}
+
+void Focus::paint(QPixmap &img) {
+  QPainter paint(&img);
+  paint.setPen(QPen(m_lineColor, m_lineWidth));
+
+  // Determine the range of the data
+  double minValue = *std::min_element(m_last_values.begin(), m_last_values.end());
+  double maxValue = *std::max_element(m_last_values.begin(), m_last_values.end());
+  double range = maxValue - minValue;
+  int width = img.width();
+  int height = img.height();
+
+  // Plot each point
+  for (std::size_t i = 0; i < m_last_values.size() - 1; ++i) {
+    double normalizedStart = (m_last_values[i] - minValue) / range;
+    double normalizedEnd = (m_last_values[i + 1] - minValue) / range;
+    int x1 = (i * width) / m_last_values.size();
+    int y1 = height - (normalizedStart * height);
+    int x2 = ((i + 1) * width) / m_last_values.size();
+    int y2 = height - (normalizedEnd * height);
+
+    paint.drawLine(x1, y1, x2, y2);
+  }
 }

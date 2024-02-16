@@ -24,6 +24,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QRubberBand>
 #include <QMouseEvent>
+#include "focus.hpp"
 
 namespace labforge::ui {
 
@@ -42,10 +43,12 @@ public:
   void addFeature(QPoint &pos, QColor &color, int width);
   void reset();
   void redrawPixmap();
+  void enableFocus(bool value);
 
 private:
   QPoint m_origin;
   QRect m_crop;
+  Focus m_focus;
   std::unique_ptr<QRubberBand> m_rubberband;
   std::unique_ptr<QPixmap> m_last_frame;
   bool m_scaled;

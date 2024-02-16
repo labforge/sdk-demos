@@ -188,6 +188,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.chkCalibrate->setVisible(true);
   cfg.chkCalibrate->setChecked(false);
   cfg.chkCalibrate->setEnabled(true);
+
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
   s_load_format(cfg.cbxFormat, false);
   cfg.lblFormat->setVisible(false);
@@ -207,6 +208,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   connect(cfg.btnSave, &QPushButton::released, this, &MainWindow::handleSave);
   connect(cfg.chkColormap, &QCheckBox::stateChanged, this, &MainWindow::handleColormap);
   connect(cfg.btnDeviceControl, &QPushButton::released, this, &MainWindow::handleDeviceControl);
+  connect(cfg.cbxFocus,&QCheckBox::stateChanged, this, &MainWindow::handleFocus);
 
   // Force disconnected state
   OnDisconnected();
@@ -405,6 +407,11 @@ void MainWindow::handleDisconnect() {
 
 void MainWindow::handleColormap(){
   cfg.cbxColormap->setEnabled(cfg.chkColormap->isChecked());
+}
+
+void MainWindow::handleFocus() {
+  cfg.widgetLeftSensor->enableFocus(cfg.cbxFocus->isChecked());
+  cfg.widgetRightSensor->enableFocus(cfg.cbxFocus->isChecked());
 }
 
 bool isWinVisible(PvGenBrowserWnd *aWnd){
