@@ -91,14 +91,14 @@ def load_calibration(kfile: str, num_cameras: int):
             calib = yaml.safe_load(f)
 
         if len(calib.keys()) != num_cameras:
-            raise Exception('Invalid number of cameras')
+            raise RuntimeError('Invalid number of cameras')
 
         if list(calib.keys()) != ['cam0', 'cam1']:
-            raise Exception('Invalid calibration file: Camera node not found')
+            raise RuntimeError('Invalid calibration file: Camera node not found')
 
         if calib['cam0']['width'] != calib['cam1']['width'] or \
            calib['cam0']['height'] != calib['cam1']['height']:
-            raise Exception('Mismatching width and height')
+            raise RuntimeError('Mismatching width and height')
 
         for cam in calib.keys():
             cam_id = cam[-1]
