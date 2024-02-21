@@ -11,17 +11,22 @@ The Python script shows how to programmatically enable chunk data transmission f
 
 Change the following demo parameters to your desired settings in the ```demo.py``` file.
 
-| ***Parameter***               | ***Description***                               |
-|-------------------------------|-------------------------------------------------|
-| ```max_fast_features```       | Maximum number of keypoints to transmit.        |
-| ```fast_threshold```          | Threshold for the Fast9 algorithm.              |
-| ```use_non_max_suppression``` | Whether to use non-maximum suppression.         |
+| ***Parameter***      | ***Description***                                                                              |
+|----------------------|------------------------------------------------------------------------------------------------|
+| ```--mac```          | (optional) The MAC address of the camera. Assumes the first available camera if not specified. |
+| `--corner_type`      | (optional) One of the feature point detector [FAST, GFTT]. Default=FAST                        |
+| `--gftt_detector`    | (optional) Underlying detector for GFTT. One of [Harris, MinEigenValue]. Default=Harris        |
+| ```--max_features``` | (optional) Maximum number of keypoints to transmit. Default = 1000                             |
+| `--quality_level`    | (optional) Quality level for GFTT. Default = 500                                               |
+| `--min_distance`     | (optional) Minimum distance between detected points with GFTT. Default = 15                    |
+| `--paramk`           | (optional) Free parameter `k` for GFTT. Default = 0                                            |
+| ```--threshold```    | (optional) Threshold for the FAST algorithm. Default=20                                        |
+| ```--nms```          | (optional) Set to use non-maximum suppression with FAST. Default=false                         |
 
 ## Usage
 
 ```bash
-python demo.py ?MAC
-# MAC     - (optional) mac address of Bottlenose to connect to or first one
+python demo.py <parameters>
 ```
 
 ----

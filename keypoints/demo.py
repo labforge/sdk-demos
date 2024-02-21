@@ -54,7 +54,7 @@ def parse_args():
 
     parser.add_argument("-k", "--paramk", type=float, default=0,
                         help="free parameter K for Harris corner")
-    parser.add_argument("--threshold", type=int, default=100, help="set threshold for FAST")
+    parser.add_argument("--threshold", type=int, default=20, help="set threshold for FAST")
     parser.add_argument("--nms", action='store_true', help="use nms for FAST")
 
     return parser.parse_args()
