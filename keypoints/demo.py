@@ -16,8 +16,8 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = ("Thomas Reidemeister <thomas@labforge.ca>"
-              "G. M. Tchamgoue <martin@labforge.ca>")
+__author__ = ("G. M. Tchamgoue <martin@labforge.ca>"
+              "Thomas Reidemeister <thomas@labforge.ca>")
 __copyright__ = "Copyright 2023, Labforge Inc."
 
 import sys
@@ -47,11 +47,13 @@ def parse_args():
                         help="type of corner to detect")
     parser.add_argument("--gftt_detector", default='Harris', choices=['Harris', 'MinEigenValue'],
                         help="Set the detector for GFTT")
-    parser.add_argument("--max_features", default=1000, type=int, help="maximum number of features to detect")
+    parser.add_argument("--max_features", default=1000, type=int,
+                        help="maximum number of features to detect")
     parser.add_argument("--quality_level", default=500, type=int, help="quality level for GFTT")
     parser.add_argument("--min_distance", default=15, type=int, help="minimum distance for GFTT")
 
-    parser.add_argument("-k", "--paramk", type=float, default=0, help="free parameter K for Harris corner")
+    parser.add_argument("-k", "--paramk", type=float, default=0,
+                        help="free parameter K for Harris corner")
     parser.add_argument("--threshold", type=int, default=100, help="set threshold for FAST")
     parser.add_argument("--nms", action='store_true', help="use nms for FAST")
 
@@ -69,7 +71,7 @@ def parse_validate_args():
     assert 0 < params.max_features <= max_num, f'Invalid max_features, values in [1, {max_num}]'
 
     assert 0 <= params.threshold <= 255, 'Invalid threshold, values in [0, 255]'
-    assert 0 < params.quality_level <= 1023, f'Invalid quality_level, values in [1, 1023]'
+    assert 0 < params.quality_level <= 1023, 'Invalid quality_level, values in [1, 1023]'
     assert 0 <= params.min_distance <= 30, 'Invalid min_distance, values in [0, 30]'
     assert 0 <= params.paramk <= 1.0, 'Invalid paramk, values in [0, 1.0]'
 
@@ -111,7 +113,13 @@ def set_image_streaming(device: eb.PvDeviceGEV):
     pixel_format = device_params.Get("PixelFormat")
     pixel_format.SetValue("YUV422_8")
 
+
 def handle_buffer(pvbuffer, device):
+    """
+    handles incoming buffer with disparity data
+    :param pvbuffer: The incoming buffer
+    :param device: the device
+    """
     payload_type = pvbuffer.GetPayloadType()
     if payload_type == eb.PvPayloadTypeImage:
         image = pvbuffer.GetImage()
@@ -187,6 +195,41 @@ def configure_fast9(device, max_num: int = 1000, threshold: int = 20, use_nms: b
     fast_nms.SetValue(use_nms)
 
 
+def configure_gftt(device, detector: str, max_num: int = 1000, quality_level: int = 500,
+                   min_distance: int = 15, k: float = 0.0):
+    """
+    Configure the GFTT keypoint detector
+    :param device: Device to configure
+    :param detector: the detector to use ['Harris', 'MinEigenValue']
+    :param max_num: Maximum number of features to consider.
+    :param quality_level: Quality level of keypoints
+    :param min_distance:  minimum distance between keypoints
+    :param k: the parameter k
+    """
+    # Get device parameters
+    device_params = device.GetParameters()
+    corner_type = device_params.Get("KPCornerType")
+    corner_type.SetValue("GFTT")
+
+    detector_name = 'Harris'
+    if detector.lower() == 'mineigenvalue':
+        detector_name = 'Min-Eigen'
+    detector_type = device_params.Get("KPDetector")
+    detector_type.SetValue(detector_name)
+
+    max_features = device_params.Get("KPMaxNumber")
+    max_features.SetValue(max_num)
+
+    quality = device_params.Get("KPQualityLevel")
+    quality.SetValue(quality_level)
+
+    distance = device_params.Get("KPMinimunDistance")
+    distance.SetValue(min_distance)
+
+    param_k = device_params.Get("KPHarrisParamK")
+    param_k.SetValue(k)
+
+
 def run_demo(device, stream):
     """
     Run the demo
@@ -222,8 +265,8 @@ def run_demo(device, stream):
             stream.QueueBuffer(pvbuffer)
         else:
             # Retrieve pvbuffer failure
-            warnings.warn(f"Unable to retrieve buffer. {result.GetCodeString()} ({result.GetDescription()})",
-                          RuntimeWarning)
+            warnings.warn(f"Unable to retrieve buffer. {result.GetCodeString()} "
+                          f"({result.GetDescription()})", RuntimeWarning)
 
     # Tell the Bottlenose to stop sending images.
     stop.Execute()
@@ -240,8 +283,17 @@ if __name__ == '__main__':
 
         # Enable keypoint detection and streaming
         enable_feature_points(device=bn_device)
-        configure_fast9(device=bn_device, max_num=args.max_features, threshold=args.threshold, use_nms=args.nms)
 
+        # configure feature point detector
+        if args.corner_type == 'FAST':
+            configure_fast9(device=bn_device, max_num=args.max_features,
+                            threshold=args.threshold, use_nms=args.nms)
+        else:
+            configure_gftt(device=bn_device, detector=args.gftt_detector,
+                           max_num=args.max_features, quality_level=args.quality_level,
+                           min_distance=args.min_distance, k=args.paramk)
+
+        # run demo
         run_demo(bn_device, bn_stream)
 
     deinit_bottlenose(bn_device, bn_stream, bn_buffers)
