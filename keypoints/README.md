@@ -1,11 +1,11 @@
 # Simple Keypoint Sample
 
-This is a modified version of the streaming demo that shows how to transmit the key points from Bottlenose.
+This demo shows how to stream keypoints from a Bottlenose camera.
 
-Please use ```eBusPlayer``` first to configure the image quality, gain, and exposure settings.
+This example assumes that any other settings related to image quality such as `exposure`, `gain`, and `CCM` is properly set. Please use `Stereo Viewer` or `eBusPlayer` to configure the image quality to your like.
 
 The Python script shows how to programmatically enable chunk data transmission for 
-[Fast9](https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test) key points.
+[FAST](https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test) and GFTT key points.
 
 ## Setup
 

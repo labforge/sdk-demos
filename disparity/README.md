@@ -15,25 +15,25 @@ The Python script shows how to programmatically
 
 ## Setup
 
-Change the following demo parameters to your desired settings in the ```demo.py``` file.
+Set the following arguments to the ```demo.py``` file to change demo behavior.
 
-| ***Parameter*** | ***Description***                                                                              |
-|-----------------|------------------------------------------------------------------------------------------------|
-| ```mac```       | (optional) The MAC address of the camera. Assumes the first available camera if not specified. |
-| ```offsety1```  | (optional) The Y offset of the right image. Default 440.                                       | 
-| ```image```     | (optional) Decide whether to stream the left image with disparity.                             |
-| ```cost_path```     | (optional) Sets disparity cost path                                                            |
-| ```crosscheck```     | (optional) Sets crosscheck value                                                               |
-| ```subpixel```     | (optional) Set sub-pixel value                                                                 |
-| ```blockwidth```     | (optional) block size width                                                                    |
-| ```blockheight```     | (optional) block size height                                                                   |
-| ```mindisparity```     | (optional) minimum disparity                                                                   |
-| ```numdisparity```     | (optional) number of disparity                                                                 |
-| ```vsearch```     | (optional) Set vertical search                                                                 |
-| ```threshold```     | (optional) set threshold                                                                       |
-| ```uniqueness```     | (optional) set uniqueness ratio                                                                |
-| ```penalty1```     | (optional) set penalty1                                                                        |
-| ```penalty2```     | (optional) set penalty2                                                                        |
+| ***Parameter***      | ***Description***                                                                              |
+|----------------------|------------------------------------------------------------------------------------------------|
+| ```--mac```          | (optional) The MAC address of the camera. Assumes the first available camera if not specified. |
+| ```--offsety1```     | (optional) The Y offset of the right image. Default 440.                                       | 
+| ```--image```        | (optional) Decide whether to stream the left image with disparity.                             |
+| ```--cost_path```    | (optional) Sets disparity cost path                                                            |
+| ```--crosscheck```   | (optional) Sets crosscheck value                                                               |
+| ```--subpixel```     | (optional) Set sub-pixel value                                                                 |
+| ```--blockwidth```   | (optional) block size width                                                                    |
+| ```--blockheight```  | (optional) block size height                                                                   |
+| ```--mindisparity``` | (optional) minimum disparity                                                                   |
+| ```--numdisparity``` | (optional) number of disparity                                                                 |
+| ```--vsearch```      | (optional) Set vertical search                                                                 |
+| ```--threshold```    | (optional) set threshold                                                                       |
+| ```--uniqueness```   | (optional) set uniqueness ratio                                                                |
+| ```--penalty1```     | (optional) set penalty1                                                                        |
+| ```--penalty2```     | (optional) set penalty2                                                                        |
 ## Usage
 
 ```bash
