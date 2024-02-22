@@ -7,22 +7,22 @@ This example assumes that:
 - all the image quality related settings such as `exposure`, `gain`, and `CCM` are set. Please use `Stereo Viewer` or `eBusPlayer` to configure the image quality to your like.
 
 The Python script shows how to programmatically 
-- set keypoint parameters, only [Fast9](https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test) is shown, but can be adapted for [GFTT](https://ieeexplore.ieee.org/document/323794). 
+- set keypoint parameters, only [FAST](https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test) is shown, but can be adapted for [GFTT](https://ieeexplore.ieee.org/document/323794). 
 - set keypoint matching parameters
 - enable chunk data transmission for sparse point cloud
 
 ## Setup
 
-Change the following demo parameters to your desired settings in the ```demo.py``` file.
+Set the following arguments to the ```demo.py``` file to change demo behavior.
 
-| ***Parameter***      | ***Description***                                                                              |
-|----------------------|------------------------------------------------------------------------------------------------|
-| ```mac```            | (optional) The MAC address of the camera. Assumes the first available camera if not specified. |
-| ```max_keypoints```  | (optional) Maximum number of keypoints to detect. Default 100.                                 |
-| ```fast_threshold``` | (optional) Keypoint threshold for the Fast9 algorithm. Default 20.                             |
-| ```match_xoffset```  | (optional) Matcher horizontal search range. Default 0.                                         |
-| ```match_yoffset```  | (optional) Matcher vertical search range. Default 0.                                           |
-| ```offsety1```       | (optional) The Y offset of the right image. Default 440.                                       | 
+| ***Parameter***        | ***Description***                                                                              |
+|------------------------|------------------------------------------------------------------------------------------------|
+| ```--mac```            | (optional) The MAC address of the camera. Assumes the first available camera if not specified. |
+| ```--max_keypoints```  | (optional) Maximum number of keypoints to detect. Default 100.                                 |
+| ```--fast_threshold``` | (optional) Keypoint threshold for the Fast9 algorithm. Default 20.                             |
+| ```--match_xoffset```  | (optional) Matcher horizontal search range. Default 0.                                         |
+| ```--match_yoffset```  | (optional) Matcher vertical search range. Default 0.                                           |
+| ```--offsety1```       | (optional) The Y offset of the right image. Default 440.                                       | 
 ## Usage
 
 ```bash

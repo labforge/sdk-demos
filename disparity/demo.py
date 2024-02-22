@@ -92,6 +92,18 @@ def check_stereo(device: eb.PvDeviceGEV, image: bool):
     multipart = device_params.Get('GevSCCFGMultiPartEnabled')
     multipart.SetValue(image)
 
+
+def enable_undistort_rectify(device: eb.PvDeviceGEV):
+    """
+    Enables undistortion and rectification
+    :param device: The device
+    """
+    if not is_stereo(device):
+        raise RuntimeError('Sparse3D supported only on Bottlenose stereo.')
+
+    # Get device parameters
+    device_params = device.GetParameters()
+
     # Turn on rectification
     rectify = device_params.Get("Rectification")
     rectify.SetValue(True)
@@ -316,6 +328,8 @@ if __name__ == '__main__':
     if bn_device is not None:
         check_stereo(device=bn_device, image=args.image)
         set_y1_offset(device=bn_device, value=args.offsety1)
+
+        enable_undistort_rectify(device=bn_device)
         enable_disparity(device=bn_device)
         configure_disparity(device=bn_device, params=args)
 
