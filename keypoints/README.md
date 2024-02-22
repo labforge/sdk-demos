@@ -9,7 +9,7 @@ The Python script shows how to programmatically enable chunk data transmission f
 
 ## Setup
 
-Change the following demo parameters to your desired settings in the ```demo.py``` file.
+Change the following demo parameters to your desired settings.
 
 | ***Parameter***      | ***Description***                                                                              |
 |----------------------|------------------------------------------------------------------------------------------------|
