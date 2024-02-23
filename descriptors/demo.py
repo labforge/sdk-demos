@@ -1,7 +1,7 @@
 # coding: utf-8
 """
 ******************************************************************************
-*  Copyright 2023 Labforge Inc.                                              *
+*  Copyright 2024 Labforge Inc.                                              *
 *                                                                            *
 * Licensed under the Apache License, Version 2.0 (the "License");            *
 * you may not use this project except in compliance with the License.        *
@@ -17,7 +17,7 @@
 ******************************************************************************
 """
 __author__ = "G. M. Tchamgoue <martin@labforge.ca>"
-__copyright__ = "Copyright 2023, Labforge Inc."
+__copyright__ = "Copyright 2024, Labforge Inc."
 
 import sys
 import warnings
