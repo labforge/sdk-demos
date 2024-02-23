@@ -134,6 +134,7 @@ def handle_buffer(pvbuffer, device):
         image = pvbuffer.GetImage()
         image_data = image.GetDataPointer()
 
+        # decode keypoints and descriptors chunkdata
         keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
         descr = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
 
@@ -151,6 +152,8 @@ def handle_buffer(pvbuffer, device):
 
         image_data0 = image0.GetDataPointer()
         image_data1 = image1.GetDataPointer()
+
+        # decode keypoints and descriptors chunkdata
         keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
         descr = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
 
