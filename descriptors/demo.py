@@ -16,7 +16,7 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = ("G. M. Tchamgoue <martin@labforge.ca>")
+__author__ = "G. M. Tchamgoue <martin@labforge.ca>"
 __copyright__ = "Copyright 2023, Labforge Inc."
 
 import sys
@@ -46,8 +46,10 @@ def parse_args():
     parser.add_argument("--threshold", type=int, default=20, help="set threshold for FAST")
     parser.add_argument("--nms", action='store_true', help="use nms for FAST")
 
-    parser.add_argument("--dlen", type=int, default=120, choices=[120, 128, 256, 486], help="AKAZE descriptor length")
-    parser.add_argument("--dwin", type=int, default=20, choices=[20, 30, 40, 60, 80], help="Window size for AKAZE computation")
+    parser.add_argument("--dlen", type=int, default=120, choices=[120, 128, 256, 486],
+                        help="AKAZE descriptor length")
+    parser.add_argument("--dwin", type=int, default=20, choices=[20, 30, 40, 60, 80],
+                        help="Window size for AKAZE computation")
 
     return parser.parse_args()
 
