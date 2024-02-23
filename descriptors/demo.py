@@ -142,6 +142,8 @@ def handle_buffer(pvbuffer, device):
         image_data = cv2.cvtColor(image_data, cv2.COLOR_YUV2BGR_YUY2)
         if len(keypoints):
             image_data = chk.draw_keypoints(image_data, keypoints[0])
+
+        # print descriptors
         print_descriptor(descr)
 
         cv2.imshow("Keypoints", image_data)
@@ -164,6 +166,7 @@ def handle_buffer(pvbuffer, device):
             cvimage0 = chk.draw_keypoints(cvimage0, keypoints[0])
             cvimage1 = chk.draw_keypoints(cvimage1, keypoints[1])
 
+        # print descriptors
         print_descriptor(descr)
 
         display_image = np.hstack((cvimage0, cvimage1))
