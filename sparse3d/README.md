@@ -4,9 +4,9 @@
 
 This example assumes that:
 - your camera is properly calibrated and the calibration parameters uploaded the camera. Checkout the [calibration example](../calibration/README.md) to see how to upload your parameters.
-- all the image quality related settings such as `exposure`, `gain`, and `CCM` are set. Please use `Stereo Viewer` or `eBusPlayer` to configure the image quality to your like.
+- all the image quality related settings such as `exposure`, `gain`, and `CCM` are set. Please use `Stereo Viewer` or `eBusPlayer` to configure the image quality to your liking.
 
-The Python script shows how to programmatically 
+The Python script shows how to: 
 - set keypoint parameters, only [FAST](https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test) is shown, but can be adapted for [GFTT](https://ieeexplore.ieee.org/document/323794). 
 - set keypoint matching parameters
 - enable chunk data transmission for sparse point cloud

@@ -5,9 +5,9 @@
 This example assumes that:
 - your camera is properly calibrated 
 - the calibration parameters are uploaded the camera. Checkout the [calibration example](../calibration/README.md) to see how to upload your parameters.
-- all the image quality related settings such as `exposure`, `gain`, and `CCM` are set. Please use `Stereo Viewer` or `eBusPlayer` to configure the image quality to your like.
+- all the image quality related settings such as `exposure`, `gain`, and `CCM` are set. Please use `Stereo Viewer` or `eBusPlayer` to configure the image quality to your liking.
 
-The Python script shows how to programmatically 
+The Python script shows how to:
 - set camera into disparity mode
 - set disparity parameters 
 - acquire disparity map
