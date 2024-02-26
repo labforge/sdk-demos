@@ -126,7 +126,11 @@ bool Pipeline::Start(bool calibrate) {
     m_stream->QueueBuffer( *lIt );
     lIt++;
   }
-  
+
+  if(m_rectify) m_rectify->GetValue(m_rectify_init);  
+  m_undistort->GetValue(m_undistort_init);
+  m_pixformat->GetValue( m_pixfmt_init );   
+    
   bool rct_value = calibrate?!calibrate:m_rectify_init;
   bool und_value = calibrate?!calibrate:m_undistort_init;
   PvString pixformat = calibrate?"YUV422_8":m_pixfmt_init.GetAscii();

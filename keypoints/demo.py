@@ -16,15 +16,18 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = ("Thomas Reidemeister <thomas@labforge.ca>"
-              "G. M. Tchamgoue <martin@labforge.ca>")
+__author__ = ("G. M. Tchamgoue <martin@labforge.ca>"
+              "Thomas Reidemeister <thomas@labforge.ca>")
 __copyright__ = "Copyright 2023, Labforge Inc."
 
 import sys
 import warnings
 
-import eBUS as eb
+import argparse
 import cv2
+import numpy as np
+import eBUS as eb
+
 
 # reference common utility files
 sys.path.insert(1, '../common')
@@ -34,7 +37,89 @@ from connection import init_bottlenose, deinit_bottlenose
 import draw_chunkdata as chk
 
 
+def parse_args():
+    """
+    parses and return the command-line arguments
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--mac", default=None, help="MAC address of the Bottlenose camera")
+    parser.add_argument("--corner_type", default='FAST', choices=['FAST', 'GFTT'],
+                        help="type of corner to detect")
+    parser.add_argument("--gftt_detector", default='Harris', choices=['Harris', 'MinEigenValue'],
+                        help="Set the detector for GFTT")
+    parser.add_argument("--max_features", default=1000, type=int,
+                        help="maximum number of features to detect")
+    parser.add_argument("--quality_level", default=500, type=int, help="quality level for GFTT")
+    parser.add_argument("--min_distance", default=15, type=int, help="minimum distance for GFTT")
+
+    parser.add_argument("-k", "--paramk", type=float, default=0,
+                        help="free parameter K for Harris corner")
+    parser.add_argument("--threshold", type=int, default=20, help="set threshold for FAST")
+    parser.add_argument("--nms", action='store_true', help="use nms for FAST")
+
+    return parser.parse_args()
+
+
+def parse_validate_args():
+    """
+    Parse and validate the range of arguments
+    :return: the parsed argument object
+    """
+    params = parse_args()
+
+    max_num = 65535 if params.corner_type == 'FAST' else 8192
+    assert 0 < params.max_features <= max_num, f'Invalid max_features, values in [1, {max_num}]'
+
+    assert 0 <= params.threshold <= 255, 'Invalid threshold, values in [0, 255]'
+    assert 0 < params.quality_level <= 1023, 'Invalid quality_level, values in [1, 1023]'
+    assert 0 <= params.min_distance <= 30, 'Invalid min_distance, values in [0, 30]'
+    assert 0 <= params.paramk <= 1.0, 'Invalid paramk, values in [0, 1.0]'
+
+    return params
+
+
+def is_stereo(device: eb.PvDeviceGEV):
+    """
+    Queries the device to determine if the camera is stereo.
+    :param device: The device to query
+    :return True if stereo, False otherwise
+    """
+    reg = device.GetParameters().Get('DeviceModelName')
+    res, model = reg.GetValue()
+
+    assert res.IsOK(), 'Error accessing camera'
+
+    num_cameras = 1 if model[-1].upper() == 'M' else 2
+
+    return num_cameras == 2
+
+
+def set_image_streaming(device: eb.PvDeviceGEV):
+    """
+    Checks that the device is a stereo camera and turns on multipart on if needed
+    :param device: The device
+    """
+
+    stereo = is_stereo(device)
+
+    # Get device parameters
+    device_params = device.GetParameters()
+
+    # turn multipart on if stereo
+    multipart = device_params.Get('GevSCCFGMultiPartEnabled')
+    multipart.SetValue(stereo)
+
+    # set image mode
+    pixel_format = device_params.Get("PixelFormat")
+    pixel_format.SetValue("YUV422_8")
+
+
 def handle_buffer(pvbuffer, device):
+    """
+    handles incoming buffer with disparity data
+    :param pvbuffer: The incoming buffer
+    :param device: the device
+    """
     payload_type = pvbuffer.GetPayloadType()
     if payload_type == eb.PvPayloadTypeImage:
         image = pvbuffer.GetImage()
@@ -49,6 +134,24 @@ def handle_buffer(pvbuffer, device):
                 image_data = chk.draw_keypoints(image_data, keypoints[0])
             cv2.imshow("Keypoints", image_data)
 
+    elif payload_type == eb.PvPayloadTypeMultiPart:
+        image0 = pvbuffer.GetMultiPartContainer().GetPart(0).GetImage()
+        image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
+
+        image_data0 = image0.GetDataPointer()
+        image_data1 = image1.GetDataPointer()
+        keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
+
+        cvimage0 = cv2.cvtColor(image_data0, cv2.COLOR_YUV2BGR_YUY2)
+        cvimage1 = cv2.cvtColor(image_data1, cv2.COLOR_YUV2BGR_YUY2)
+
+        cvimage0 = chk.draw_keypoints(cvimage0, keypoints[0])
+        cvimage1 = chk.draw_keypoints(cvimage1, keypoints[1])
+
+        display_image = np.hstack((cvimage0, cvimage1))
+
+        cv2.imshow("Keypoints", display_image)
+
 
 def enable_feature_points(device):
     """
@@ -59,45 +162,79 @@ def enable_feature_points(device):
     device_params = device.GetParameters()
 
     # Enable keypoint detection and streaming
-    chunkMode = device_params.Get("ChunkModeActive")
-    chunkMode.SetValue(True)
-    chunkSelector = device_params.Get("ChunkSelector")
-    chunkSelector.SetValue("FeaturePoints")
-    chunkEnable = device_params.Get("ChunkEnable")
-    chunkEnable.SetValue(True)
+    chunk_mode = device_params.Get("ChunkModeActive")
+    chunk_mode.SetValue(True)
+
+    chunk_selector = device_params.Get("ChunkSelector")
+    chunk_selector.SetValue("FeaturePoints")
+
+    chunk_enable = device_params.Get("ChunkEnable")
+    chunk_enable.SetValue(True)
 
 
-def configure_fast9(device, max_num=1000, threshold=20, useNonMaxSuppression=True):
+def configure_fast9(device, max_num: int = 1000, threshold: int = 20, use_nms: bool = True):
     """
-    Configure the Fast9n keypoint detector
+    Configure the Fast keypoint detector
     :param device: Device to configure
     :param max_num: Maximum number of features to consider.
     :param threshold: Quality threshold 0...100
-    :param useNonMaxSuppression:  Use non-maximum suppression
+    :param use_nms:  Use non-maximum suppression
     """
     # Get device parameters
     device_params = device.GetParameters()
-    KPCornerType = device_params.Get("KPCornerType")
-    KPCornerType.SetValue("Fast9n")
+    corner_type = device_params.Get("KPCornerType")
+    corner_type.SetValue("Fast9n")
 
-    KPFast9nMaxNum = device_params.Get("KPMaxNumber")
-    KPFast9nMaxNum.SetValue(int(max_num))
+    max_features = device_params.Get("KPMaxNumber")
+    max_features.SetValue(max_num)
 
-    KPFast9nThreshold = device_params.Get("KPThreshold")
-    KPFast9nThreshold.SetValue(threshold)
+    fast_threshold = device_params.Get("KPThreshold")
+    fast_threshold.SetValue(threshold)
 
-    KPFast9nUseNonMaxSuppression = device_params.Get("KPUseNMS")
-    KPFast9nUseNonMaxSuppression.SetValue(useNonMaxSuppression)
+    fast_nms = device_params.Get("KPUseNMS")
+    fast_nms.SetValue(use_nms)
 
 
-def run_demo(device, stream, max_fast_features=1000, fast_threshold=10, use_non_max_suppression=True):
+def configure_gftt(device, detector: str, max_num: int = 1000, quality_level: int = 500,
+                   min_distance: int = 15, k: float = 0.0):
+    """
+    Configure the GFTT keypoint detector
+    :param device: Device to configure
+    :param detector: the detector to use ['Harris', 'MinEigenValue']
+    :param max_num: Maximum number of features to consider.
+    :param quality_level: Quality level of keypoints
+    :param min_distance:  minimum distance between keypoints
+    :param k: the parameter k
+    """
+    # Get device parameters
+    device_params = device.GetParameters()
+    corner_type = device_params.Get("KPCornerType")
+    corner_type.SetValue("GFTT")
+
+    detector_name = 'Harris'
+    if detector.lower() == 'mineigenvalue':
+        detector_name = 'Min-Eigen'
+    detector_type = device_params.Get("KPDetector")
+    detector_type.SetValue(detector_name)
+
+    max_features = device_params.Get("KPMaxNumber")
+    max_features.SetValue(max_num)
+
+    quality = device_params.Get("KPQualityLevel")
+    quality.SetValue(quality_level)
+
+    distance = device_params.Get("KPMinimunDistance")
+    distance.SetValue(min_distance)
+
+    param_k = device_params.Get("KPHarrisParamK")
+    param_k.SetValue(k)
+
+
+def run_demo(device, stream):
     """
     Run the demo
     :param device: The device to stream from
     :param stream: The stream to use for streaming
-    :param max_fast_features: The maximum number of features to extract from the image.
-    :param fast_threshold: The threshold to use for the Fast9 extractor
-    :param use_non_max_suppression: Use non-maximum suppression for the Fast9 extractor
     """
     # Get device parameters need to control streaming
     device_params = device.GetParameters()
@@ -105,10 +242,6 @@ def run_demo(device, stream, max_fast_features=1000, fast_threshold=10, use_non_
     # Map the GenICam AcquisitionStart and AcquisitionStop commands
     start = device_params.Get("AcquisitionStart")
     stop = device_params.Get("AcquisitionStop")
-
-    # Enable keypoint detection and streaming
-    enable_feature_points(device)
-    configure_fast9(device, max_fast_features, fast_threshold, use_non_max_suppression)
 
     # Enable streaming and send the AcquisitionStart command
     device.StreamEnable()
@@ -132,8 +265,8 @@ def run_demo(device, stream, max_fast_features=1000, fast_threshold=10, use_non_
             stream.QueueBuffer(pvbuffer)
         else:
             # Retrieve pvbuffer failure
-            warnings.warn(f"Unable to retrieve buffer. {result.GetCodeString()} ({result.GetDescription()})",
-                          RuntimeWarning)
+            warnings.warn(f"Unable to retrieve buffer. {result.GetCodeString()} "
+                          f"({result.GetDescription()})", RuntimeWarning)
 
     # Tell the Bottlenose to stop sending images.
     stop.Execute()
@@ -141,12 +274,26 @@ def run_demo(device, stream, max_fast_features=1000, fast_threshold=10, use_non_
 
 
 if __name__ == '__main__':
-    mac_address = None
-    if len(sys.argv) >= 2:
-        mac_address = sys.argv[1]
+    args = parse_validate_args()
 
-    device, stream, buffers = init_bottlenose(mac_address)
-    if device is not None:
-        run_demo(device, stream)
+    bn_device, bn_stream, bn_buffers = init_bottlenose(args.mac)
+    if bn_device is not None:
+        # set device into image streaming mode
+        set_image_streaming(device=bn_device)
 
-    deinit_bottlenose(device, stream, buffers)
+        # Enable keypoint detection and streaming
+        enable_feature_points(device=bn_device)
+
+        # configure feature point detector
+        if args.corner_type == 'FAST':
+            configure_fast9(device=bn_device, max_num=args.max_features,
+                            threshold=args.threshold, use_nms=args.nms)
+        else:
+            configure_gftt(device=bn_device, detector=args.gftt_detector,
+                           max_num=args.max_features, quality_level=args.quality_level,
+                           min_distance=args.min_distance, k=args.paramk)
+
+        # run demo
+        run_demo(bn_device, bn_stream)
+
+    deinit_bottlenose(bn_device, bn_stream, bn_buffers)

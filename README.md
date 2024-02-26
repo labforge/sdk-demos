@@ -71,17 +71,19 @@ source /opt/pleora/ebus_sdk/Ubuntu-<Ubuntu version>/bin/set_puregev_env.sh
 
 ## Python Code Samples
 
-| ***Sample***                                | ***Description***                                        | ***Applicable Device(s)*** |
-|---------------------------------------------|----------------------------------------------------------|----------------------------|
-| [Stream](stream/README.md)                  | Simple Streaming Example                                 | Mono, Stereo               |
-| [Focus](parameters/README.md)               | Simple Utility to focus Lenses                           | Mono, Stereo               |
-| [Keypoints](keypoints/README.md)            | Simple Keypoint Detection Demo                           | Mono, Stereo               |
-| [Stereo Matching](stereo_matches/README.md) | Simple Stereo Matching Example                           | Stereo only                |
-| [AI Model](ai_model/README.md)              | Simple Bounding Box Detection Demo                       | Mono, Stereo               |
-| [Utility](utility/README.md)                | Sources of the update utility for firmware and AI models | Mono, Stereo               |
-| [Distribution](distribution/README.md)      | Sources of the utility distribution build                | Mono, Stereo               |
-| [Calibration](calibration/README.md)        | Shows how to upload calibration parameters               | Mono, Stereo               |
-| [Parameters](parameters/README.md)          | List all parameters exposed by your Bottlenose camera    | Mono, Stereo               |
+| ***Sample***                                | ***Description***                                                      | ***Applicable Device(s)*** |
+|---------------------------------------------|------------------------------------------------------------------------|----------------------------|
+| [Stream](stream/README.md)                  | Simple Streaming Example                                               | Mono, Stereo               |
+| [Focus](parameters/README.md)               | Simple Utility to focus Lenses                                         | Mono, Stereo               |
+| [Keypoints](keypoints/README.md)            | Simple Keypoint Detection Demo                                         | Mono, Stereo               |
+| [Stereo Matching](stereo_matches/README.md) | Simple Stereo Matching Example                                         | Stereo only                |
+| [AI Model](ai_model/README.md)              | Simple Bounding Box Detection Demo                                     | Mono, Stereo               |
+| [Utility](utility/README.md)                | Sources of the update utility for firmware and AI models               | Mono, Stereo               |
+| [Distribution](distribution/README.md)      | Sources of the utility distribution build                              | Mono, Stereo               |
+| [Calibration](calibration/README.md)        | Shows how to upload calibration parameters into your Bottlenose Camera | Mono, Stereo               |
+| [Sparse PointCloud](sparse3d/README.md)     | Shows how to stream out sparse pointcloud from a Bottlenose camera     | Stereo only                |
+| [Disparity](disparity/README.md)            | Shows how to stream disparity data from a Bottlenose camera            | Stereo only                |
+| [Parameters](parameters/README.md)          | List all parameters exposed by your Bottlenose camera                  | Mono, Stereo               |
 
 ## Python API Documentation
 
