@@ -523,18 +523,30 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="chkColormap">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="toolTip">
-                <string>Apply chosen color map ...</string>
-               </property>
+              <widget class="QLabel" name="lblMinDisparity">
                <property name="text">
-                <string>Apply Colormap</string>
+                <string>Min</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="spinMinDisparity">
+               <property name="maximum">
+                <number>255</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="lblMaxDisparity">
+               <property name="text">
+                <string>Max</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="spinMaxDisparity">
+               <property name="maximum">
+                <number>255</number>
                </property>
               </widget>
              </item>

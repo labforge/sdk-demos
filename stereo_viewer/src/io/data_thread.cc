@@ -20,6 +20,9 @@
 #include <QDir>
 #include "io/data_thread.hpp"
 
+#include <algorithm>
+#include <fstream>
+
 using namespace labforge::io;
 using namespace std;
 
@@ -45,10 +48,11 @@ DataThread::~DataThread()
   wait();
 }
 
-void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image, QString format){
+void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image, QString format, const uint16_t *raw){
   QMutexLocker locker(&m_mutex);
   
-  m_queue.enqueue({timestamp, left_image, right_image, format});
+  cv::Mat dmat(left_image.height(),left_image.width(), CV_16UC1, (uint16_t *)raw);
+  m_queue.enqueue({timestamp, left_image, right_image, format, dmat});
   
   if (!isRunning()) {
     start(HighPriority);
@@ -108,6 +112,59 @@ void DataThread::stop(){
   m_condition.wakeOne();
 }  
 
+static void saveColoredPLYFile(const cv::Mat& pointCloud, QImage &image, const QString& filename) {
+  ofstream plyFile(filename.toStdString());
+
+  // Write PLY header
+  plyFile << "ply\n";
+  plyFile << "format ascii 1.0\n";
+  plyFile << "element vertex " << pointCloud.rows * pointCloud.cols << "\n";
+  plyFile << "property float x\n";
+  plyFile << "property float y\n";
+  plyFile << "property float z\n";
+  plyFile << "property uchar red\n";
+  plyFile << "property uchar green\n";
+  plyFile << "property uchar blue\n";
+  plyFile << "end_header\n";
+  
+  // Write point cloud data
+  for (int y = 0; y < pointCloud.rows; ++y) {
+      for (int x = 0; x < pointCloud.cols; ++x) {
+          cv::Point3f pt = pointCloud.at<cv::Point3f>(y, x);
+          QColor color = image.pixelColor(x, y);
+          
+          plyFile << pt.x << " " << pt.y << " " << pt.z << " "
+                  << color.red() << " "  // Red
+                  << color.green() << " "  // Green
+                  << color.blue() << "\n"; // Blue
+      }
+  }
+
+  plyFile.close();
+}
+
+static void project3D(cv::Mat &dispf32, cv::Mat &xyz, cv::Mat &qmat){
+  
+  cv::Mat_<float> vec_tmp(4,1);
+  for(int y=0; y < dispf32.rows; ++y) {
+      for(int x=0; x < dispf32.cols; ++x) {
+          vec_tmp(0) = x; 
+          vec_tmp(1) = y; 
+          vec_tmp(2) = dispf32.at<float>(y,x); 
+          vec_tmp(3) = 1;
+
+          vec_tmp = qmat * vec_tmp;
+          vec_tmp /= vec_tmp(3);
+
+          cv::Vec3f &point = xyz.at<cv::Vec3f>(y,x);
+          point[0] = vec_tmp(0);
+          point[1] = vec_tmp(1);
+          point[2] = vec_tmp(2);
+          if(vec_tmp(2) > 7) point[2] = 0;
+      }
+  }
+}
+
 void DataThread::run() {    
   while(!m_abort) {
     m_mutex.lock();
@@ -129,7 +186,21 @@ void DataThread::run() {
     if (m_stereo){
       if(m_disparity){            
         imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);         
-        imdata.right.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);               
+        imdata.right.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);  
+
+        //float Q[16] = {1.0,0.0,0.0,-1000.52124,0.0,1.0,0.0,-584.05273,0.0,0.0,0.0,3923.664,0.0,0.0,7.4457912,96.79574};
+        float Q[16] = {1.0,0.0,0.0,-890.5212,0.0,1.0,0.0,-594.0528,0.0,0.0,0.0,3923.6646,0.0,0.0,7.4457903,-0.0};
+        cv::Mat qmat(4, 4, CV_32F, Q);
+        cv::Mat pc(imdata.left.height(), imdata.left.width(), CV_32FC3);
+      
+        cv::Mat dispf32;
+        imdata.disparity.setTo(0, imdata.disparity == 65535);
+        imdata.disparity.convertTo(dispf32, CV_32FC1, (1./255.0), 0);
+
+        QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
+        cv::reprojectImageTo3D(dispf32, pc, qmat, false, CV_32F);
+        //project3D(dispf32, pc, qmat);
+        saveColoredPLYFile(pc, imdata.left, fname);
       } else {       
         imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);            
         imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str(), quality);
