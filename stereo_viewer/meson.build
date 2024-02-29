@@ -31,7 +31,7 @@ app_inc = include_directories(
 cpp = meson.get_compiler('cpp')
 # set PATH=C:\qt5\bin;%PATH%
 qt5 = import('qt5')
-qt5_deps = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'Test', 'Network'])
+qt5_deps = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'Test', 'Network'], main: true)
 opencv_dep = dependency('opencv4', required: false)
 if not opencv_dep.found()
   cv_dir = get_option('cv_dir')

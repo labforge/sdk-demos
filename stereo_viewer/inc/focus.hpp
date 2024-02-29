@@ -42,8 +42,9 @@ public:
   void process(QPixmap &pixmap);
 private:
   static cv::Mat to_mat(const QImage &image);
-  static double focusValue(const cv::Mat &img);
-  void paint(QPixmap &img);
+  static double focusValue(const cv::Mat &gray);
+  static double averageBrightness(const cv::Mat& gray);
+  void paint(QPixmap &img, double brightness);
   size_t m_maxValues;
   QColor m_lineColor;
   size_t m_lineWidth;
