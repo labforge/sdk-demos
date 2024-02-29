@@ -73,7 +73,7 @@ if host_machine.system() == 'linux'
 else # Windows, note force 64-bit
   pleora_dirs = ['C:/Program Files/Pleora Technologies Inc/eBUS SDK/Libraries']
   pleora_inc = '-IC:/Program Files/Pleora Technologies Inc/eBUS SDK/Includes'
-  pleora_args = [pleora_inc, '-D_AFXDLL', '/MD']
+  pleora_args = [pleora_inc, '-D_AFXDLL', '/MD', '-D_CRT_SECURE_NO_WARNINGS']
   PvBase = cpp.find_library('PvBase64', required: true, dirs: pleora_dirs)
   PvBuffer = cpp.find_library('PvBuffer64', required: true, dirs: pleora_dirs)
   PvSystem = cpp.find_library('PvSystem64', required: true, dirs: pleora_dirs)
