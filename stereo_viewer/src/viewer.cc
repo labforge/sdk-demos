@@ -271,6 +271,10 @@ void MainWindow::handleStart() {
       
       cfg.chkCalibrate->setEnabled(false);
       resetStatusCounters();
+
+      cv::Mat qMat;
+      m_stereo_rig->getDepthMatrix(qMat);
+      m_data_thread->setDepthMatrix(qMat);
     }
   }
 }
@@ -391,7 +395,7 @@ void MainWindow::handleConnect() {
 
   if(connectGEV(devinfo)) {    
     OnConnected();   
-    m_stereo_rig->setParameters(m_device); 
+    m_stereo_rig->setParameters(m_device);
   } else {
     OnDisconnected();
   }

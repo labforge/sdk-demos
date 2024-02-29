@@ -84,10 +84,44 @@ void StereoRig::setParameters(PvDevice *lDevice){
     std::cout << "kHeight: " << std::get<int64_t>(regvalue) << std::endl;
     m_height = std::get<int64_t>(regvalue);
   }
+  applyStereoRectify();
 
 }
 
 bool StereoRig::calibrated(uint32_t width, uint32_t height){
-    return ((width == m_width) && (height == m_height) &&
-           (m_width > 0) && (m_height > 0));
+  return ((width == m_width) && (height == m_height) &&
+          (m_width > 0) && (m_height > 0));
+}
+
+void StereoRig::applyStereoRectify(){
+  /* K matrices */  
+  double kmat1[9] = {m_params["fx0"], 0.0, m_params["cx0"], 0.0, m_params["fy0"], m_params["cy0"], 0.0, 0.0, 1.0};
+  double kmat2[9] = {m_params["fx1"], 0.0, m_params["cx1"], 0.0, m_params["fy1"], m_params["cy1"], 0.0, 0.0, 1.0};
+  cv::Mat K1(3, 3, CV_64F, kmat1);
+  cv::Mat K2(3, 3, CV_64F, kmat2);
+
+  /* distortion coeffs */  
+  double dist1[5] = {m_params["k10"], m_params["k20"], m_params["p10"], m_params["p20"], m_params["k30"]};
+  double dist2[5] = {m_params["k11"], m_params["k21"], m_params["p11"], m_params["p21"], m_params["k31"]};
+  cv::Mat distCoeffs1(5, 1, CV_64F, dist1);
+  cv::Mat distCoeffs2(5, 1, CV_64F, dist2);
+  cv::Size imageSize(m_width, m_height);
+
+  /* rotation and translation */
+  double rvec[3] = {m_params["rx1"], m_params["ry1"], m_params["rz1"]};
+  double tvec[3] = {m_params["tx1"], m_params["ty1"], m_params["tz1"]};
+  cv::Mat Rv(3, 1, CV_64F, rvec);
+  cv::Mat R(3, 3, CV_64F);
+  cv::Mat T(3, 1, CV_64F, tvec);
+  cv::Rodrigues(Rv, R);  
+
+  cv::stereoRectify(K1, distCoeffs1, K2, distCoeffs2, imageSize,
+                    R, T, m_R1, m_R2, m_P1, m_P2, m_Q);
+  std::cout << "R1 = " << std::endl << " "  << m_R1 << std::endl << std::endl;
+  std::cout << "Q = " << std::endl << " "  << m_Q << std::endl << std::endl;
+}
+
+void StereoRig::getDepthMatrix(cv::Mat &qmat){
+  qmat = m_Q.clone();
+  std::cout << "qmat = " << std::endl << " "  << qmat << std::endl << std::endl;
 }

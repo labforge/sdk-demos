@@ -51,7 +51,10 @@ DataThread::~DataThread()
 void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image, QString format, const uint16_t *raw){
   QMutexLocker locker(&m_mutex);
   
-  cv::Mat dmat(left_image.height(),left_image.width(), CV_16UC1, (uint16_t *)raw);
+  cv::Mat dmat;
+  if(raw != nullptr){
+    dmat = cv::Mat(left_image.height(),left_image.width(), CV_16UC1, (uint16_t *)raw);    
+  }
   m_queue.enqueue({timestamp, left_image, right_image, format, dmat});
   
   if (!isRunning()) {
@@ -187,20 +190,25 @@ void DataThread::run() {
       if(m_disparity){            
         imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);         
         imdata.right.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);  
+        
+        if(!imdata.disparity.empty()){
+          //float Q[16] = {1.0,0.0,0.0,-1000.52124,0.0,1.0,0.0,-584.05273,0.0,0.0,0.0,3923.664,0.0,0.0,7.4457912,96.79574};
+          //float Q[16] = {1.0,0.0,0.0,-890.5212,0.0,1.0,0.0,-594.0528,0.0,0.0,0.0,3923.6646,0.0,0.0,7.4457903,-0.0};
+          //float Q[16] = {1.0,0.0,0.0,-898.6985,0.0,1.0,0.0,-592.93506,0.0,0.0,0.0,3893.555,0.0,0.0,7.4382367,-0.0};
+          //cv::Mat qmat(4, 4, CV_32F, Q);
 
-        //float Q[16] = {1.0,0.0,0.0,-1000.52124,0.0,1.0,0.0,-584.05273,0.0,0.0,0.0,3923.664,0.0,0.0,7.4457912,96.79574};
-        float Q[16] = {1.0,0.0,0.0,-890.5212,0.0,1.0,0.0,-594.0528,0.0,0.0,0.0,3923.6646,0.0,0.0,7.4457903,-0.0};
-        cv::Mat qmat(4, 4, CV_32F, Q);
-        cv::Mat pc(imdata.left.height(), imdata.left.width(), CV_32FC3);
-      
-        cv::Mat dispf32;
-        imdata.disparity.setTo(0, imdata.disparity == 65535);
-        imdata.disparity.convertTo(dispf32, CV_32FC1, (1./255.0), 0);
+          cv::Mat pc(imdata.left.height(), imdata.left.width(), CV_32FC3);      
+          cv::Mat dispf32;
 
-        QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
-        cv::reprojectImageTo3D(dispf32, pc, qmat, false, CV_32F);
-        //project3D(dispf32, pc, qmat);
-        saveColoredPLYFile(pc, imdata.left, fname);
+          //imdata.disparity.setTo(0, imdata.disparity == 65535);
+          imdata.disparity.convertTo(dispf32, CV_32FC1, (1./255.0), 0);
+
+          QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
+          if(!m_matQ.empty()){               
+            cv::reprojectImageTo3D(dispf32, pc, m_matQ, false, CV_32F);          
+            saveColoredPLYFile(pc, imdata.left, fname);
+          }
+        }
       } else {       
         imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);            
         imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str(), quality);
@@ -215,4 +223,9 @@ void DataThread::run() {
     
     m_frame_counter += 1;               
   }
+}
+
+void  DataThread::setDepthMatrix(cv::Mat& qmat){
+  m_matQ = qmat.clone();
+  std::cout << "m_matQ = " << std::endl << " "  << m_matQ << std::endl << std::endl;
 }

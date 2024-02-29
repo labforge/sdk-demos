@@ -54,6 +54,7 @@ public:
     void setStereoDisparity(bool is_stereo, bool is_disparity);
     void stop();   
 
+    void setDepthMatrix(cv::Mat& qmat);
 signals:
     void dataReceived();
     void dataProcessed();
@@ -77,6 +78,7 @@ private:
     bool m_stereo;
     bool m_abort;
     bool m_disparity;
+    cv::Mat m_matQ;
 };
 }
 

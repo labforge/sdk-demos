@@ -33,17 +33,27 @@ class StereoRig
 {    
 
 public:
-    StereoRig();
-    StereoRig(PvDevice *lDevice);
-    ~StereoRig();
+  StereoRig();
+  StereoRig(PvDevice *lDevice);
+  ~StereoRig();
 
-    void setParameters(PvDevice *lDevice);
-    bool calibrated(uint32_t width, uint32_t height);
+  void setParameters(PvDevice *lDevice);
+  bool calibrated(uint32_t width, uint32_t height);
+  void getDepthMatrix(cv::Mat &qmat);
 
 private:
-    std::map<std::string, float> m_params;
-    uint32_t m_width;
-    uint32_t m_height; 
+  std::map<std::string, float> m_params;
+  uint32_t m_width;
+  uint32_t m_height; 
+
+  /* output matrices */
+  cv::Mat m_R1; //(3, 3, CV_64F);
+  cv::Mat m_R2; //(3, 3, CV_64F);
+  cv::Mat m_P1; //(3, 4, CV_64F);
+  cv::Mat m_P2; //(3, 4, CV_64F);
+  cv::Mat m_Q;//(4, 4, CV_64F);
+
+  void applyStereoRectify();
 };
 
 }
