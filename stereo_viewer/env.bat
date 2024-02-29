@@ -41,7 +41,9 @@ IF NOT EXIST "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\VC\Aux
 CALL "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
 
 :: QT5
-SET QTHOME=C:\qt5
+IF NOT DEFINED QTHOME (
+    SET QTHOME=C:\qt5
+)
 IF NOT EXIST %QTHOME% (
     ECHO QT5 not properly installed ... exiting
     EXIT /B 1
@@ -51,7 +53,9 @@ IF NOT EXIST %QTHOME% (
 )
 
 :: OpenCV4
-SET OPENCVHOME="C:\cv4"
+IF NOT DEFINED OPENCVHOME (
+    SET OPENCVHOME=C:\cv4
+)
 IF NOT EXIST %OPENCVHOME% (
     ECHO OpenCV not properly installed ... exiting
     EXIT /B 1

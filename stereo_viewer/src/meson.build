@@ -56,7 +56,7 @@ else
     include_directories : app_inc,
     install: true,
     dependencies: [app_deps],
-    gui_app: true,
-    link_args : ['/SUBSYSTEM:WINDOWS', 'C:/qt5/lib/qtmain.lib']
+    gui_app: false,
+    link_args : ['/SUBSYSTEM:WINDOWS']
   )
 endif
