@@ -123,7 +123,8 @@ class MainWindow(QMainWindow):
         self.ui.btnFile.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogStart))
         self.ui.btnUpload.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
         self.ui.btnQuit.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCloseButton))
-        self.ui.btnConnect.setIcon(QIcon.fromTheme("network-wired", QIcon(":/network-wired.png")))
+        self.ui.btnConnect.setIcon(QIcon(":/network-wired.svg"))
+        # self.ui.btnConnect.setIcon(QIcon.fromTheme("network-wired", QIcon(":/network-wired.png")))
         self.ui.prgUpload.setVisible(False)
         self.ui.btnUpload.setVisible(False)
         self.ui.txtFile.setReadOnly(True)
@@ -201,17 +202,24 @@ class MainWindow(QMainWindow):
             self.ui.txtFile.setText(selected_file)
 
     def handle_connect(self):
-        select = BottlenoseSelector("Select Bottlenose Camera", self)
-        if select.exec() == QDialog.Accepted:
-            connection_id = select.selected_bottlenose()
-            if connection_id is not None:
-                self.disconnect()
-                if self.connect_gev(connection_id) is not None:
-                    self.ui.btnFile.setEnabled(True)
-                    self.setAcceptDrops(True)
-                    if len(self.ui.txtFile.text()) > 0:
-                        self.ui.btnUpload.setVisible(True)
-                        self.ui.btnUpload.setEnabled(True)
+        if self.ui.btnConnect.text() == "Disconnect":
+            self.ui.btnConnect.setIcon(QIcon(":/network-wired.svg"))
+            self.ui.btnConnect.setText("Select")
+            self.disconnect()
+        else:
+            select = BottlenoseSelector("Select Bottlenose Camera", self)
+            if select.exec() == QDialog.Accepted:
+                connection_id = select.selected_bottlenose()
+                if connection_id is not None:
+                    if self.connect_gev(connection_id) is not None:
+                        self.ui.btnFile.setEnabled(True)
+                        self.setAcceptDrops(True)
+                        if len(self.ui.txtFile.text()) > 0:
+                            self.ui.btnUpload.setVisible(True)
+                            self.ui.btnUpload.setEnabled(True)
+
+                        self.ui.btnConnect.setText("Disconnect")
+                        self.ui.btnConnect.setIcon(QIcon(":/window-close.svg"))
 
     def handle_quit(self):
         self.close()

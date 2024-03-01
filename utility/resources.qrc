@@ -1,5 +1,7 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
 <file alias="labforge.ico">img/labforge.ico</file>
+<file alias="network-wired.svg">img/network-wired.svg</file>
+<file alias="window-close.svg">img/window-close.svg</file>
 </qresource>
 </RCC>
