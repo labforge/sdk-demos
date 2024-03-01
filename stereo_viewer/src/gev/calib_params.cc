@@ -14,11 +14,11 @@
  * limitations under the License.                                             *
  ******************************************************************************
 
-@file stereo_rig.hpp 
+@file calib_params.cc 
 @author G. M. Tchamgoue <martin@labforge.ca>
 */
 
-#include "gev/stereo_rig.hpp"
+#include "gev/calib_params.hpp"
 #include <string>
 #include <variant>
 #include <iostream>
@@ -26,13 +26,13 @@
 using namespace labforge::gev;
 using namespace std;
 
-StereoRig::StereoRig(){
+CalibParams::CalibParams(){
 }
-StereoRig::StereoRig(PvDevice *lDevice){
+CalibParams::CalibParams(PvDevice *lDevice){
   setParameters(lDevice);
 }
 
-StereoRig::~StereoRig(){}
+CalibParams::~CalibParams(){}
 
 static bool getRegister(PvDevice *lDevice, std::string regname, std::variant<int64_t, double> &value){
   bool regOK = false;
@@ -60,7 +60,7 @@ static bool getRegister(PvDevice *lDevice, std::string regname, std::variant<int
   return regOK;
 }
 
-void StereoRig::setParameters(PvDevice *lDevice){  
+void CalibParams::setParameters(PvDevice *lDevice){  
   std::variant<int64_t, double> regvalue;
   const std::string names[] = {"fx", "fy", "cx", "cy", "k1",
                                "k2", "p1", "p2", "k3", "tx",
@@ -93,12 +93,12 @@ void StereoRig::setParameters(PvDevice *lDevice){
 
 }
 
-bool StereoRig::calibrated(uint32_t width, uint32_t height){
+bool CalibParams::calibrated(uint32_t width, uint32_t height){
   return ((width == m_width) && (height == m_height) &&
           (m_width > 0) && (m_height > 0));
 }
 
-void StereoRig::applyStereoRectify(){
+void CalibParams::applyStereoRectify(){
   /* K matrices */  
   double kmat1[9] = {m_params["fx0"], 0.0, m_params["cx0"], 0.0, m_params["fy0"], m_params["cy0"], 0.0, 0.0, 1.0};
   double kmat2[9] = {m_params["fx1"], 0.0, m_params["cx1"], 0.0, m_params["fy1"], m_params["cy1"], 0.0, 0.0, 1.0};
@@ -126,7 +126,7 @@ void StereoRig::applyStereoRectify(){
   std::cout << "Q = " << std::endl << " "  << m_Q << std::endl << std::endl;
 }
 
-void StereoRig::getDepthMatrix(cv::Mat &qmat){
+void CalibParams::getDepthMatrix(cv::Mat &qmat){
   qmat = m_Q.clone();
   std::cout << "qmat = " << std::endl << " "  << qmat << std::endl << std::endl;
 }

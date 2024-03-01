@@ -202,6 +202,9 @@ void DataThread::run() {
 
           //imdata.disparity.setTo(0, imdata.disparity == 65535);
           imdata.disparity.convertTo(dispf32, CV_32FC1, (1./255.0), 0);
+          /*cv::Mat filtered;
+          cv::medianBlur(imdata.disparity, filtered, 3);
+          filtered.convertTo(dispf32, CV_32FC1, (1./255.0), 0);*/
 
           QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
           if(!m_matQ.empty()){               

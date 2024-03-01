@@ -14,7 +14,7 @@
  * limitations under the License.                                             *
  ******************************************************************************
 
-@file stereo_rig.hpp 
+@file calib_params.hpp 
 @author G. M. Tchamgoue <martin@labforge.ca>
 */
 
@@ -24,18 +24,18 @@
 #include <PvDeviceGEV.h>
 #include <map>
 
-#ifndef __GEV_STEREO_RIG_HPP__
-#define __GEV_STEREO_RIG_HPP__
+#ifndef __GEV_CALIB_PARAMS_HPP__
+#define __GEV_CALIB_PARAMS_HPP__
 
 namespace labforge::gev {
 
-class StereoRig
+class CalibParams
 {    
 
 public:
-  StereoRig();
-  StereoRig(PvDevice *lDevice);
-  ~StereoRig();
+  CalibParams();
+  CalibParams(PvDevice *lDevice);
+  ~CalibParams();
 
   void setParameters(PvDevice *lDevice);
   bool calibrated(uint32_t width, uint32_t height);
@@ -58,4 +58,4 @@ private:
 
 }
 
-#endif // __GEV_STEREO_RIG_HPP__
+#endif // __GEV_CALIB_PARAMS_HPP__

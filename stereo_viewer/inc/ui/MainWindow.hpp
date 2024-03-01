@@ -32,7 +32,7 @@
 #include "ui_stereo_viewer.h"
 #include "gev/pipeline.hpp"
 #include "io/data_thread.hpp"
-#include "gev/stereo_rig.hpp"
+#include "gev/calib_params.hpp"
 #include <cstdint>
 
 class PvGenBrowserWnd;
@@ -90,7 +90,7 @@ private:
   void showStatusMessage(uint32_t received=1);
   void resetStatusCounters();
 
-  std::unique_ptr<labforge::gev::StereoRig> m_stereo_rig;
+  labforge::gev::CalibParams m_calib;
 };
 
 }

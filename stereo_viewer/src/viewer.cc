@@ -98,6 +98,9 @@ static QImage s_mono_to_qimage(const cv::Mat*img, int colormap=COLORMAP_JET, int
     Mat img_color;
     Mat dst = img->clone();
 
+    //cv::Mat filtered;
+    //cv::medianBlur(*img, dst, 3);
+
     dst.setTo(0, dst == 65535);
     if(mindisp > 0) dst.setTo(0, dst<(mindisp * 255));
     if(maxdisp > 0) dst.setTo(0, dst>(maxdisp * 255));
@@ -236,8 +239,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   }
 
   m_data_thread = std::make_unique<labforge::io::DataThread>();
-  m_stereo_rig = std::make_unique<labforge::gev::StereoRig>();
-
+  
   //status
   resetStatusCounters();
   showStatusMessage();
@@ -273,7 +275,7 @@ void MainWindow::handleStart() {
       resetStatusCounters();
 
       cv::Mat qMat;
-      m_stereo_rig->getDepthMatrix(qMat);
+      m_calib.getDepthMatrix(qMat);
       m_data_thread->setDepthMatrix(qMat);
     }
   }
@@ -395,7 +397,7 @@ void MainWindow::handleConnect() {
 
   if(connectGEV(devinfo)) {    
     OnConnected();   
-    m_stereo_rig->setParameters(m_device);
+    m_calib.setParameters(m_device);
   } else {
     OnDisconnected();
   }

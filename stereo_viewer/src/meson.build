@@ -32,7 +32,7 @@ source_files = files([
   'gev/util.cc',
   'ui/cameraview.cc',
   'io/data_thread.cc',
-  'gev/stereo_rig.cc',
+  'gev/calib_params.cc',
 ])
 
 if host_machine.system() == 'linux'
