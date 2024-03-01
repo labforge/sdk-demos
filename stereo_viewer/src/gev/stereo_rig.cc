@@ -66,12 +66,16 @@ void StereoRig::setParameters(PvDevice *lDevice){
                                "k2", "p1", "p2", "k3", "tx",
                                "ty", "tz", "rx", "ry", "rz"};  
 
+  uint32_t num_cameras = getRegister(lDevice, "fx1", regvalue)?2:1;    
+
   for(std::string name:names){
-    for(uint32_t i = 0; i < 2; ++i){ 
+    for(uint32_t i = 0; i < num_cameras; ++i){ 
       std::string regname = name + std::to_string(i);
       if(getRegister(lDevice, regname, regvalue)){
         std::cout << regname << ": " << std::get<double>(regvalue) << std::endl;
         m_params[regname] = std::get<double>(regvalue);
+      } else{
+        break;
       }
     }
   }  
@@ -84,7 +88,8 @@ void StereoRig::setParameters(PvDevice *lDevice){
     std::cout << "kHeight: " << std::get<int64_t>(regvalue) << std::endl;
     m_height = std::get<int64_t>(regvalue);
   }
-  applyStereoRectify();
+
+  if(num_cameras == 2) applyStereoRectify();
 
 }
 
