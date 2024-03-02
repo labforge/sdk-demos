@@ -23,6 +23,8 @@ import sys
 import warnings
 import argparse
 import eBUS as eb
+import cv2
+import math
 
 
 # reference common utility files
@@ -37,7 +39,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mac", default=None, help="MAC address of the Bottlenose camera")
-    parser.add_argument("-k", "--max_keypoints", type=int, default=100, choices=range(1, 65535),
+    parser.add_argument("-k", "--max_keypoints", type=int, default=1000, choices=range(1, 65535),
                         help="Maximum number of keypoints to detect")
     parser.add_argument("-t", "--fast_threshold", type=int, default=20, choices=range(0, 255),
                         help="Keypoint threshold for the Fast9 algorithm")
@@ -143,6 +145,25 @@ def configure_matcher(device: eb.PvDeviceGEV, offsetx: int, offsety: int):
     y_offset.SetValue(offsety)
 
 
+def enable_feature_points(device):
+    """
+    Enable the feature points chunk data
+    :param device: The device to enable feature points on
+    """
+    # Get device parameters
+    device_params = device.GetParameters()
+
+    # Enable keypoint detection and streaming
+    chunk_mode = device_params.Get("ChunkModeActive")
+    chunk_mode.SetValue(True)
+
+    chunk_selector = device_params.Get("ChunkSelector")
+    chunk_selector.SetValue("FeaturePoints")
+
+    chunk_enable = device_params.Get("ChunkEnable")
+    chunk_enable.SetValue(True)
+
+
 def enable_sparse_pointcloud(device: eb.PvDeviceGEV):
     """
     Enable sparse point cloud chunk data
@@ -164,6 +185,52 @@ def enable_sparse_pointcloud(device: eb.PvDeviceGEV):
     chunk_enable.SetValue(True)
 
 
+def process_points(keypoints, pc, image, timestamp, min_depth=0.0, max_depth=2.5):
+    ply_filename = f'{timestamp}_output_point_cloud.ply'
+    image_filename = f'{timestamp}_matched_points.png'
+    intermediate_list = []
+    valid_points = []
+    # Point data
+    for i in range(len(keypoints[0]["data"])):
+        x = keypoints[0]["data"][i].x
+        y = keypoints[0]["data"][i].y
+        rgb_value = image[y, x]
+        if math.isnan(pc[i].x) or math.isnan(pc[i].y) or math.isnan(pc[i].z):
+            continue
+        if pc[i].z < min_depth or pc[i].z > max_depth:
+            continue
+        intermediate_list.append((pc[i].x, pc[i].y, pc[i].z, rgb_value[0], rgb_value[1], rgb_value[2]))
+        valid_points.append(cv2.KeyPoint(x=x, y=y, size=15))
+
+    # Draw the keypoints on the image
+    if len(valid_points) > 0:
+        image = cv2.drawKeypoints(image, valid_points, 0, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        cv2.imshow('Matched Points', image)
+        if cv2.waitKey(1) & 0xFF != 0xFF:
+            return False
+        cv2.imwrite(image_filename, image)
+
+    with open(ply_filename, 'w') as ply_file:
+        # PLY header
+        ply_file.write("ply\n")
+        ply_file.write("format ascii 1.0\n")
+        ply_file.write(f"element vertex {len(intermediate_list)}\n")
+        ply_file.write("property float x\n")
+        ply_file.write("property float y\n")
+        ply_file.write("property float z\n")
+        ply_file.write("property uchar red\n")
+        ply_file.write("property uchar green\n")
+        ply_file.write("property uchar blue\n")
+        ply_file.write("end_header\n")
+        for point in intermediate_list:
+            ply_file.write(f"{point[0]} {point[1]} {point[2]} {point[3]} {point[4]} {point[5]}\n")
+        ply_file.write("\n")
+
+    # Save point cloud to a PLY file
+    print(f'Point cloud saved to {ply_filename}')
+    return True
+
+
 def handle_buffer(pvbuffer: eb.PvBuffer, device: eb.PvDeviceGEV):
     """
     handles incoming buffer and decodes the associated sparse point cloud chunk data
@@ -173,17 +240,21 @@ def handle_buffer(pvbuffer: eb.PvBuffer, device: eb.PvDeviceGEV):
     payload_type = pvbuffer.GetPayloadType()
     if payload_type == eb.PvPayloadTypeMultiPart:
         # images associated with the buffer
-        # image0 = pvbuffer.GetMultiPartContainer().GetPart(0).GetImage()
-        # image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
+        image0 = pvbuffer.GetMultiPartContainer().GetPart(0).GetImage() # left image
+        image_data = image0.GetDataPointer()
+        image_data = cv2.cvtColor(image_data, cv2.COLOR_YUV2BGR_YUY2)
+        #image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
+
+        # Parses the feature points from the buffer
+        keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
 
         # parses sparse point cloud from the buffer
         # returns a list of Point3D(x,y,z). NaN values are set for unmatched points.
         pc = decode_chunk(device=device, buffer=pvbuffer, chunk='SparsePointCloud')
         timestamp = pvbuffer.GetTimestamp()
-        if len(pc) > 0:
-            print(f' {timestamp}: {len(pc)} points: P0({pc[0].x}, {pc[0].y}, {pc[0].z})')
-        else:
-            print(f' {timestamp}: {len(pc)} points: ')
+        if pc is not None and len(pc) > 0 and keypoints is not None and len(keypoints) > 0:
+            return process_points(keypoints, pc, image_data, timestamp)
+    return True
 
 
 def acquire_data(device, stream):
@@ -192,6 +263,7 @@ def acquire_data(device, stream):
     :param device: The device to stream from
     :param stream: The stream to use for streaming
     """
+    cv2.namedWindow('Matched Points', cv2.WINDOW_NORMAL)
 
     # Get device parameters need to control streaming
     device_params = device.GetParameters()
@@ -210,7 +282,8 @@ def acquire_data(device, stream):
         if result.IsOK():
             if operational_result.IsOK():
                 # We now have a valid buffer.
-                handle_buffer(pvbuffer, device)
+                if not handle_buffer(pvbuffer, device):
+                    break
             else:
                 # Non OK operational result
                 warnings.warn(f"Operational result error. {operational_result.GetCodeString()} "
@@ -236,6 +309,7 @@ if __name__ == '__main__':
         set_y1_offset(device=bn_device, value=args.offsety1)
         configure_fast9(device=bn_device, kp_max=args.max_keypoints, threshold=args.fast_threshold)
         configure_matcher(device=bn_device, offsetx=args.match_xoffset, offsety=args.match_yoffset)
+        enable_feature_points(device=bn_device)
         enable_sparse_pointcloud(device=bn_device)
         acquire_data(device=bn_device, stream=bn_stream)
 

@@ -3,13 +3,23 @@
 ***This demo requires Bottlenose Stereo, it will not work with Bottlenose Mono.***
 
 This example assumes that:
-- your camera is properly calibrated and the calibration parameters uploaded the camera. Checkout the [calibration example](../calibration/README.md) to see how to upload your parameters.
+- your camera is properly [calibrated and the calibration parameters uploaded the camera](). Checkout the [calibration example](../calibration/README.md) to see how to upload your parameters.
 - all the image quality related settings such as `exposure`, `gain`, and `CCM` are set. Please use `Stereo Viewer` or `eBusPlayer` to configure the image quality to your like.
 
 The Python script shows how to programmatically 
 - set keypoint parameters, only [FAST](https://en.wikipedia.org/wiki/Features_from_accelerated_segment_test) is shown, but can be adapted for [GFTT](https://ieeexplore.ieee.org/document/323794). 
 - set keypoint matching parameters
 - enable chunk data transmission for sparse point cloud
+
+## Output
+
+The script will display the feature points that are detected in the left image that also
+have valid 3d correspondences. Each valid frame will yield a `ply` and `png` file that can be viewed with a 3D 
+viewer such as [MeshLab](https://www.meshlab.net/). For example,
+
+```
+python demo.py --mac <mac> --offsety1 <offset_from_calibration>
+```
 
 ## Setup
 
