@@ -357,7 +357,7 @@ def get_chunkdata_by_id(rawdata: np.ndarray, chunk_id: int = 0):
             chkid = int.from_bytes(rawdata[pos:(pos + 4)], 'big')  # transmitted as big-endian
 
             pos -= chunk_len
-            if chkid == chunk_id and chunk_magic[chkid] == chunk_len:
+            if chkid == chunk_id and chunk_len <= chunk_magic[chkid]:
                 chunk_data = rawdata[pos:(pos + chunk_len)]  # transmitted as little-endian
                 break
 
