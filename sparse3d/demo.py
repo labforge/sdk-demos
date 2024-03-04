@@ -303,16 +303,24 @@ def handle_buffer(pvbuffer: eb.PvBuffer, device: eb.PvDeviceGEV):
         image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
         image_data_right = image1.GetDataPointer()
         image_data_right = cv2.cvtColor(image_data_right, cv2.COLOR_YUV2BGR_YUY2)
+        print('.')
 
         # Parses the feature points from the buffer
         keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
+        if keypoints is not None:
+            print('k')
 
         # Use matches with coordinates instead
         matches = decode_chunk(device=device, buffer=pvbuffer, chunk="FeatureMatches")
+        if matches is not None:
+            print('m')
 
         # parses sparse point cloud from the buffer
         # returns a list of Point3D(x,y,z). NaN values are set for unmatched points.
         pc = decode_chunk(device=device, buffer=pvbuffer, chunk='SparsePointCloud')
+        if pc is not None:
+            print('p')
+
         timestamp = pvbuffer.GetTimestamp()
 
         if pc is not None and len(pc) > 0 and keypoints is not None and len(keypoints) > 0 and len(matches) > 0:
