@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <cmath>
 
 using namespace labforge::io;
 using namespace std;
@@ -115,13 +116,32 @@ void DataThread::stop(){
   m_condition.wakeOne();
 }  
 
+static inline bool invalid(cv::Point3f &pt){
+  return (std::isnan(pt.x) || std::isnan(pt.y) || std::isnan(pt.z) ||
+          std::isinf(pt.x) || std::isinf(pt.y) || std::isinf(pt.z)); 
+}
+
+static uint32_t countNaN(const cv::Mat& pointCloud){
+  uint32_t count = 0;
+  for (int y = 0; y < pointCloud.rows; ++y) {
+      for (int x = 0; x < pointCloud.cols; ++x) {
+        cv::Point3f pt = pointCloud.at<cv::Point3f>(y, x);
+        if(invalid(pt)) count++;          
+      }
+  }
+  return count;
+}
+
 static void saveColoredPLYFile(const cv::Mat& pointCloud, QImage &image, const QString& filename) {
   ofstream plyFile(filename.toStdString());
+
+  uint32_t nan_counts = countNaN(pointCloud);
+  uint32_t pc_size = pointCloud.rows * pointCloud.cols - nan_counts;
 
   // Write PLY header
   plyFile << "ply\n";
   plyFile << "format ascii 1.0\n";
-  plyFile << "element vertex " << pointCloud.rows * pointCloud.cols << "\n";
+  plyFile << "element vertex " << pc_size << "\n";
   plyFile << "property float x\n";
   plyFile << "property float y\n";
   plyFile << "property float z\n";
@@ -134,6 +154,8 @@ static void saveColoredPLYFile(const cv::Mat& pointCloud, QImage &image, const Q
   for (int y = 0; y < pointCloud.rows; ++y) {
       for (int x = 0; x < pointCloud.cols; ++x) {
           cv::Point3f pt = pointCloud.at<cv::Point3f>(y, x);
+          if(invalid(pt)) continue;
+
           QColor color = image.pixelColor(x, y);
           
           plyFile << pt.x << " " << pt.y << " " << pt.z << " "
