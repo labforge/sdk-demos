@@ -28,6 +28,8 @@ from collections import namedtuple
 import struct
 from datetime import datetime, timedelta
 
+# |<chkid>| <our_chunk|header> || <ckid> |<our_chunk|header> ||
+
 
 def read_chunk_id(device: eb.PvDeviceGEV, chunk_name: str):
     """
@@ -231,6 +233,7 @@ def decode_chunk_pointcloud(data):
         return None
 
     count = int.from_bytes(data[0:4], 'little')
+    assert count < 66000, f"Invalid point cloud count received {count}"
     points = []
 
     Point3D = namedtuple('Point3D', ['x', 'y', 'z'])
@@ -240,7 +243,9 @@ def decode_chunk_pointcloud(data):
         x = np.frombuffer(data[i:i + 4], dtype=dt)
         y = np.frombuffer(data[i + 4:i + 8], dtype=dt)
         z = np.frombuffer(data[i + 8:i + 12], dtype=dt)
-
+        # # FIXME: premature abort if decoding fails
+        # if len(x) == 0 or len(y) == 0 or len(z) == 0:
+        #     return points
         pt = Point3D(x[0], y[0], z[0])
         points.append(pt)
 

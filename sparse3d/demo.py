@@ -25,6 +25,7 @@ import argparse
 import eBUS as eb
 import cv2
 import math
+import numpy as np
 
 
 # reference common utility files
@@ -145,7 +146,7 @@ def configure_matcher(device: eb.PvDeviceGEV, offsetx: int, offsety: int):
     y_offset.SetValue(offsety)
 
 
-def enable_feature_points(device):
+def enable_feature_points_and_matches(device):
     """
     Enable the feature points chunk data
     :param device: The device to enable feature points on
@@ -154,14 +155,23 @@ def enable_feature_points(device):
     device_params = device.GetParameters()
 
     # Enable keypoint detection and streaming
-    chunk_mode = device_params.Get("ChunkModeActive")
-    chunk_mode.SetValue(True)
+    chunkMode = device_params.Get("ChunkModeActive")
+    chunkMode.SetValue(True)
 
-    chunk_selector = device_params.Get("ChunkSelector")
-    chunk_selector.SetValue("FeaturePoints")
+    match_output_format = device_params.Get("HAMATOutputFormat")
 
-    chunk_enable = device_params.Get("ChunkEnable")
-    chunk_enable.SetValue(True)
+    chunkSelector = device_params.Get("ChunkSelector")
+    chunkEnable = device_params.Get("ChunkEnable")
+
+    # Enable Feature Points
+    chunkSelector.SetValue("FeaturePoints")
+    chunkEnable.SetValue(True)
+
+    # Enable Feature Matches
+    chunkSelector.SetValue("FeatureMatches")
+    chunkEnable.SetValue(True)
+    res = match_output_format.SetValue("Coordinate Only")
+    assert res.IsOK()
 
 
 def enable_sparse_pointcloud(device: eb.PvDeviceGEV):
@@ -185,46 +195,93 @@ def enable_sparse_pointcloud(device: eb.PvDeviceGEV):
     chunk_enable.SetValue(True)
 
 
-def process_points(keypoints, pc, image, timestamp, min_depth=0.0, max_depth=2.5):
+def process_points_and_matches(keypoints, matches, pc, image_left, image_right, timestamp, min_depth=0.0, max_depth=2.5):
     ply_filename = f'{timestamp}_output_point_cloud.ply'
-    image_filename = f'{timestamp}_matched_points.png'
+    image_filename_left = f'{timestamp}_matched_left_points.png'
+    image_filename_right = f'{timestamp}_matched_right_points.png'
+    image_filename_correspondence = f'{timestamp}_correspondence.png'
     intermediate_list = []
-    valid_points = []
+    valid_points_left = []
+    valid_points_right = []
+
     # Point data
     for i in range(len(keypoints[0]["data"])):
         x = keypoints[0]["data"][i].x
         y = keypoints[0]["data"][i].y
-        rgb_value = image[y, x]
-        if math.isnan(pc[i].x) or math.isnan(pc[i].y) or math.isnan(pc[i].z):
+        x1 = matches.points[i].x
+        y1 = matches.points[i].y
+        rgb_value = image_left[y, x]
+        # Just skip bad 3d matches from HMAT
+        if x1 == matches.unmatched or y1 == matches.unmatched:
             continue
-        if pc[i].z < min_depth or pc[i].z > max_depth:
-            continue
+        # Not a good test for "valid matches", 3d coordinate can be nan for valid matches
+        # if math.isnan(pc[i].x) or math.isnan(pc[i].y) or math.isnan(pc[i].z):
+        #     continue
+        # if pc[i].z < min_depth or pc[i].z > max_depth:
+        #     continue
         intermediate_list.append((pc[i].x, pc[i].y, pc[i].z, rgb_value[0], rgb_value[1], rgb_value[2]))
-        valid_points.append(cv2.KeyPoint(x=x, y=y, size=15))
+        valid_points_left.append(cv2.KeyPoint(x=x, y=y, size=15))
+        valid_points_right.append(cv2.KeyPoint(x=x1, y=y1, size=15))
+
+    # Do not use "unmatched" !!!
+    # Could have multiple matches for a single point
+    # for point in matches.points:
+    #     if point.x != matches.unmatched and point.y != matches.unmatched:
+    #         valid_points_right.append(cv2.KeyPoint(x=point.x, y=point.y, size=15))
+    # Sanity (will fail
+    # if len(valid_points_left) != len(valid_points_right):
+    #    import pdb; pdb.set_trace()
 
     # Draw the keypoints on the image
-    if len(valid_points) > 0:
-        image = cv2.drawKeypoints(image, valid_points, 0, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        cv2.imshow('Matched Points', image)
+    if len(valid_points_left) > 0:
+        #image = cv2.drawKeypoints(image, valid_points_left, 0, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        # Detailled drawing with enumeration
+        for image, points in [(image_left, valid_points_left), (image_right, valid_points_right)]:
+            for i, kp in enumerate(points):
+                x, y = int(kp.pt[0]), int(kp.pt[1])  # Get the coordinates of the keypoint
+
+                # Draw a small circle at the keypoint location
+                cv2.circle(image, (x, y), 3, (255, 0, 0), -1)  # Change color and thickness as needed
+
+                # Put a text label (index) next to the circle
+                cv2.putText(image, f"{i:02d}", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+
+        cv2.imshow('Matched Points', image_left)
         if cv2.waitKey(1) & 0xFF != 0xFF:
             return False
-        cv2.imwrite(image_filename, image)
+        cv2.imwrite(image_filename_left, image_left)
+        cv2.imwrite(image_filename_right, image_right)
 
-    with open(ply_filename, 'w') as ply_file:
-        # PLY header
-        ply_file.write("ply\n")
-        ply_file.write("format ascii 1.0\n")
-        ply_file.write(f"element vertex {len(intermediate_list)}\n")
-        ply_file.write("property float x\n")
-        ply_file.write("property float y\n")
-        ply_file.write("property float z\n")
-        ply_file.write("property uchar red\n")
-        ply_file.write("property uchar green\n")
-        ply_file.write("property uchar blue\n")
-        ply_file.write("end_header\n")
-        for point in intermediate_list:
-            ply_file.write(f"{point[0]} {point[1]} {point[2]} {point[3]} {point[4]} {point[5]}\n")
-        ply_file.write("\n")
+        # Correspondence plot
+        good = [cv2.DMatch(_imgIdx=0, _queryIdx=i, _trainIdx=i, _distance=0)
+                for i in range(len(valid_points_left))]
+        image_correspondence = np.array([])
+        image_correspondence = cv2.drawMatches(image_left,
+                                  valid_points_left,
+                                  image_right,
+                                  valid_points_right,
+                                  matches1to2=good,
+                                  outImg=image_correspondence,
+                                  flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        cv2.imwrite(image_filename_correspondence, image_correspondence)
+
+    # with open(ply_filename, 'w') as ply_file:
+    #     # PLY header
+    #     ply_file.write("ply\n")
+    #     ply_file.write("format ascii 1.0\n")
+    #     ply_file.write(f"element vertex {len(intermediate_list)}\n")
+    #     ply_file.write("property float x\n")
+    #     ply_file.write("property float y\n")
+    #     ply_file.write("property float z\n")
+    #     ply_file.write("property uchar red\n")
+    #     ply_file.write("property uchar green\n")
+    #     ply_file.write("property uchar blue\n")
+    #     ply_file.write("end_header\n")
+    print("===== RESULTS ======")
+    for point in intermediate_list:
+        print(f"{point[0]} {point[1]} {point[2]} {point[3]} {point[4]} {point[5]}\n")
+        # ply_file.write(f"{point[0]} {point[1]} {point[2]} {point[3]} {point[4]} {point[5]}\n")
+        # ply_file.write("\n")
 
     # Save point cloud to a PLY file
     print(f'Point cloud saved to {ply_filename}')
@@ -241,19 +298,30 @@ def handle_buffer(pvbuffer: eb.PvBuffer, device: eb.PvDeviceGEV):
     if payload_type == eb.PvPayloadTypeMultiPart:
         # images associated with the buffer
         image0 = pvbuffer.GetMultiPartContainer().GetPart(0).GetImage() # left image
-        image_data = image0.GetDataPointer()
-        image_data = cv2.cvtColor(image_data, cv2.COLOR_YUV2BGR_YUY2)
-        #image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
+        image_data_left = image0.GetDataPointer()
+        image_data_left = cv2.cvtColor(image_data_left, cv2.COLOR_YUV2BGR_YUY2)
+        image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
+        image_data_right = image1.GetDataPointer()
+        image_data_right = cv2.cvtColor(image_data_right, cv2.COLOR_YUV2BGR_YUY2)
 
         # Parses the feature points from the buffer
         keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
+
+        # Use matches with coordinates instead
+        matches = decode_chunk(device=device, buffer=pvbuffer, chunk="FeatureMatches")
 
         # parses sparse point cloud from the buffer
         # returns a list of Point3D(x,y,z). NaN values are set for unmatched points.
         pc = decode_chunk(device=device, buffer=pvbuffer, chunk='SparsePointCloud')
         timestamp = pvbuffer.GetTimestamp()
-        if pc is not None and len(pc) > 0 and keypoints is not None and len(keypoints) > 0:
-            return process_points(keypoints, pc, image_data, timestamp)
+
+        if pc is not None and len(pc) > 0 and keypoints is not None and len(keypoints) > 0 and len(matches) > 0:
+            return process_points_and_matches(keypoints,
+                                              matches,
+                                              pc,
+                                              image_data_left,
+                                              image_data_right,
+                                              timestamp)
     return True
 
 
@@ -309,7 +377,7 @@ if __name__ == '__main__':
         set_y1_offset(device=bn_device, value=args.offsety1)
         configure_fast9(device=bn_device, kp_max=args.max_keypoints, threshold=args.fast_threshold)
         configure_matcher(device=bn_device, offsetx=args.match_xoffset, offsety=args.match_yoffset)
-        enable_feature_points(device=bn_device)
+        enable_feature_points_and_matches(device=bn_device)
         enable_sparse_pointcloud(device=bn_device)
         acquire_data(device=bn_device, stream=bn_stream)
 
