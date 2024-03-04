@@ -313,7 +313,7 @@ def decode_chunk_data(data: np.ndarray, chunk: str):
     return chunk_data
 
 
-def get_chunkdata_by_id(rawdata: np.ndarray, chunk_id: int = 0):
+def get_chunkdata_by_id_old(rawdata: np.ndarray, chunk_id: int = 0):
     """
     In case of multipart transmission, returns the buffer attached to each ID.
     """
@@ -337,6 +337,33 @@ def get_chunkdata_by_id(rawdata: np.ndarray, chunk_id: int = 0):
 
     return chunk_data
 
+
+def get_chunkdata_by_id(rawdata: np.ndarray, chunk_id: int = 0):
+    """
+    In case of multipart transmission, returns the buffer attached to each ID.
+    """
+    MAX_KEYPOINTS = 65535
+    chunk_magic = {0x4001: 2*(MAX_KEYPOINTS * 2 + 8), 0x4006: MAX_KEYPOINTS * 16 + 12, 0x4007: MAX_KEYPOINTS*12 + 4}
+
+    chunk_data = []
+    if rawdata is None or len(rawdata) == 0 or chunk_id < 0:
+        return chunk_data
+
+    pos = len(rawdata) - 4
+    while pos >= 0:
+        chunk_len = int.from_bytes(rawdata[pos:(pos + 4)], 'big')  # transmitted as big-endian
+        if chunk_len > 0 and (pos - 4 - chunk_len) > 0:
+            pos -= 4
+            chkid = int.from_bytes(rawdata[pos:(pos + 4)], 'big')  # transmitted as big-endian
+
+            pos -= chunk_len
+            if chkid == chunk_id and chunk_magic[chkid] == chunk_len:
+                chunk_data = rawdata[pos:(pos + chunk_len)]  # transmitted as little-endian
+                break
+
+        pos -= 4
+
+    return chunk_data
 
 def decode_chunk(device: eb.PvDeviceGEV, buffer: eb.PvBuffer, chunk: str):
     """
