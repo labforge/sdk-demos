@@ -49,14 +49,15 @@ DataThread::~DataThread()
   wait();
 }
 
-void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image, QString format, const uint16_t *raw){
+void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image, 
+                         QString format, const uint16_t *raw, int32_t min_disparity){
   QMutexLocker locker(&m_mutex);
   
   cv::Mat dmat;
   if(raw != nullptr){
     dmat = cv::Mat(left_image.height(),left_image.width(), CV_16UC1, (uint16_t *)raw);    
   }
-  m_queue.enqueue({timestamp, left_image, right_image, format, dmat});
+  m_queue.enqueue({timestamp, left_image, right_image, format, dmat, min_disparity});
   
   if (!isRunning()) {
     start(HighPriority);
@@ -227,6 +228,8 @@ void DataThread::run() {
           /*cv::Mat filtered;
           cv::medianBlur(imdata.disparity, filtered, 3);
           filtered.convertTo(dispf32, CV_32FC1, (1./255.0), 0);*/
+
+          dispf32 += imdata.min_disparity;
 
           QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
           if(!m_matQ.empty()){               

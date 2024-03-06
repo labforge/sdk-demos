@@ -39,6 +39,7 @@ struct ImageData
     QImage right;
     QString format;
     cv::Mat disparity;
+    int32_t min_disparity;
 };
 
 class DataThread : public QThread
@@ -49,7 +50,7 @@ public:
     DataThread(QObject *parent = nullptr);
     ~DataThread();
 
-    void process(uint64_t timestamp, const QImage &left, const QImage &right, QString format, const uint16_t *raw);
+    void process(uint64_t timestamp, const QImage &left, const QImage &right, QString format, const uint16_t *raw, int32_t);
     bool setFolder(QString new_folder);
     void setStereoDisparity(bool is_stereo, bool is_disparity);
     void stop();   

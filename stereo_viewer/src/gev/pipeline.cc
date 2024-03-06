@@ -74,6 +74,8 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
   m_pixformat = dynamic_cast<PvGenEnum *>( lDeviceParams->Get( "PixelFormat" ) );
   m_rectify  = dynamic_cast<PvGenBoolean *>( lDeviceParams->Get( "Rectification" ) );
   m_undistort = dynamic_cast<PvGenBoolean *>( lDeviceParams->Get( "Undistortion" ) );
+  m_mindisparity = dynamic_cast<PvGenInteger *>( lDeviceParams->Get( "MinimumDisparity" ) );
+
   // Get stream parameters
   PvGenParameterArray *lStreamParams = m_stream->GetParameters();
   m_fps = dynamic_cast<PvGenFloat *>( lStreamParams->Get( "AcquisitionRate" ) );
@@ -150,11 +152,11 @@ bool Pipeline::Start(bool calibrate) {
   return true;
 }
 
-size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t>> &out) {
+size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t, int32_t>> &out) {
   QMutexLocker l(&m_image_lock);
   
   if(!m_images.empty()){
-    tuple<Mat *, Mat *, uint64_t> image = m_images.dequeue();
+    tuple<Mat *, Mat *, uint64_t, int32_t> image = m_images.dequeue();
     out.push_back(image);
   }
 
@@ -175,7 +177,7 @@ void Pipeline::Stop() {
 
 void Pipeline::run() {
   size_t consequitive_errors = 0;  
-  
+    
   while(m_start_flag) {
     PvBuffer *lBuffer = nullptr;
     PvResult lOperationResult;
@@ -184,6 +186,7 @@ void Pipeline::run() {
     double lFrameRateVal = 0.0;
     double lBandwidthVal = 0.0;
     uint64_t timestamp;
+    int64_t minDisparity = 0;
     info_t info = {};
 
     // Retrieve next buffer
@@ -204,6 +207,10 @@ void Pipeline::run() {
           timestamp = info.real_time;
         } else {
           cerr << "Could not decode meta information" << endl;
+        }
+
+        if(m_mindisparity){
+          m_mindisparity->GetValue(minDisparity);
         }
         
         IPvImage *img0, *img1;
@@ -226,7 +233,7 @@ void Pipeline::run() {
                       make_tuple(
                               new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
                               new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer()),
-                              timestamp
+                              timestamp, minDisparity
                               )
                               );
             }
@@ -248,7 +255,7 @@ void Pipeline::run() {
               }
 
               m_images.enqueue( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()), 
-                                             new Mat(), timestamp));
+                                             new Mat(), timestamp, minDisparity));
             }
             
             emit monoReceived(is_disparity);

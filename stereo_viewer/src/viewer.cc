@@ -560,7 +560,7 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
   return false;
 }
 
-void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo, bool disparity, uint16_t *raw_disparity) {
+void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo, bool disparity, uint16_t *raw_disparity, int32_t min_disparity) {
   // Set the image
   cfg.widgetLeftSensor->setImage(left, false);
   cfg.widgetRightSensor->setVisible(stereo);
@@ -590,7 +590,7 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool s
   bool is_saving = (!cfg.btnSave->isEnabled() && m_saving);
   bool is_recording = (!cfg.btnRecord->isEnabled() && !cfg.btnSave->isEnabled() && !m_saving);
   if(is_saving || is_recording){
-    m_data_thread->process(timestamp, left, right, cfg.cbxFormat->currentData().toString(), raw_disparity);        
+    m_data_thread->process(timestamp, left, right, cfg.cbxFormat->currentData().toString(), raw_disparity, min_disparity);        
     if(is_saving){
       cfg.btnSave->setEnabled(true);
       cfg.btnRecord->setEnabled(true);
@@ -640,7 +640,7 @@ void MainWindow::handleError(QString msg){
 
 void MainWindow::handleStereoData(bool is_disparity) {
   if(m_pipeline) {
-    list<tuple<Mat*, Mat*, uint64_t>> images;
+    list<tuple<Mat*, Mat*, uint64_t, int32_t>> images;
     uint16_t *raw_disparity = nullptr;
 
     m_pipeline->GetPairs(images);
@@ -662,7 +662,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
         q2 = s_yuv2_to_qimage(get<1>(*it));
       }
       
-      newData(get<2>(*it), q1, q2, true, is_disparity, raw_disparity);
+      newData(get<2>(*it), q1, q2, true, is_disparity, raw_disparity, get<3>(*it));
       delete get<0>(*it);
       delete get<1>(*it);
     }
@@ -671,7 +671,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
 
 void MainWindow::handleMonoData(bool is_disparity){
   if(m_pipeline){
-    list<tuple<Mat*, Mat*, uint64_t>> images;
+    list<tuple<Mat*, Mat*, uint64_t, int32_t>> images;
     uint16_t *raw_disparity = nullptr;
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(false, is_disparity);
@@ -692,7 +692,7 @@ void MainWindow::handleMonoData(bool is_disparity){
         q1 = s_yuv2_to_qimage(get<0>(*it));
       }
 
-      newData(get<2>(*it), q1, q2, false, is_disparity, raw_disparity);
+      newData(get<2>(*it), q1, q2, false, is_disparity, raw_disparity, get<3>(*it));
       delete get<0>(*it);
       delete get<1>(*it);
     }
