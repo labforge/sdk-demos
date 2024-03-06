@@ -99,6 +99,15 @@ static QImage s_mono_to_qimage(const cv::Mat*img, bool colorize=true, int colorm
     Mat img_color;
     Mat dst = img->clone();
 
+    /*double minVal; 
+    double maxVal; 
+    Point minLoc; 
+    Point maxLoc;
+    dst.setTo(0, dst == 65535);
+    minMaxLoc(dst, &minVal, &maxVal, &minLoc, &maxLoc );
+    cout << "min val: " << minVal << endl;
+    cout << "max val: " << maxVal << endl;*/
+
     dst.setTo(0, dst == 65535);
     normalize(dst, res, 0, 255, NORM_MINMAX, CV_8UC1);
 

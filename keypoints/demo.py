@@ -144,7 +144,7 @@ def handle_buffer(pvbuffer, device):
 
         cvimage0 = cv2.cvtColor(image_data0, cv2.COLOR_YUV2BGR_YUY2)
         cvimage1 = cv2.cvtColor(image_data1, cv2.COLOR_YUV2BGR_YUY2)
-
+        import pdb;pdb.set_trace()
         cvimage0 = chk.draw_keypoints(cvimage0, keypoints[0])
         cvimage1 = chk.draw_keypoints(cvimage1, keypoints[1])
 
