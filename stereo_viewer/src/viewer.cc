@@ -239,7 +239,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   }
 
   m_data_thread = std::make_unique<labforge::io::DataThread>();
-  
+
   //status
   resetStatusCounters();
   showStatusMessage();
@@ -395,7 +395,7 @@ void MainWindow::handleConnect() {
     OnDisconnected();
   }
 
-  if(connectGEV(devinfo)) {    
+  if(connectGEV(devinfo)) {
     OnConnected();   
     m_calib.setParameters(m_device);
   } else {
