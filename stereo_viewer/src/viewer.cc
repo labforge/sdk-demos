@@ -209,6 +209,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   connect(cfg.chkColormap, &QCheckBox::stateChanged, this, &MainWindow::handleColormap);
   connect(cfg.btnDeviceControl, &QPushButton::released, this, &MainWindow::handleDeviceControl);
   connect(cfg.cbxFocus,&QCheckBox::stateChanged, this, &MainWindow::handleFocus);
+  connect(cfg.spinRuler, QOverload<int>::of(&QSpinBox::valueChanged), this, &MainWindow::setRuler);
 
   // Force disconnected state
   OnDisconnected();
@@ -673,6 +674,11 @@ void MainWindow::handleMonoData(bool is_disparity){
       delete get<1>(*it);
     }
   }
+}
+
+void MainWindow::setRuler(int value) {
+  cfg.widgetLeftSensor->setRuler(value);
+  cfg.widgetRightSensor->setRuler(value);
 }
 
 int main(int argc, char *argv[]) {

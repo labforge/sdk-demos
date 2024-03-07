@@ -41,6 +41,7 @@ public:
   void setImage(QImage &img, bool redraw);
   void addTarget(QRect &pos, QString &label, QColor &color, int width);
   void addFeature(QPoint &pos, QColor &color, int width);
+  void setRuler(int val);
   void reset();
   void redrawPixmap();
   void enableFocus(bool value);
@@ -52,7 +53,7 @@ private:
   std::unique_ptr<QRubberBand> m_rubberband;
   std::unique_ptr<QPixmap> m_last_frame;
   bool m_scaled;
-
+  int m_ruler_pos;
 };
 
 } // namespace labforge::ui
