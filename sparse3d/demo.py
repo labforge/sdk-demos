@@ -265,23 +265,21 @@ def process_points_and_matches(keypoints, matches, pc, image_left, image_right, 
                                   flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         cv2.imwrite(image_filename_correspondence, image_correspondence)
 
-    # with open(ply_filename, 'w') as ply_file:
-    #     # PLY header
-    #     ply_file.write("ply\n")
-    #     ply_file.write("format ascii 1.0\n")
-    #     ply_file.write(f"element vertex {len(intermediate_list)}\n")
-    #     ply_file.write("property float x\n")
-    #     ply_file.write("property float y\n")
-    #     ply_file.write("property float z\n")
-    #     ply_file.write("property uchar red\n")
-    #     ply_file.write("property uchar green\n")
-    #     ply_file.write("property uchar blue\n")
-    #     ply_file.write("end_header\n")
-    print("===== RESULTS ======")
-    for point in intermediate_list:
-        print(f"{point[0]} {point[1]} {point[2]} {point[3]} {point[4]} {point[5]}\n")
-        # ply_file.write(f"{point[0]} {point[1]} {point[2]} {point[3]} {point[4]} {point[5]}\n")
-        # ply_file.write("\n")
+    with open(ply_filename, 'w') as ply_file:
+        # PLY header
+        ply_file.write("ply\n")
+        ply_file.write("format ascii 1.0\n")
+        ply_file.write(f"element vertex {len(intermediate_list)}\n")
+        ply_file.write("property float x\n")
+        ply_file.write("property float y\n")
+        ply_file.write("property float z\n")
+        ply_file.write("property uchar red\n")
+        ply_file.write("property uchar green\n")
+        ply_file.write("property uchar blue\n")
+        ply_file.write("end_header\n")
+        for point in intermediate_list:
+            ply_file.write(f"{point[0]} {point[1]} {point[2]} {point[3]} {point[4]} {point[5]}\n")
+            ply_file.write("\n")
 
     # Save point cloud to a PLY file
     print(f'Point cloud saved to {ply_filename}')
@@ -303,24 +301,16 @@ def handle_buffer(pvbuffer: eb.PvBuffer, device: eb.PvDeviceGEV):
         image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
         image_data_right = image1.GetDataPointer()
         image_data_right = cv2.cvtColor(image_data_right, cv2.COLOR_YUV2BGR_YUY2)
-        print('.')
 
         # Parses the feature points from the buffer
         keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
-        if keypoints is not None:
-            print('k')
 
         # Use matches with coordinates instead
         matches = decode_chunk(device=device, buffer=pvbuffer, chunk="FeatureMatches")
-        if matches is not None:
-            print('m')
 
         # parses sparse point cloud from the buffer
         # returns a list of Point3D(x,y,z). NaN values are set for unmatched points.
         pc = decode_chunk(device=device, buffer=pvbuffer, chunk='SparsePointCloud')
-        if pc is not None:
-            print('p')
-
         timestamp = pvbuffer.GetTimestamp()
 
         if pc is not None and len(pc) > 0 and keypoints is not None and len(keypoints) > 0 and len(matches) > 0:
