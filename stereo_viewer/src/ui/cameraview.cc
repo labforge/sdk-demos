@@ -25,7 +25,7 @@
 using namespace std;
 using namespace labforge::ui;
 
-CameraView::CameraView(QWidget *parent) : QLabel(parent), m_scaled(false) {
+CameraView::CameraView(QWidget *parent) : QLabel(parent), m_scaled(false), m_ruler_pos(0) {
 }
 
 void CameraView::resizeEvent(QResizeEvent *event) {

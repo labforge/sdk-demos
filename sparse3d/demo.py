@@ -50,6 +50,8 @@ def parse_args():
                         help="Matcher vertical search range.")
     parser.add_argument("-y1", "--offsety1", type=int, default=440, choices=range(0, 880),
                         help="Matcher vertical search range.")
+    parser.add_argument("-n", "--min_threshold", type=int, default=500, help="Matcher vertical search range.")
+    parser.add_argument("-r", "--ratio_threshold", type=int, default=1023, help="Matcher vertical search range.")
     return parser.parse_args()
 
 
@@ -127,23 +129,40 @@ def configure_fast9(device: eb.PvDeviceGEV, kp_max: int, threshold: int):
     fast_threshold.SetValue(threshold)
 
 
-def configure_matcher(device: eb.PvDeviceGEV, offsetx: int, offsety: int):
+def configure_matcher(device: eb.PvDeviceGEV, offsetx: int, offsety: int, min_threshold: int, ratio_threshold: int):
     """
     configure keypoint matcher
     :param device: The device to enable matching on
     :param offsetx: The x offset of the matcher
     :param offsety: The y offset of the matcher
+    :param min_threshold: The minimum threshold for the matcher
+    :param ratio_threshold: The ratio threshold for the matcher
     """
     # Get device parameters
     device_params = device.GetParameters()
 
     # set x offset parameter
     x_offset = device_params.Get("HAMATXOffset")
-    x_offset.SetValue(offsetx)
+    res = x_offset.SetValue(offsetx)
+    if not res.IsOK():
+        raise RuntimeError(f"Failed to set x offset to {offsetx}. {res.GetCodeString()} ({res.GetDescription()})")
 
     # set y offset parameter
     y_offset = device_params.Get("HAMATYOffset")
-    y_offset.SetValue(offsety)
+    res = y_offset.SetValue(offsety)
+    if not res.IsOK():
+        raise RuntimeError(f"Failed to set y offset to {offsety}. {res.GetCodeString()} ({res.GetDescription()})")
+
+    # Configure thresholds
+    min_threshold_param = device_params.Get("HAMATMinThreshold")
+    res = min_threshold_param.SetValue(min_threshold)
+    if not res.IsOK():
+        raise RuntimeError(f"Failed to set min threshold to {min_threshold}. {res.GetCodeString()} ({res.GetDescription()})")
+
+    ratio_threshold_param = device_params.Get("HAMATRatioThreshold")
+    res = ratio_threshold_param.SetValue(ratio_threshold)
+    if not res.IsOK():
+        raise RuntimeError(f"Failed to set ratio threshold to {ratio_threshold}. {res.GetCodeString()} ({res.GetDescription()})")
 
 
 def enable_feature_points_and_matches(device):
@@ -195,6 +214,28 @@ def enable_sparse_pointcloud(device: eb.PvDeviceGEV):
     chunk_enable.SetValue(True)
 
 
+def annotate_disparities(matched_img, valid_left, valid_right, matches):
+    for match in matches:
+        # Get matching keypoints
+        pt1 = valid_left[match.queryIdx].pt
+        pt2 = valid_right[match.trainIdx].pt
+
+        # Calculate disparity
+        disparity = pt2[0] - pt1[0]  # x2 - x1
+
+        # Determine direction (+ve or -ve)
+        direction = '+' if disparity > 0 else '-'
+
+        # Disparity text to display
+        disparity_text = f"{direction}{abs(disparity):.2f}"
+
+        # Midpoint for text annotation (you might need to adjust this based on your image size)
+        mid_pt = (int((pt1[0] + pt2[0]) / 2), int((pt1[1] + pt2[1]) / 2))
+
+        # Annotate the matched image
+        cv2.putText(matched_img, disparity_text, mid_pt, cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 1)
+
+
 def process_points_and_matches(keypoints, matches, pc, image_left, image_right, timestamp, min_depth=0.0, max_depth=2.5):
     ply_filename = f'{timestamp}_output_point_cloud.ply'
     image_filename_left = f'{timestamp}_matched_left_points.png'
@@ -241,14 +282,11 @@ def process_points_and_matches(keypoints, matches, pc, image_left, image_right, 
                 x, y = int(kp.pt[0]), int(kp.pt[1])  # Get the coordinates of the keypoint
 
                 # Draw a small circle at the keypoint location
-                cv2.circle(image, (x, y), 3, (255, 0, 0), -1)  # Change color and thickness as needed
+                cv2.circle(image, (x, y), 1, (0, 0, 0), -1)  # Change color and thickness as needed
 
                 # Put a text label (index) next to the circle
-                cv2.putText(image, f"{i:02d}", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+                #cv2.putText(image, f"{i:02d}", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), 1)
 
-        cv2.imshow('Matched Points', image_left)
-        if cv2.waitKey(1) & 0xFF != 0xFF:
-            return False
         cv2.imwrite(image_filename_left, image_left)
         cv2.imwrite(image_filename_right, image_right)
 
@@ -263,6 +301,10 @@ def process_points_and_matches(keypoints, matches, pc, image_left, image_right, 
                                   matches1to2=good,
                                   outImg=image_correspondence,
                                   flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        annotate_disparities(image_correspondence, valid_points_left, valid_points_right, good)
+        # cv2.imshow('Matched Points', image_correspondence)
+        # if cv2.waitKey(1) & 0xFF != 0xFF:
+        #     return False
         cv2.imwrite(image_filename_correspondence, image_correspondence)
 
     with open(ply_filename, 'w') as ply_file:
@@ -282,7 +324,7 @@ def process_points_and_matches(keypoints, matches, pc, image_left, image_right, 
             ply_file.write("\n")
 
     # Save point cloud to a PLY file
-    print(f'Point cloud saved to {ply_filename}')
+    print(f'Point cloud saved to {ply_filename} # of points in left {len(keypoints[0]["data"])} matches {len(intermediate_list)}')
     return True
 
 
@@ -329,7 +371,7 @@ def acquire_data(device, stream):
     :param device: The device to stream from
     :param stream: The stream to use for streaming
     """
-    cv2.namedWindow('Matched Points', cv2.WINDOW_NORMAL)
+    # cv2.namedWindow('Matched Points', cv2.WINDOW_NORMAL)
 
     # Get device parameters need to control streaming
     device_params = device.GetParameters()
@@ -374,7 +416,8 @@ if __name__ == '__main__':
         turn_on_stereo(device=bn_device)
         set_y1_offset(device=bn_device, value=args.offsety1)
         configure_fast9(device=bn_device, kp_max=args.max_keypoints, threshold=args.fast_threshold)
-        configure_matcher(device=bn_device, offsetx=args.match_xoffset, offsety=args.match_yoffset)
+        configure_matcher(device=bn_device, offsetx=args.match_xoffset, offsety=args.match_yoffset,
+                          min_threshold=args.min_threshold, ratio_threshold=args.ratio_threshold)
         enable_feature_points_and_matches(device=bn_device)
         enable_sparse_pointcloud(device=bn_device)
         acquire_data(device=bn_device, stream=bn_stream)
