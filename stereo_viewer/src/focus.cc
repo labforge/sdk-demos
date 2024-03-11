@@ -42,7 +42,10 @@ void Focus::process(QPixmap &pixmap) {
     QImage image = pixmap.toImage();
     Mat mat = to_mat(image);
     if(!mat.empty()) {
-      double value = focusValue(mat);
+      Mat gray;
+      cvtColor(mat, gray, COLOR_BGR2GRAY);
+      double value = focusValue(gray);
+      double brightness = averageBrightness(gray);
       m_last_values.push_back(value);
       // Overflow
       if(m_last_values.size() > m_maxValues) {
@@ -53,7 +56,7 @@ void Focus::process(QPixmap &pixmap) {
         m_last_values.insert(m_last_values.begin(), m_maxValues - m_last_values.size(), value);
       }
       // Draw focus helper
-      paint(pixmap);
+      paint(pixmap, brightness);
     }
   }
 }
@@ -72,9 +75,7 @@ cv::Mat Focus::to_mat(const QImage &image) {
   return mat;
 }
 
-double Focus::focusValue(const cv::Mat &img) {
-  Mat gray;
-  cvtColor(img, gray, COLOR_BGR2GRAY);
+double Focus::focusValue(const cv::Mat &gray) {
   Mat lap;
   Laplacian(gray, lap, CV_64F);
   Scalar mu, sigma;
@@ -82,7 +83,12 @@ double Focus::focusValue(const cv::Mat &img) {
   return sigma.val[0] * sigma.val[0];
 }
 
-void Focus::paint(QPixmap &img) {
+double Focus::averageBrightness(const cv::Mat& gray) {
+    cv::Scalar meanBrightness = cv::mean(gray);
+    return meanBrightness[0];
+}
+
+void Focus::paint(QPixmap &img, double brightness) {
   QPainter paint(&img);
   paint.setPen(QPen(m_lineColor, m_lineWidth));
 
@@ -103,5 +109,33 @@ void Focus::paint(QPixmap &img) {
     int y2 = height - (normalizedEnd * height);
 
     paint.drawLine(x1, y1, x2, y2);
+  }
+
+  // Set up the painter for drawing text
+  QFont font = paint.font();
+  font.setPixelSize(12); // Adjust the size as needed
+  paint.setFont(font);
+  paint.setPen(Qt::red); // Choose a color that contrasts well with your image background
+
+  // Create the text to display
+  QString brightnessText = QString("Brightness: %1").arg(brightness, 3, 'f', 0, ' ');
+
+  // Calculate the position to draw the text
+  int textPadding = 5; // Padding from the top-right corner
+  QFontMetrics fontMetrics(font);
+  int textWidth = fontMetrics.width(brightnessText);
+  int textX = width - textWidth - textPadding; // Adjust X position based on text width
+  int textY = textPadding + fontMetrics.ascent(); // Adjust Y position to align text properly
+
+  // Draw the text on the image
+  paint.drawText(textX, textY, brightnessText);
+  if (!m_last_values.empty()) {
+    double lastValue = m_last_values.back();
+    QString lastValueText = QString("Sharpness: %1").arg(lastValue, 6, 'f', 0, ' ');
+    textX = textPadding; // X position is just the padding amount
+    textY = textPadding + fontMetrics.ascent(); // Adjust Y position to align text properly
+
+    // Draw the text on the image
+    paint.drawText(textX, textY, lastValueText);
   }
 }
