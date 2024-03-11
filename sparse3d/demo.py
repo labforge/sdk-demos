@@ -24,7 +24,6 @@ import warnings
 import argparse
 import eBUS as eb
 import cv2
-import math
 import numpy as np
 
 
@@ -42,7 +41,7 @@ def parse_args():
     parser.add_argument("-m", "--mac", default=None, help="MAC address of the Bottlenose camera")
     parser.add_argument("-k", "--max_keypoints", type=int, default=1000, choices=range(1, 65535),
                         help="Maximum number of keypoints to detect")
-    parser.add_argument("-t", "--fast_threshold", type=int, default=20, choices=range(0, 255),
+    parser.add_argument("-t", "--fast_threshold", type=int, default=10, choices=range(0, 255),
                         help="Keypoint threshold for the Fast9 algorithm")
     parser.add_argument("-x", "--match_xoffset", type=int, default=0, choices=range(-4095, 4095),
                         help="Matcher horizontal search range.")
@@ -50,7 +49,7 @@ def parse_args():
                         help="Matcher vertical search range.")
     parser.add_argument("-y1", "--offsety1", type=int, default=440, choices=range(0, 880),
                         help="Matcher vertical search range.")
-    parser.add_argument("-n", "--min_threshold", type=int, default=500, help="Matcher vertical search range.")
+    parser.add_argument("-n", "--min_threshold", type=int, default=40, help="Matcher vertical search range.")
     parser.add_argument("-r", "--ratio_threshold", type=int, default=1023, help="Matcher vertical search range.")
     return parser.parse_args()
 
