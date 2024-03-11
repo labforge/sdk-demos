@@ -252,7 +252,7 @@ def process_points_and_matches(keypoints, matches, pc, image_left, image_right, 
         y1 = matches.points[i].y
         rgb_value = image_left[y, x]
         # Just skip bad 3d matches from HMAT
-        if x1 == matches.unmatched or y1 == matches.unmatched:
+        if matches.unmatched in (x1, y1):
             continue
         # Not a good test for "valid matches", 3d coordinate can be nan for valid matches
         # if math.isnan(pc[i].x) or math.isnan(pc[i].y) or math.isnan(pc[i].z):
@@ -276,7 +276,7 @@ def process_points_and_matches(keypoints, matches, pc, image_left, image_right, 
     if len(valid_points_left) > 0:
         #image = cv2.drawKeypoints(image, valid_points_left, 0, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         # Detailled drawing with enumeration
-        for image, points in [(image_left, valid_points_left), (image_right, valid_points_right)]:
+        for image, points in ((image_left, valid_points_left), (image_right, valid_points_right)):
             for i, kp in enumerate(points):
                 x, y = int(kp.pt[0]), int(kp.pt[1])  # Get the coordinates of the keypoint
 
