@@ -47,9 +47,10 @@ if not opencv_dep.found()
   cv4_gui = cpp.find_library('opencv_highgui430', dirs: cv4_lib_dirs)
   cv4_codec = cpp.find_library('opencv_imgcodecs430', dirs: cv4_lib_dirs)
   cv4_imgproc = cpp.find_library('opencv_imgproc430', dirs: cv4_lib_dirs)
+  cv4_calib = cpp.find_library('opencv_calib3d430', dirs: cv4_lib_dirs)
   opencv_dep = declare_dependency(version: '4.3.0',
                                   compile_args: ['-I' + cv4_include_path],
-                                  dependencies : [cv4_core, cv4_gui, cv4_codec, cv4_imgproc],
+                                  dependencies : [cv4_core, cv4_gui, cv4_codec, cv4_imgproc, cv4_calib],
                                   )
 endif
 if host_machine.system() == 'linux'
@@ -68,7 +69,7 @@ if host_machine.system() == 'linux'
   PvStream = cpp.find_library('PvStream', required: true, dirs: pleora_dirs)
   PvVirualDevice = cpp.find_library('PvVirtualDevice', required: true, dirs: pleora_dirs)
   PvGUI = cpp.find_library('PvGUI', required: true, dirs: pleora_dirs)
-  PvAppUtils = cpp.find_library('PvAppUtils', required: true, dirs: pleora_dirs)  
+  PvAppUtils = cpp.find_library('PvAppUtils', required: true, dirs: pleora_dirs)
   PvPersistence = cpp.find_library('PvPersistence', required: true, dirs: pleora_dirs)
 else # Windows, note force 64-bit
   pleora_dirs = ['C:/Program Files/Pleora Technologies Inc/eBUS SDK/Libraries']
