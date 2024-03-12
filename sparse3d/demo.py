@@ -39,9 +39,9 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mac", default=None, help="MAC address of the Bottlenose camera")
-    parser.add_argument("-k", "--max_keypoints", type=int, default=1000, choices=range(1, 65535),
+    parser.add_argument("-k", "--max_keypoints", type=int, default=65534, choices=range(1, 65535),
                         help="Maximum number of keypoints to detect")
-    parser.add_argument("-t", "--fast_threshold", type=int, default=10, choices=range(0, 255),
+    parser.add_argument("-t", "--fast_threshold", type=int, default=3, choices=range(0, 255),
                         help="Keypoint threshold for the Fast9 algorithm")
     parser.add_argument("-x", "--match_xoffset", type=int, default=0, choices=range(-4095, 4095),
                         help="Matcher horizontal search range.")
