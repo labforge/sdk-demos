@@ -14,7 +14,7 @@
  * limitations under the License.                                             *
  ******************************************************************************
 
-@file calib_params.cc 
+@file calib_params.cc
 @author G. M. Tchamgoue <martin@labforge.ca>
 */
 
@@ -49,27 +49,27 @@ static bool getRegister(PvDevice *lDevice, std::string regname, std::variant<int
   if (t == PvGenTypeInteger) { // int
     int64_t ival = 0;
     res = lDeviceParams->GetIntegerValue(param->GetName(), ival);
-    regOK = res.IsOK();    
+    regOK = res.IsOK();
     value = ival;
   } else if (t == PvGenTypeFloat) { // float
     double dval = 0.0;
-    res = lDeviceParams->GetFloatValue(param->GetName(), dval);    
-    value = dval;   
+    res = lDeviceParams->GetFloatValue(param->GetName(), dval);
+    value = dval;
     regOK = res.IsOK();
   }
   return regOK;
 }
 
-void CalibParams::setParameters(PvDevice *lDevice){  
+void CalibParams::setParameters(PvDevice *lDevice){
   std::variant<int64_t, double> regvalue;
   const std::string names[] = {"fx", "fy", "cx", "cy", "k1",
                                "k2", "p1", "p2", "k3", "tx",
-                               "ty", "tz", "rx", "ry", "rz"};  
+                               "ty", "tz", "rx", "ry", "rz"};
 
-  uint32_t num_cameras = getRegister(lDevice, "fx1", regvalue)?2:1;    
+  uint32_t num_cameras = getRegister(lDevice, "fx1", regvalue)?2:1;
 
   for(std::string name:names){
-    for(uint32_t i = 0; i < num_cameras; ++i){ 
+    for(uint32_t i = 0; i < num_cameras; ++i){
       std::string regname = name + std::to_string(i);
       if(getRegister(lDevice, regname, regvalue)){
         std::cout << regname << ": " << std::get<double>(regvalue) << std::endl;
@@ -78,7 +78,7 @@ void CalibParams::setParameters(PvDevice *lDevice){
         break;
       }
     }
-  }  
+  }
 
   if(getRegister(lDevice, "kWidth", regvalue)){
     std::cout << "kWidth: " << std::get<int64_t>(regvalue) << std::endl;
@@ -99,13 +99,13 @@ bool CalibParams::calibrated(uint32_t width, uint32_t height){
 }
 
 void CalibParams::applyStereoRectify(){
-  /* K matrices */  
+  /* K matrices */
   double kmat1[9] = {m_params["fx0"], 0.0, m_params["cx0"], 0.0, m_params["fy0"], m_params["cy0"], 0.0, 0.0, 1.0};
   double kmat2[9] = {m_params["fx1"], 0.0, m_params["cx1"], 0.0, m_params["fy1"], m_params["cy1"], 0.0, 0.0, 1.0};
   cv::Mat K1(3, 3, CV_64F, kmat1);
   cv::Mat K2(3, 3, CV_64F, kmat2);
 
-  /* distortion coeffs */  
+  /* distortion coeffs */
   double dist1[5] = {m_params["k10"], m_params["k20"], m_params["p10"], m_params["p20"], m_params["k30"]};
   double dist2[5] = {m_params["k11"], m_params["k21"], m_params["p11"], m_params["p21"], m_params["k31"]};
   cv::Mat distCoeffs1(5, 1, CV_64F, dist1);
@@ -118,17 +118,12 @@ void CalibParams::applyStereoRectify(){
   cv::Mat Rv(3, 1, CV_64F, rvec);
   cv::Mat R(3, 3, CV_64F);
   cv::Mat T(3, 1, CV_64F, tvec);
-  cv::Rodrigues(Rv, R);  
+  cv::Rodrigues(Rv, R);
 
   cv::stereoRectify(K1, distCoeffs1, K2, distCoeffs2, imageSize,
                     R, T, m_R1, m_R2, m_P1, m_P2, m_Q);
-  std::cout << "R1 = " << std::endl << " "  << m_R1 << std::endl << std::endl;
-  std::cout << "Q = " << std::endl << " "  << m_Q << std::endl << std::endl;
-  std::cout << "P1 = " << std::endl << " "  << m_P1 << std::endl << std::endl;
-  std::cout << "P2 = " << std::endl << " "  << m_P2 << std::endl << std::endl;
 }
 
 void CalibParams::getDepthMatrix(cv::Mat &qmat){
   qmat = m_Q.clone();
-  std::cout << "qmat = " << std::endl << " "  << qmat << std::endl << std::endl;
 }

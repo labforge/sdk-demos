@@ -67,7 +67,7 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
   if(m_buffers.empty()) {
     throw runtime_error("Could allocate stream buffers");
   }
- 
+
   // Map start and stop and status commands
   m_start = dynamic_cast<PvGenCommand *>( lDeviceParams->Get( "AcquisitionStart" ) );
   m_stop = dynamic_cast<PvGenCommand *>( lDeviceParams->Get( "AcquisitionStop" ) );
@@ -87,14 +87,14 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
   }
   if(!m_fps ||
      !m_bandwidth ||
-     !m_pixformat ||      
+     !m_pixformat ||
      !m_undistort){
       throw runtime_error("Unable to initialise critical camera features. Please, make sure the camera is accessible.");
      }
 
-  if(m_rectify) m_rectify->GetValue(m_rectify_init);  
+  if(m_rectify) m_rectify->GetValue(m_rectify_init);
   m_undistort->GetValue(m_undistort_init);
-  m_pixformat->GetValue( m_pixfmt_init );    
+  m_pixformat->GetValue( m_pixfmt_init );
 
   m_start_flag = false;
 }
@@ -117,10 +117,10 @@ Pipeline::~Pipeline() {
   }
   if(!m_buffers.empty()) {
     FreeStreamBuffers(&m_buffers);
-  }  
+  }
 }
 
-bool Pipeline::Start(bool calibrate) {  
+bool Pipeline::Start(bool calibrate) {
   // Queue all buffers
   auto lIt = m_buffers.begin();
   while ( lIt != m_buffers.end() )
@@ -129,18 +129,18 @@ bool Pipeline::Start(bool calibrate) {
     lIt++;
   }
 
-  if(m_rectify) m_rectify->GetValue(m_rectify_init);  
+  if(m_rectify) m_rectify->GetValue(m_rectify_init);
   m_undistort->GetValue(m_undistort_init);
-  m_pixformat->GetValue( m_pixfmt_init );   
-    
+  m_pixformat->GetValue( m_pixfmt_init );
+
   bool rct_value = calibrate?!calibrate:m_rectify_init;
   bool und_value = calibrate?!calibrate:m_undistort_init;
   PvString pixformat = calibrate?"YUV422_8":m_pixfmt_init.GetAscii();
-          
+
   if(m_rectify) m_rectify->SetValue(rct_value);
-  m_undistort->SetValue(und_value);    
+  m_undistort->SetValue(und_value);
   m_pixformat->SetValue(pixformat);
-  
+
   PvResult res = m_device->StreamEnable();
   if(!res.IsOK())
     return false;
@@ -154,7 +154,7 @@ bool Pipeline::Start(bool calibrate) {
 
 size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t, int32_t>> &out) {
   QMutexLocker l(&m_image_lock);
-  
+
   if(!m_images.empty()){
     tuple<Mat *, Mat *, uint64_t, int32_t> image = m_images.dequeue();
     out.push_back(image);
@@ -170,14 +170,14 @@ void Pipeline::Stop() {
   // Discard all queued buffers
 
   if(m_rectify) m_rectify->SetValue(m_rectify_init);
-  m_undistort->SetValue(m_undistort_init);    
+  m_undistort->SetValue(m_undistort_init);
   m_pixformat->SetValue(m_pixfmt_init);
-  QThread::currentThread()->usleep(100*1000);  
+  QThread::currentThread()->usleep(100*1000);
 }
 
 void Pipeline::run() {
-  size_t consequitive_errors = 0;  
-    
+  size_t consequitive_errors = 0;
+
   while(m_start_flag) {
     PvBuffer *lBuffer = nullptr;
     PvResult lOperationResult;
@@ -212,14 +212,14 @@ void Pipeline::run() {
         if(m_mindisparity){
           m_mindisparity->GetValue(minDisparity);
         }
-        
+
         IPvImage *img0, *img1;
         switch ( lBuffer->GetPayloadType() ) {
           case PvPayloadTypeMultiPart:
             img0 = lBuffer->GetMultiPartContainer()->GetPart(0)->GetImage();
             img1 = lBuffer->GetMultiPartContainer()->GetPart(1)->GetImage();
             m_pixformat->GetValue( pixformat );
-            
+
             // Protected image creation
             {
               int cv_pixfmt0 = (img0->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
@@ -228,7 +228,7 @@ void Pipeline::run() {
 
               QMutexLocker l(&m_image_lock);
               // See if there is chunk data attached
-              
+
               m_images.enqueue(
                       make_tuple(
                               new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
@@ -237,11 +237,11 @@ void Pipeline::run() {
                               )
                               );
             }
-            
+
             emit pairReceived(is_disparity);
             break;
 
-          case PvPayloadTypeImage:                        
+          case PvPayloadTypeImage:
             {
               QMutexLocker l(&m_image_lock);
               img0 = lBuffer->GetImage();
@@ -254,15 +254,15 @@ void Pipeline::run() {
                 is_disparity = false;
               }
 
-              m_images.enqueue( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()), 
+              m_images.enqueue( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()),
                                              new Mat(), timestamp, minDisparity));
             }
-            
+
             emit monoReceived(is_disparity);
             break;
 
           default:
-            // Invalid buffer received            
+            // Invalid buffer received
             cout << "FMT_ERR(" << consequitive_errors << ") :" << lResult.GetCodeString().GetAscii() << endl;
             consequitive_errors++;
             emit onError(lResult.GetCodeString().GetAscii());
@@ -308,7 +308,7 @@ void Pipeline::run() {
 
   // Discard retrieved pairs
   {
-    QMutexLocker l(&m_image_lock);    
+    QMutexLocker l(&m_image_lock);
     m_images.clear();
   }
 

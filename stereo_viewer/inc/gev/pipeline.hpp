@@ -70,7 +70,7 @@ namespace labforge::gev {
     PvString m_pixfmt_init;
 
     std::list<PvBuffer*> m_buffers;
-    QQueue<std::tuple<cv::Mat*, cv::Mat*, uint64_t , int32_t>> m_images;    
+    QQueue<std::tuple<cv::Mat*, cv::Mat*, uint64_t , int32_t>> m_images;
     volatile bool m_start_flag;
     QMutex m_image_lock;
   };
