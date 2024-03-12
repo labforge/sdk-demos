@@ -16,6 +16,7 @@ qt_app_headers = [
   '../inc/ui/cameraview.hpp',
   '../inc/gev/pipeline.hpp',
   '../inc/io/data_thread.hpp',
+  '../inc/gev/calib_params.hpp',
   ]
 
 qtprocessed = qt5.preprocess(moc_headers: qt_app_headers,

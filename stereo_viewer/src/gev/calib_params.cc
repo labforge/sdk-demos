@@ -72,7 +72,7 @@ void CalibParams::setParameters(PvDevice *lDevice){
     for(uint32_t i = 0; i < num_cameras; ++i){
       std::string regname = name + std::to_string(i);
       if(getRegister(lDevice, regname, regvalue)){
-        m_params[regname] = std::get<double>(regvalue);
+        m_params[regname] = (float)std::get<double>(regvalue);
       } else{
         break;
       }
@@ -80,10 +80,10 @@ void CalibParams::setParameters(PvDevice *lDevice){
   }
 
   if(getRegister(lDevice, "kWidth", regvalue)){
-    m_width = std::get<int64_t>(regvalue);
+    m_width = (uint32_t)std::get<int64_t>(regvalue);
   }
   if(getRegister(lDevice, "kHeight", regvalue)){
-    m_height = std::get<int64_t>(regvalue);
+    m_height = (uint32_t)std::get<int64_t>(regvalue);
   }
 
   if(num_cameras == 2) applyStereoRectify();
