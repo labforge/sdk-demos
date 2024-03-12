@@ -48,9 +48,12 @@ if not opencv_dep.found()
   cv4_codec = cpp.find_library('opencv_imgcodecs430', dirs: cv4_lib_dirs)
   cv4_imgproc = cpp.find_library('opencv_imgproc430', dirs: cv4_lib_dirs)
   cv4_calib = cpp.find_library('opencv_calib3d430', dirs: cv4_lib_dirs)
+  cv4_feat = cpp.find_library('opencv_features2d430', dirs: cv4_lib_dirs)
+  cv4_flann = cpp.find_library('opencv_flann430', dirs: cv4_lib_dirs)
+
   opencv_dep = declare_dependency(version: '4.3.0',
                                   compile_args: ['-I' + cv4_include_path],
-                                  dependencies : [cv4_core, cv4_gui, cv4_codec, cv4_imgproc, cv4_calib],
+                                  dependencies : [cv4_core, cv4_gui, cv4_codec, cv4_imgproc, cv4_calib, cv4_feat, cv4_flann],
                                   )
 endif
 if host_machine.system() == 'linux'
