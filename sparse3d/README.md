@@ -26,16 +26,16 @@ python demo.py --mac <mac> --offsety1 <offset_from_calibration>
 
 Set the following arguments to the ```demo.py``` file to change demo behavior.
 
-| ***Parameter***        | ***Description***                                                                               |
-|------------------------|-------------------------------------------------------------------------------------------------|
-| ```--mac```            | (optional) The MAC address of the camera. Assumes the first available camera if not specified.  |
-| ```--max_keypoints```  | (optional) Maximum number of keypoints to detect. Default 1000.                                 |
-| ```--fast_threshold``` | (optional) Keypoint threshold for the Fast9 algorithm. Default 10.                              |
-| ```--match_xoffset```  | (optional) Matcher horizontal search range. Default 0 (use existing value)                      |
-| ```--match_yoffset```  | (optional) Matcher vertical search range. Default 0 (use existing value)                        |
-| ```--offsety1```       | (optional) The Y offset of the right image. Default 440.                                        |
-| ```--min_threshold```  | (optional) Minimum threshold to accept a matched keypoint. Default 40.                          |
-|```--ratio_threshold``` | (optional) Ratio threshold. Default 1023                                                        |
+| ***Parameter***        | ***Description***                                                                              |
+|------------------------|------------------------------------------------------------------------------------------------|
+| ```--mac```            | (optional) The MAC address of the camera. Assumes the first available camera if not specified. |
+| ```--max_keypoints```  | (optional) Maximum number of keypoints to detect. Default 1000.                                |
+| ```--fast_threshold``` | (optional) Keypoint threshold for the Fast9 algorithm. Default 4.                              |
+| ```--match_xoffset```  | (optional) Matcher horizontal search range. Default 0 (use existing value)                     |
+| ```--match_yoffset```  | (optional) Matcher vertical search range. Default 0 (use existing value)                       |
+| ```--offsety1```       | (optional) The Y offset of the right image. Default 440.                                       |
+| ```--min_threshold```  | (optional) Minimum threshold to accept a matched keypoint. Default 40.                         |
+|```--ratio_threshold``` | (optional) Ratio threshold. Default 1023                                                       |
 
 ## Usage
 
