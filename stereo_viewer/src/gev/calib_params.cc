@@ -72,7 +72,6 @@ void CalibParams::setParameters(PvDevice *lDevice){
     for(uint32_t i = 0; i < num_cameras; ++i){
       std::string regname = name + std::to_string(i);
       if(getRegister(lDevice, regname, regvalue)){
-        std::cout << regname << ": " << std::get<double>(regvalue) << std::endl;
         m_params[regname] = std::get<double>(regvalue);
       } else{
         break;
@@ -81,11 +80,9 @@ void CalibParams::setParameters(PvDevice *lDevice){
   }
 
   if(getRegister(lDevice, "kWidth", regvalue)){
-    std::cout << "kWidth: " << std::get<int64_t>(regvalue) << std::endl;
     m_width = std::get<int64_t>(regvalue);
   }
   if(getRegister(lDevice, "kHeight", regvalue)){
-    std::cout << "kHeight: " << std::get<int64_t>(regvalue) << std::endl;
     m_height = std::get<int64_t>(regvalue);
   }
 
