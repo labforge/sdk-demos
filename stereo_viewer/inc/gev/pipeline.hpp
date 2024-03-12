@@ -43,7 +43,7 @@ namespace labforge::gev {
     bool Start(bool calibrate);
     void Stop();
     bool IsStarted() { return m_start_flag; }
-    size_t GetPairs(std::list<std::tuple<cv::Mat*, cv::Mat*, uint64_t>> &out);
+    size_t GetPairs(std::list<std::tuple<cv::Mat*, cv::Mat*, uint64_t, int32_t>> &out);
     void run() override;
 
   Q_SIGNALS:
@@ -63,13 +63,14 @@ namespace labforge::gev {
     PvGenEnum* m_pixformat;
     PvGenBoolean *m_rectify;
     PvGenBoolean *m_undistort;
+    PvGenInteger *m_mindisparity;
 
     bool m_rectify_init;
     bool m_undistort_init;
     PvString m_pixfmt_init;
 
     std::list<PvBuffer*> m_buffers;
-    QQueue<std::tuple<cv::Mat*, cv::Mat*, uint64_t >> m_images;    
+    QQueue<std::tuple<cv::Mat*, cv::Mat*, uint64_t , int32_t>> m_images;
     volatile bool m_start_flag;
     QMutex m_image_lock;
   };

@@ -54,10 +54,10 @@ using namespace labforge::gev;
 static int64_t s_get_mtu(PvDevice *lDevice) {
   PvGenParameterArray *lDeviceParams = lDevice->GetParameters();
   PvGenInteger *intval = dynamic_cast<PvGenInteger *>(lDeviceParams->Get("GevSCPSPacketSize"));
-  
+
   int64_t value = -1;
-  if(intval != nullptr) {    
-    intval->GetValue(value);    
+  if(intval != nullptr) {
+    intval->GetValue(value);
   }
 
   return value;
@@ -66,14 +66,14 @@ static int64_t s_get_mtu(PvDevice *lDevice) {
 static bool s_is_bottlenose(const PvDeviceInfo*info) {
 #ifndef NDEBUG
   // In Debug mode accept any GEV device as source
-  (void)info;  
+  (void)info;
   return true;
 #else
   string serial(info->GetSerialNumber().GetAscii());
   std::for_each(serial.begin(), serial.end(), [](char & c){
     c = ::toupper(c);
   });
-  
+
   //if((name.rfind("Bottlenose", 0) == 0) && (serial.rfind("8C1F64D0E", 0) == 0)) {
   if(serial.rfind("8C1F64D0E", 0) == 0) {
     return true;
@@ -90,24 +90,26 @@ static QImage s_yuv2_to_qimage(const cv::Mat*img) {
   return QImage((uchar*) res.data, res.cols, res.rows, res.step, QImage::Format_RGB888).copy();
 }
 
-static QImage s_mono_to_qimage(const cv::Mat*img, bool colorize=true, int colormap=COLORMAP_JET) {
-  Mat res;  
+static QImage s_mono_to_qimage(const cv::Mat*img, int colormap=COLORMAP_JET, int mindisp=0, int maxdisp=0) {
+  Mat res;
   QImage::Format qformat = QImage::Format_Grayscale8;
-      
-  colormap = (colormap < 0)?COLORMAP_INFERNO:colormap;
-  if(colorize){
+
+  if(colormap > 0){
     Mat img_color;
     Mat dst = img->clone();
 
     dst.setTo(0, dst == 65535);
+    if(mindisp > 0) dst.setTo(0, dst<(mindisp * 255));
+    if(maxdisp > 0) dst.setTo(0, dst>(maxdisp * 255));
+
     normalize(dst, res, 0, 255, NORM_MINMAX, CV_8UC1);
 
-    applyColorMap(res, img_color, colormap);
+    applyColorMap(res, img_color, colormap-1);
     cv::cvtColor(img_color, res, COLOR_BGR2RGB);
     qformat = QImage::Format_RGB888;
   }
   else {
-    img->convertTo(res, CV_8UC1, 0.0038910505836575876, 0);
+    img->convertTo(res, CV_8UC1, 0.00392156862745098, 0);
   }
   return QImage((uchar*) res.data, res.cols, res.rows, res.step, qformat).copy();
 }
@@ -118,12 +120,12 @@ static void s_load_colormap(QComboBox *cbx, int default_cm=COLORMAP_JET){
   const int pixw = 256;
   const int pixh = 30;
 
-  unsigned char xpm[pixw*pixh]; 
+  unsigned char xpm[pixw*pixh];
   Mat img_color, res;
   Mat raw_cm(pixh, pixw, CV_8UC1, xpm);
-  QPixmap pixmap;
+  QPixmap pixmap(pixw, pixh);
   std::tuple<int,QString> colormaps[] = {{COLORMAP_AUTUMN,"Autumn"}, {COLORMAP_BONE,"Bone"},
-                                         {COLORMAP_JET,"Jet"}, {COLORMAP_WINTER,"Winter"}, 
+                                         {COLORMAP_JET,"Jet"}, {COLORMAP_WINTER,"Winter"},
                                          {COLORMAP_RAINBOW,"Rainbow"}, {COLORMAP_OCEAN,"Ocean"},
                                          {COLORMAP_SUMMER,"Summer"}, {COLORMAP_SPRING,"Spring"},
                                          {COLORMAP_COOL,"Cool"}, {COLORMAP_HSV,"HSV"},
@@ -139,27 +141,34 @@ static void s_load_colormap(QComboBox *cbx, int default_cm=COLORMAP_JET){
     for(int k = 0; k < pixw; ++k){
       xpm[i*pixw + k] = k;
     }
-  }  
-  
+  }
+
   cbx->setIconSize(QSize(96, 16));
+
+  /* Add no color */
+  pixmap.fill(QColor("white"));
+  cbx->addItem(QIcon(pixmap), "Black & White");
+
+  /* Add other color */
   for(auto colormap:colormaps){
     applyColorMap(raw_cm, img_color, get<0>(colormap));
     cv::cvtColor(img_color, res, COLOR_BGR2RGB);
-    QImage qimg((uchar*)res.data, res.cols, res.rows, res.step, QImage::Format_RGB888);  
+    QImage qimg((uchar*)res.data, res.cols, res.rows, res.step, QImage::Format_RGB888);
     pixmap.convertFromImage(qimg);
 
-    QIcon icon(pixmap);    
+    QIcon icon(pixmap);
     cbx->addItem(icon, get<1>(colormap));
     if(get<0>(colormap) == default_cm){
-      cbx->setCurrentIndex(default_cm);
+      cbx->setCurrentIndex(default_cm + 1);
     }
   }
+
 }
 
 static void s_load_format(QComboBox *cbx, bool isVisible=true){
-  cbx->addItem("BMP (Windows Bitmap)", "BMP"); 
-  cbx->addItem("PNG (Portable Network Graphics)", "PNG"); 
-  cbx->addItem("JPEG (Joint Photographic Experts Group)", "JPG");  
+  cbx->addItem("BMP (Windows Bitmap)", "BMP");
+  cbx->addItem("PNG (Portable Network Graphics)", "PNG");
+  cbx->addItem("JPEG (Joint Photographic Experts Group)", "JPG");
   cbx->addItem("PPM (Portable Pixmap)", "PPM");
   cbx->setCurrentIndex(0);
   cbx->setVisible(isVisible);
@@ -175,16 +184,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   QStyle *pStyle = QApplication::style();
   cfg.btnDisconnect->setIcon(pStyle->standardIcon(QStyle::SP_DialogCloseButton));
   cfg.btnFolder->setIcon(pStyle->standardIcon(QStyle::SP_DirOpenIcon));
-  cfg.btnStart->setIcon(pStyle->standardIcon(QStyle::SP_MediaPlay)); 
+  cfg.btnStart->setIcon(pStyle->standardIcon(QStyle::SP_MediaPlay));
   cfg.btnStop->setIcon(pStyle->standardIcon(QStyle::SP_MediaStop));
   cfg.btnSave->setIcon(pStyle->standardIcon(QStyle::SP_DialogSaveButton));
   cfg.btnRecord->setIcon(QIcon::fromTheme("media-record", QIcon(":/media-record.png")));
   cfg.editFolder->setText(QApplication::translate("MainWindow", QDir::currentPath().toLocal8Bit().data(), Q_NULLPTR));
 
-  cfg.chkColormap->setVisible(false);
   cfg.labelColormap->setVisible(false);
   cfg.cbxColormap->setVisible(false);
-  cfg.chkColormap->setChecked(true);  
   cfg.chkCalibrate->setVisible(true);
   cfg.chkCalibrate->setChecked(false);
   cfg.chkCalibrate->setEnabled(true);
@@ -192,6 +199,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   s_load_colormap(cfg.cbxColormap, COLORMAP_JET);
   s_load_format(cfg.cbxFormat, false);
   cfg.lblFormat->setVisible(false);
+
+  cfg.lblMinDisparity->setVisible(false);
+  cfg.lblMaxDisparity->setVisible(false);
+  cfg.spinMinDisparity->setVisible(false);
+  cfg.spinMaxDisparity->setVisible(false);
 
   cfg.btnDeviceControl->setEnabled(true);
   m_device_browser = new PvGenBrowserWnd;
@@ -206,7 +218,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   connect(cfg.btnFolder, &QPushButton::released, this, &MainWindow::onFolderSelect);
   connect(cfg.btnRecord, &QPushButton::released, this, &MainWindow::handleRecording);
   connect(cfg.btnSave, &QPushButton::released, this, &MainWindow::handleSave);
-  connect(cfg.chkColormap, &QCheckBox::stateChanged, this, &MainWindow::handleColormap);
   connect(cfg.btnDeviceControl, &QPushButton::released, this, &MainWindow::handleDeviceControl);
   connect(cfg.cbxFocus,&QCheckBox::stateChanged, this, &MainWindow::handleFocus);
   connect(cfg.spinRuler, QOverload<int>::of(&QSpinBox::valueChanged), this, &MainWindow::setRuler);
@@ -233,11 +244,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 }
 
 MainWindow::~MainWindow(){
-  CloseGenWindow( m_device_browser );    
+  CloseGenWindow( m_device_browser );
   if(m_device_browser){
     delete m_device_browser;
     m_device_browser = nullptr;
-  }   
+  }
 
   m_pipeline.reset();
   if(m_device) {
@@ -246,7 +257,7 @@ MainWindow::~MainWindow(){
   }
 
   if(m_data_thread){
-    m_data_thread.reset();    
+    m_data_thread.reset();
   }
 }
 
@@ -257,9 +268,13 @@ void MainWindow::handleStart() {
       cfg.btnStop->setEnabled(true);
       cfg.btnSave->setEnabled(true);
       cfg.btnRecord->setEnabled(true);
-      
+
       cfg.chkCalibrate->setEnabled(false);
       resetStatusCounters();
+
+      cv::Mat qMat;
+      m_calib.getDepthMatrix(qMat);
+      m_data_thread->setDepthMatrix(qMat);
     }
   }
 }
@@ -314,14 +329,14 @@ void MainWindow::OnDisconnected() {
   cfg.btnRecord->setEnabled(false);
   cfg.btnSave->setEnabled(false);
 
-  cfg.editIP->setText(""); 
-  cfg.editMAC->setText(""); 
+  cfg.editIP->setText("");
+  cfg.editMAC->setText("");
   cfg.editModel->setText("");
   cfg.chkCalibrate->setEnabled(true);
-  cfg.btnDeviceControl->setEnabled(false);  
+  cfg.btnDeviceControl->setEnabled(false);
 }
 
-void MainWindow::handleRecording(){  
+void MainWindow::handleRecording(){
   cfg.btnStop->setEnabled(true);
   cfg.btnRecord->setEnabled(false);
   cfg.btnSave->setEnabled(false);
@@ -336,21 +351,21 @@ void MainWindow::handleRecording(){
 
 }
 
-void MainWindow::handleSave(){  
+void MainWindow::handleSave(){
   cfg.btnSave->setEnabled(false);
   cfg.btnRecord->setEnabled(false);
   cfg.cbxFormat->setEnabled(false);
-  m_saving = true;  
+  m_saving = true;
 
   if(!m_data_thread->setFolder(cfg.editFolder->text())){
     QMessageBox::critical(this, "Folder Error", "Could not create or find folder. Make sure you have appropriate write permission to the destination folder.");
   }
 }
 
-void MainWindow::onFolderSelect(){    
+void MainWindow::onFolderSelect(){
   QString fpath = cfg.editFolder->text().isEmpty()?QDir::currentPath():cfg.editFolder->text();
   QString selected_dir = QFileDialog::getExistingDirectory(this, tr("Select Directory"),
-                                                           fpath, QFileDialog::ShowDirsOnly | 
+                                                           fpath, QFileDialog::ShowDirsOnly |
                                                            QFileDialog::DontResolveSymlinks);
   if(!selected_dir.isEmpty()){
     cfg.editFolder->setText(selected_dir);
@@ -379,11 +394,12 @@ void MainWindow::handleConnect() {
   }
 
   if(connectGEV(devinfo)) {
-    OnConnected();    
+    OnConnected();
+    m_calib.setParameters(m_device);
   } else {
     OnDisconnected();
   }
-  lFinder.Close();  
+  lFinder.Close();
 }
 
 void MainWindow::handleDisconnect() {
@@ -393,7 +409,7 @@ void MainWindow::handleDisconnect() {
     delete m_device_browser;
     m_device_browser = new PvGenBrowserWnd;
   }
-  
+
   m_pipeline = nullptr;
   if(m_device) {
     PvDevice::Free(m_device);
@@ -402,12 +418,8 @@ void MainWindow::handleDisconnect() {
 
   OnDisconnected();
   m_data_thread->stop();
-  resetStatusCounters();  
-  this->statusBar()->clearMessage();  
-}
-
-void MainWindow::handleColormap(){
-  cfg.cbxColormap->setEnabled(cfg.chkColormap->isChecked());
+  resetStatusCounters();
+  this->statusBar()->clearMessage();
 }
 
 void MainWindow::handleFocus() {
@@ -424,14 +436,14 @@ bool isWinVisible(PvGenBrowserWnd *aWnd){
     HWND whandle = FindWindowA(NULL, wTitle.GetAscii());
     if(whandle == NULL) return false;
     return IsWindowVisible(whandle);
-  #else     
+  #else
     return aWnd->GetQWidget()->isVisible();
   #endif
 }
 
 void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArray, const QString &aTitle )
 {
-  if(!aWnd) return;   
+  if(!aWnd) return;
   if(isWinVisible(aWnd)){
     CloseGenWindow( aWnd );
     return;
@@ -439,7 +451,7 @@ void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArr
 
   // Create, assign parameters, set title and show modeless
   aWnd->SetTitle( aTitle.toUtf8().constData() );
-  
+
 #ifdef _AFXDLL
   PvResult lResult = aWnd->ShowModeless((PvWindowHandle)winId());
   lResult = aWnd->DoEvents();
@@ -451,36 +463,36 @@ void MainWindow::ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArr
 }
 
 void MainWindow::CloseGenWindow( PvGenBrowserWnd *aWnd )
-{  
+{
   if(isWinVisible(aWnd)){
     aWnd->Close();
-  }  
+  }
 }
 
-void MainWindow::handleDeviceControl(){  
+void MainWindow::handleDeviceControl(){
   ShowGenWindow( m_device_browser, m_device->GetParameters(), "Device Control" );
 }
 
 bool MainWindow::connectGEV(const PvDeviceInfo *info) {
   if(info != nullptr) {
-    // Sanity check that we're talking to a Bottlenose    
+    // Sanity check that we're talking to a Bottlenose
     if(!s_is_bottlenose(info)) {
-      
+
       QMessageBox::warning(this, "Unsupported Device",
-                           "Selected device is not a Bottlenose Camera! ");                   
+                           "Selected device is not a Bottlenose Camera! ");
       return false;
     }
     PvResult lResult;
     PvDevice *lDevice = PvDevice::CreateAndConnect( info->GetConnectionID(), &lResult );
-    if(lDevice) {     
+    if(lDevice) {
       // Open Stream
       PvStream *lStream = PvStream::CreateAndOpen( info->GetConnectionID(), &lResult );
       if(lStream) {
         PvDeviceGEV* lDeviceGEV = dynamic_cast<PvDeviceGEV *>( lDevice );
         PvStreamGEV *lStreamGEV = static_cast<PvStreamGEV *>( lStream );
 
-        cfg.editIP->setText(lDeviceGEV->GetIPAddress().GetAscii()); 
-        cfg.editMAC->setText(lDeviceGEV->GetMACAddress().GetAscii()); 
+        cfg.editIP->setText(lDeviceGEV->GetIPAddress().GetAscii());
+        cfg.editMAC->setText(lDeviceGEV->GetMACAddress().GetAscii());
         cfg.editModel->setText(info->GetModelName().GetAscii());
 
         bool error = false;
@@ -546,17 +558,21 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
   return false;
 }
 
-void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo, bool disparity) {
+void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo, bool disparity, uint16_t *raw_disparity, int32_t min_disparity) {
   // Set the image
   cfg.widgetLeftSensor->setImage(left, false);
   cfg.widgetRightSensor->setVisible(stereo);
   cfg.lblDisplayRight->setVisible(stereo);
 
-  cfg.chkColormap->setVisible(disparity);
   cfg.labelColormap->setVisible(disparity);
   cfg.cbxColormap->setVisible(disparity);
 
-  if(stereo){      
+  cfg.lblMinDisparity->setVisible(disparity);
+  cfg.lblMaxDisparity->setVisible(disparity);
+  cfg.spinMinDisparity->setVisible(disparity);
+  cfg.spinMaxDisparity->setVisible(disparity);
+
+  if(stereo){
     cfg.widgetRightSensor->setImage(right, false);
     QString label = disparity?"Disparity":"Right";
     cfg.lblDisplayRight->setText(label);
@@ -568,11 +584,11 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool s
   // Do we have boundingboxes or feature points
   QColor color_dnn(255, 0, 0, 255);
   QColor color_feature(0, 255, 0, 255);
- 
+
   bool is_saving = (!cfg.btnSave->isEnabled() && m_saving);
   bool is_recording = (!cfg.btnRecord->isEnabled() && !cfg.btnSave->isEnabled() && !m_saving);
   if(is_saving || is_recording){
-    m_data_thread->process(timestamp, left, right, cfg.cbxFormat->currentData().toString());        
+    m_data_thread->process(timestamp, left, right, cfg.cbxFormat->currentData().toString(), raw_disparity, min_disparity);
     if(is_saving){
       cfg.btnSave->setEnabled(true);
       cfg.btnRecord->setEnabled(true);
@@ -595,7 +611,7 @@ void MainWindow::showStatusMessage(uint32_t rcv_images){
   auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - m_startTime);
   float esecs = elapsed.count();
   float fps = (esecs > 0)? (m_frameCount/esecs): 0.00;
-  float payload = (m_payload * fps)/1000000;  
+  float payload = (m_payload * fps)/1000000;
   QString warn = ((m_errorMsg == "AUTO_ABORTED") || (m_errorMsg == "TIMEOUT"))?"   Warning: Skipping":((m_errorMsg == "MISSING_PACKETS")?"   Last Warning: Resends":"");
   QString last_error = (m_errorCount > 0)?("   Last Error: " + m_errorMsg):"";
 
@@ -611,7 +627,7 @@ void MainWindow::resetStatusCounters(){
   m_errorCount = 0;
   m_payload = 0;
   m_errorMsg = "";
-  m_startTime = std::chrono::system_clock::now();  
+  m_startTime = std::chrono::system_clock::now();
 }
 
 void MainWindow::handleError(QString msg){
@@ -622,26 +638,29 @@ void MainWindow::handleError(QString msg){
 
 void MainWindow::handleStereoData(bool is_disparity) {
   if(m_pipeline) {
-    list<tuple<Mat*, Mat*, uint64_t>> images;
+    list<tuple<Mat*, Mat*, uint64_t, int32_t>> images;
+    uint16_t *raw_disparity = nullptr;
+
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(true, is_disparity);
-    
+
     m_frameCount += images.size();
     showStatusMessage(2);
 
     // Convert and display
     for (auto it = images.begin(); it != images.end(); ++it) {
-      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;   
+      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;
       QImage q1 = s_yuv2_to_qimage(get<0>(*it));
       QImage q2;
 
-      if(is_disparity){ 
-        q2 = s_mono_to_qimage(get<1>(*it), cfg.chkColormap->isChecked(), cfg.cbxColormap->currentIndex());
+      if(is_disparity){
+        q2 = s_mono_to_qimage(get<1>(*it), cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
+        raw_disparity = (uint16_t*)get<1>(*it)->data;
       }else{
         q2 = s_yuv2_to_qimage(get<1>(*it));
       }
-      
-      newData(get<2>(*it), q1, q2, true, is_disparity);
+
+      newData(get<2>(*it), q1, q2, true, is_disparity, raw_disparity, get<3>(*it));
       delete get<0>(*it);
       delete get<1>(*it);
     }
@@ -650,7 +669,8 @@ void MainWindow::handleStereoData(bool is_disparity) {
 
 void MainWindow::handleMonoData(bool is_disparity){
   if(m_pipeline){
-    list<tuple<Mat*, Mat*, uint64_t>> images;
+    list<tuple<Mat*, Mat*, uint64_t, int32_t>> images;
+    uint16_t *raw_disparity = nullptr;
     m_pipeline->GetPairs(images);
     m_data_thread->setStereoDisparity(false, is_disparity);
 
@@ -658,18 +678,19 @@ void MainWindow::handleMonoData(bool is_disparity){
     showStatusMessage(1);
 
     for (auto it = images.begin(); it != images.end(); ++it) {
-      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;   
-      QImage q1; 
-      QImage q2; 
+      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;
+      QImage q1;
+      QImage q2;
 
-      if(is_disparity){ 
-        q1 = s_mono_to_qimage(get<0>(*it), cfg.chkColormap->isChecked(), cfg.cbxColormap->currentIndex());
+      if(is_disparity){
+        q1 = s_mono_to_qimage(get<0>(*it), cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
+        raw_disparity = (uint16_t*)get<0>(*it)->data;
       }
       else{
         q1 = s_yuv2_to_qimage(get<0>(*it));
       }
 
-      newData(get<2>(*it), q1, q2, false, is_disparity);
+      newData(get<2>(*it), q1, q2, false, is_disparity, raw_disparity, get<3>(*it));
       delete get<0>(*it);
       delete get<1>(*it);
     }

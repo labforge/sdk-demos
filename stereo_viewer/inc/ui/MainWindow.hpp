@@ -16,7 +16,7 @@
 
 @file MainWindow.hpp MainWindow class definition
 @author Thomas Reidemeister <thomas@labforge.ca>
-        Guy Martin Tchamgoue <martin@labforge.ca> 
+        Guy Martin Tchamgoue <martin@labforge.ca>
 */
 #ifndef __MAINWINDOW_HPP__
 #define __MAINWINDOW_HPP__
@@ -32,6 +32,7 @@
 #include "ui_stereo_viewer.h"
 #include "gev/pipeline.hpp"
 #include "io/data_thread.hpp"
+#include "gev/calib_params.hpp"
 #include <cstdint>
 
 class PvGenBrowserWnd;
@@ -53,10 +54,10 @@ public Q_SLOTS:
   void handleStereoData(bool is_disparity);
   void handleMonoData(bool is_disparity);
   void handleError(QString msg);
-  void newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo=true, bool disparity=true);
+  void newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo=true,
+               bool disparity=true, uint16_t *raw_disparity=nullptr, int32_t min_disparity=0);
   void onFolderSelect();
   void handleSave();
-  void handleColormap();
   void handleFocus();
   void handleDeviceControl();
   void setRuler(int value);
@@ -73,7 +74,7 @@ private:
   void OnConnected();
   void OnDisconnected();
 
-  Ui_MainWindow cfg;  
+  Ui_MainWindow cfg;
   std::unique_ptr<labforge::gev::Pipeline> m_pipeline;
   PvDevice * m_device;
   volatile bool m_saving;
@@ -89,6 +90,8 @@ private:
   QString m_errorMsg;
   void showStatusMessage(uint32_t received=1);
   void resetStatusCounters();
+
+  labforge::gev::CalibParams m_calib;
 };
 
 }
