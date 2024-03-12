@@ -124,6 +124,8 @@ void CalibParams::applyStereoRectify(){
                     R, T, m_R1, m_R2, m_P1, m_P2, m_Q);
   std::cout << "R1 = " << std::endl << " "  << m_R1 << std::endl << std::endl;
   std::cout << "Q = " << std::endl << " "  << m_Q << std::endl << std::endl;
+  std::cout << "P1 = " << std::endl << " "  << m_P1 << std::endl << std::endl;
+  std::cout << "P2 = " << std::endl << " "  << m_P2 << std::endl << std::endl;
 }
 
 void CalibParams::getDepthMatrix(cv::Mat &qmat){
