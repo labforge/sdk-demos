@@ -474,6 +474,20 @@
               </widget>
              </item>
              <item>
+              <widget class="QLabel" name="labelRuler">
+               <property name="text">
+                <string>Ruler</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="spinRuler">
+               <property name="maximum">
+                <number>2160</number>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QLabel" name="lblFormat">
                <property name="text">
                 <string>Format</string>

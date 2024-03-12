@@ -23,6 +23,16 @@
 #include <PvBuffer.h>
 #include <vector>
 
+#if defined(__GNUC__) // GCC and Clang
+#define PACKED_STRUCT_BEGIN() struct __attribute__((packed, aligned(4)))
+#define PACKED_STRUCT_END()
+#elif defined(_MSC_VER) // MSVC
+#define PACKED_STRUCT_BEGIN() __pragma(pack(push, 1)) struct
+#define PACKED_STRUCT_END() __pragma(pack(pop))
+#else
+#error Unsupported compiler
+#endif
+
 /**
  * @brief ChunkIDs for possible buffers appended to the GEV buffer.
  */
@@ -37,14 +47,12 @@ typedef enum {
 /**
  * @brief Meta information chunk data to decode timestamps.
  */
-#ifdef __GNUC__
-typedef struct __attribute__((packed, aligned(4))) {
-#else
-typedef struct {
-#endif // __GNUC__
-  uint64_t real_time;
-  uint32_t count;
-} info_t;
+typedef PACKED_STRUCT_BEGIN() {
+  uint64_t real_time; ///< Real time in milliseconds since epoch
+  uint32_t count;     ///< Frame counter
+  float gain;         ///< Gain value
+  float exposure;     ///< Exposure value
+} PACKED_STRUCT_END() info_t;
 
 /**
  * Decode meta information from buffer, if present.

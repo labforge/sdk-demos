@@ -1,0 +1,1 @@
+option('cv_dir', type: 'string', value : 'C:/cv4/', description: 'Path to the OpenCV installation (used fror Windows)')

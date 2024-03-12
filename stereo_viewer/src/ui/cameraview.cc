@@ -25,7 +25,7 @@
 using namespace std;
 using namespace labforge::ui;
 
-CameraView::CameraView(QWidget *parent) : QLabel(parent), m_scaled(false) {
+CameraView::CameraView(QWidget *parent) : QLabel(parent), m_scaled(false), m_ruler_pos(0) {
 }
 
 void CameraView::resizeEvent(QResizeEvent *event) {
@@ -143,6 +143,17 @@ void CameraView::reset() {
 
 void CameraView::redrawPixmap() {
   QPixmap m;
+
+  // Apply ruler
+  if(m_last_frame &&
+     m_ruler_pos > 0 &&
+     m_ruler_pos <
+     m_last_frame->height()) {
+    QPainter paint(m_last_frame.get());
+    paint.setPen(QPen(Qt::red, 3));
+    paint.drawLine(0, m_ruler_pos, m_last_frame->width(), m_ruler_pos);
+  }
+
   if(m_scaled && m_last_frame) {
     m = m_last_frame->copy(m_crop).scaled(size(), Qt::KeepAspectRatio, Qt::FastTransformation);
   } else if(m_last_frame) {
@@ -154,4 +165,11 @@ void CameraView::redrawPixmap() {
 
 void CameraView::enableFocus(bool value) {
   m_focus.enable(value);
+}
+
+void CameraView::setRuler(int val) {
+  m_ruler_pos = val;
+  if(m_last_frame) {
+    redrawPixmap();
+  }
 }

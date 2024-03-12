@@ -144,9 +144,10 @@ def handle_buffer(pvbuffer, device):
 
         cvimage0 = cv2.cvtColor(image_data0, cv2.COLOR_YUV2BGR_YUY2)
         cvimage1 = cv2.cvtColor(image_data1, cv2.COLOR_YUV2BGR_YUY2)
-        import pdb;pdb.set_trace()
-        cvimage0 = chk.draw_keypoints(cvimage0, keypoints[0])
-        cvimage1 = chk.draw_keypoints(cvimage1, keypoints[1])
+
+        if len(keypoints):
+            cvimage0 = chk.draw_keypoints(cvimage0, keypoints[0])
+            cvimage1 = chk.draw_keypoints(cvimage1, keypoints[1])
 
         display_image = np.hstack((cvimage0, cvimage1))
 
@@ -236,6 +237,9 @@ def run_demo(device, stream):
     :param device: The device to stream from
     :param stream: The stream to use for streaming
     """
+    # Create a resizable keypoints window
+    cv2.namedWindow('Keypoints', cv2.WINDOW_NORMAL)
+
     # Get device parameters need to control streaming
     device_params = device.GetParameters()
 
