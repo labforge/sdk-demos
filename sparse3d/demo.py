@@ -23,6 +23,8 @@ import sys
 import warnings
 import argparse
 import eBUS as eb
+import cv2
+import numpy as np
 
 
 # reference common utility files
@@ -37,9 +39,9 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mac", default=None, help="MAC address of the Bottlenose camera")
-    parser.add_argument("-k", "--max_keypoints", type=int, default=100, choices=range(1, 65535),
+    parser.add_argument("-k", "--max_keypoints", type=int, default=65534, choices=range(1, 65535),
                         help="Maximum number of keypoints to detect")
-    parser.add_argument("-t", "--fast_threshold", type=int, default=20, choices=range(0, 255),
+    parser.add_argument("-t", "--fast_threshold", type=int, default=3, choices=range(0, 255),
                         help="Keypoint threshold for the Fast9 algorithm")
     parser.add_argument("-x", "--match_xoffset", type=int, default=0, choices=range(-4095, 4095),
                         help="Matcher horizontal search range.")
@@ -47,6 +49,8 @@ def parse_args():
                         help="Matcher vertical search range.")
     parser.add_argument("-y1", "--offsety1", type=int, default=440, choices=range(0, 880),
                         help="Matcher vertical search range.")
+    parser.add_argument("-n", "--min_threshold", type=int, default=40, help="Matcher vertical search range.")
+    parser.add_argument("-r", "--ratio_threshold", type=int, default=1023, help="Matcher vertical search range.")
     return parser.parse_args()
 
 
@@ -124,23 +128,68 @@ def configure_fast9(device: eb.PvDeviceGEV, kp_max: int, threshold: int):
     fast_threshold.SetValue(threshold)
 
 
-def configure_matcher(device: eb.PvDeviceGEV, offsetx: int, offsety: int):
+def configure_matcher(device: eb.PvDeviceGEV, offsetx: int, offsety: int, min_threshold: int, ratio_threshold: int):
     """
     configure keypoint matcher
     :param device: The device to enable matching on
     :param offsetx: The x offset of the matcher
     :param offsety: The y offset of the matcher
+    :param min_threshold: The minimum threshold for the matcher
+    :param ratio_threshold: The ratio threshold for the matcher
     """
     # Get device parameters
     device_params = device.GetParameters()
 
     # set x offset parameter
     x_offset = device_params.Get("HAMATXOffset")
-    x_offset.SetValue(offsetx)
+    res = x_offset.SetValue(offsetx)
+    if not res.IsOK():
+        raise RuntimeError(f"Failed to set x offset to {offsetx}. {res.GetCodeString()} ({res.GetDescription()})")
 
     # set y offset parameter
     y_offset = device_params.Get("HAMATYOffset")
-    y_offset.SetValue(offsety)
+    res = y_offset.SetValue(offsety)
+    if not res.IsOK():
+        raise RuntimeError(f"Failed to set y offset to {offsety}. {res.GetCodeString()} ({res.GetDescription()})")
+
+    # Configure thresholds
+    min_threshold_param = device_params.Get("HAMATMinThreshold")
+    res = min_threshold_param.SetValue(min_threshold)
+    if not res.IsOK():
+        raise RuntimeError(f"Failed to set min threshold to {min_threshold}. {res.GetCodeString()} ({res.GetDescription()})")
+
+    ratio_threshold_param = device_params.Get("HAMATRatioThreshold")
+    res = ratio_threshold_param.SetValue(ratio_threshold)
+    if not res.IsOK():
+        raise RuntimeError(f"Failed to set ratio threshold to {ratio_threshold}. {res.GetCodeString()} ({res.GetDescription()})")
+
+
+def enable_feature_points_and_matches(device):
+    """
+    Enable the feature points chunk data
+    :param device: The device to enable feature points on
+    """
+    # Get device parameters
+    device_params = device.GetParameters()
+
+    # Enable keypoint detection and streaming
+    chunkMode = device_params.Get("ChunkModeActive")
+    chunkMode.SetValue(True)
+
+    match_output_format = device_params.Get("HAMATOutputFormat")
+
+    chunkSelector = device_params.Get("ChunkSelector")
+    chunkEnable = device_params.Get("ChunkEnable")
+
+    # Enable Feature Points
+    chunkSelector.SetValue("FeaturePoints")
+    chunkEnable.SetValue(True)
+
+    # Enable Feature Matches
+    chunkSelector.SetValue("FeatureMatches")
+    chunkEnable.SetValue(True)
+    res = match_output_format.SetValue("Coordinate Only")
+    assert res.IsOK()
 
 
 def enable_sparse_pointcloud(device: eb.PvDeviceGEV):
@@ -164,6 +213,120 @@ def enable_sparse_pointcloud(device: eb.PvDeviceGEV):
     chunk_enable.SetValue(True)
 
 
+def annotate_disparities(matched_img, valid_left, valid_right, matches):
+    for match in matches:
+        # Get matching keypoints
+        pt1 = valid_left[match.queryIdx].pt
+        pt2 = valid_right[match.trainIdx].pt
+
+        # Calculate disparity
+        disparity = pt2[0] - pt1[0]  # x2 - x1
+
+        # Determine direction (+ve or -ve)
+        direction = '+' if disparity > 0 else '-'
+
+        # Disparity text to display
+        disparity_text = f"{direction}{abs(disparity):.2f}"
+
+        # Midpoint for text annotation (you might need to adjust this based on your image size)
+        mid_pt = (int((pt1[0] + pt2[0]) / 2), int((pt1[1] + pt2[1]) / 2))
+
+        # Annotate the matched image
+        cv2.putText(matched_img, disparity_text, mid_pt, cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 1)
+
+
+def process_points_and_matches(keypoints, matches, pc, image_left, image_right, timestamp, min_depth=0.0, max_depth=2.5):
+    ply_filename = f'{timestamp}_output_point_cloud.ply'
+    image_filename_left = f'{timestamp}_matched_left_points.png'
+    image_filename_right = f'{timestamp}_matched_right_points.png'
+    image_filename_correspondence = f'{timestamp}_correspondence.png'
+    intermediate_list = []
+    valid_points_left = []
+    valid_points_right = []
+
+    # Point data
+    for i in range(len(keypoints[0]["data"])):
+        x = keypoints[0]["data"][i].x
+        y = keypoints[0]["data"][i].y
+        x1 = matches.points[i].x
+        y1 = matches.points[i].y
+        rgb_value = image_left[y, x]
+        # Just skip bad 3d matches from HMAT
+        if matches.unmatched in (x1, y1):
+            continue
+        # Not a good test for "valid matches", 3d coordinate can be nan for valid matches
+        # if math.isnan(pc[i].x) or math.isnan(pc[i].y) or math.isnan(pc[i].z):
+        #     continue
+        # if pc[i].z < min_depth or pc[i].z > max_depth:
+        #     continue
+        intermediate_list.append((pc[i].x, pc[i].y, pc[i].z, rgb_value[0], rgb_value[1], rgb_value[2]))
+        valid_points_left.append(cv2.KeyPoint(x=x, y=y, size=15))
+        valid_points_right.append(cv2.KeyPoint(x=x1, y=y1, size=15))
+
+    # Do not use "unmatched" !!!
+    # Could have multiple matches for a single point
+    # for point in matches.points:
+    #     if point.x != matches.unmatched and point.y != matches.unmatched:
+    #         valid_points_right.append(cv2.KeyPoint(x=point.x, y=point.y, size=15))
+    # Sanity (will fail
+    # if len(valid_points_left) != len(valid_points_right):
+    #    import pdb; pdb.set_trace()
+
+    # Draw the keypoints on the image
+    if len(valid_points_left) > 0:
+        #image = cv2.drawKeypoints(image, valid_points_left, 0, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        # Detailled drawing with enumeration
+        for image, points in ((image_left, valid_points_left), (image_right, valid_points_right)):
+            for i, kp in enumerate(points):
+                x, y = int(kp.pt[0]), int(kp.pt[1])  # Get the coordinates of the keypoint
+
+                # Draw a small circle at the keypoint location
+                cv2.circle(image, (x, y), 1, (0, 0, 0), -1)  # Change color and thickness as needed
+
+                # Put a text label (index) next to the circle
+                #cv2.putText(image, f"{i:02d}", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), 1)
+
+        cv2.imwrite(image_filename_left, image_left)
+        cv2.imwrite(image_filename_right, image_right)
+
+        # Correspondence plot
+        good = [cv2.DMatch(_imgIdx=0, _queryIdx=i, _trainIdx=i, _distance=0)
+                for i in range(len(valid_points_left))]
+        image_correspondence = np.array([])
+        image_correspondence = cv2.drawMatches(image_left,
+                                  valid_points_left,
+                                  image_right,
+                                  valid_points_right,
+                                  matches1to2=good,
+                                  outImg=image_correspondence,
+                                  flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        annotate_disparities(image_correspondence, valid_points_left, valid_points_right, good)
+        # cv2.imshow('Matched Points', image_correspondence)
+        # if cv2.waitKey(1) & 0xFF != 0xFF:
+        #     return False
+        cv2.imwrite(image_filename_correspondence, image_correspondence)
+
+    with open(ply_filename, 'w') as ply_file:
+        # PLY header
+        ply_file.write("ply\n")
+        ply_file.write("format ascii 1.0\n")
+        ply_file.write(f"element vertex {len(intermediate_list)}\n")
+        ply_file.write("property float x\n")
+        ply_file.write("property float y\n")
+        ply_file.write("property float z\n")
+        ply_file.write("property uchar red\n")
+        ply_file.write("property uchar green\n")
+        ply_file.write("property uchar blue\n")
+        ply_file.write("end_header\n")
+        for point in intermediate_list:
+            ply_file.write(f"{point[0]} {point[1]} {point[2]} {point[3]} {point[4]} {point[5]}\n")
+            ply_file.write("\n")
+
+    # Save point cloud to a PLY file
+    print(f'Point cloud saved to {ply_filename} # of points in left {len(keypoints[0]["data"])} matches {len(intermediate_list)}')
+    return True
+
+
 def handle_buffer(pvbuffer: eb.PvBuffer, device: eb.PvDeviceGEV):
     """
     handles incoming buffer and decodes the associated sparse point cloud chunk data
@@ -173,17 +336,32 @@ def handle_buffer(pvbuffer: eb.PvBuffer, device: eb.PvDeviceGEV):
     payload_type = pvbuffer.GetPayloadType()
     if payload_type == eb.PvPayloadTypeMultiPart:
         # images associated with the buffer
-        # image0 = pvbuffer.GetMultiPartContainer().GetPart(0).GetImage()
-        # image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
+        image0 = pvbuffer.GetMultiPartContainer().GetPart(0).GetImage() # left image
+        image_data_left = image0.GetDataPointer()
+        image_data_left = cv2.cvtColor(image_data_left, cv2.COLOR_YUV2BGR_YUY2)
+        image1 = pvbuffer.GetMultiPartContainer().GetPart(1).GetImage()
+        image_data_right = image1.GetDataPointer()
+        image_data_right = cv2.cvtColor(image_data_right, cv2.COLOR_YUV2BGR_YUY2)
+
+        # Parses the feature points from the buffer
+        keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
+
+        # Use matches with coordinates instead
+        matches = decode_chunk(device=device, buffer=pvbuffer, chunk="FeatureMatches")
 
         # parses sparse point cloud from the buffer
         # returns a list of Point3D(x,y,z). NaN values are set for unmatched points.
         pc = decode_chunk(device=device, buffer=pvbuffer, chunk='SparsePointCloud')
         timestamp = pvbuffer.GetTimestamp()
-        if len(pc) > 0:
-            print(f' {timestamp}: {len(pc)} points: P0({pc[0].x}, {pc[0].y}, {pc[0].z})')
-        else:
-            print(f' {timestamp}: {len(pc)} points: ')
+
+        if pc is not None and len(pc) > 0 and keypoints is not None and len(keypoints) > 0 and len(matches) > 0:
+            return process_points_and_matches(keypoints,
+                                              matches,
+                                              pc,
+                                              image_data_left,
+                                              image_data_right,
+                                              timestamp)
+    return True
 
 
 def acquire_data(device, stream):
@@ -192,6 +370,7 @@ def acquire_data(device, stream):
     :param device: The device to stream from
     :param stream: The stream to use for streaming
     """
+    # cv2.namedWindow('Matched Points', cv2.WINDOW_NORMAL)
 
     # Get device parameters need to control streaming
     device_params = device.GetParameters()
@@ -210,7 +389,8 @@ def acquire_data(device, stream):
         if result.IsOK():
             if operational_result.IsOK():
                 # We now have a valid buffer.
-                handle_buffer(pvbuffer, device)
+                if not handle_buffer(pvbuffer, device):
+                    break
             else:
                 # Non OK operational result
                 warnings.warn(f"Operational result error. {operational_result.GetCodeString()} "
@@ -235,7 +415,9 @@ if __name__ == '__main__':
         turn_on_stereo(device=bn_device)
         set_y1_offset(device=bn_device, value=args.offsety1)
         configure_fast9(device=bn_device, kp_max=args.max_keypoints, threshold=args.fast_threshold)
-        configure_matcher(device=bn_device, offsetx=args.match_xoffset, offsety=args.match_yoffset)
+        configure_matcher(device=bn_device, offsetx=args.match_xoffset, offsety=args.match_yoffset,
+                          min_threshold=args.min_threshold, ratio_threshold=args.ratio_threshold)
+        enable_feature_points_and_matches(device=bn_device)
         enable_sparse_pointcloud(device=bn_device)
         acquire_data(device=bn_device, stream=bn_stream)
 

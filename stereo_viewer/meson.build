@@ -31,17 +31,29 @@ app_inc = include_directories(
 cpp = meson.get_compiler('cpp')
 # set PATH=C:\qt5\bin;%PATH%
 qt5 = import('qt5')
-qt5_deps = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'Test', 'Network'])
+qt5_deps = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'Test', 'Network'], main: true)
 opencv_dep = dependency('opencv4', required: false)
 if not opencv_dep.found()
-  # Windows hacks, version info is appened to cvlibs for cl compiler, but not in cmake specs, so hardcode libs here
-  cv4_core = cpp.find_library('opencv_core430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
-  cv4_gui = cpp.find_library('opencv_highgui430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
-  cv4_codec = cpp.find_library('opencv_imgcodecs430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
-  cv4_imgproc = cpp.find_library('opencv_imgproc430', dirs: ['C:\cv4\x64\vc15\bin', 'C:\cv4\lib'])
+  cv_dir = get_option('cv_dir')
+  cv4_lib_dirs = [
+    join_paths(cv_dir, 'x64', 'vc14', 'bin'),
+    join_paths(cv_dir, 'x64', 'vc15', 'bin'),
+    join_paths(cv_dir, 'lib')
+  ]
+  message(cv4_lib_dirs)
+  cv4_include_path = join_paths(cv_dir, 'include')
+  # Precompiled
+  cv4_core = cpp.find_library('opencv_core430', dirs: cv4_lib_dirs)
+  cv4_gui = cpp.find_library('opencv_highgui430', dirs: cv4_lib_dirs)
+  cv4_codec = cpp.find_library('opencv_imgcodecs430', dirs: cv4_lib_dirs)
+  cv4_imgproc = cpp.find_library('opencv_imgproc430', dirs: cv4_lib_dirs)
+  cv4_calib = cpp.find_library('opencv_calib3d430', dirs: cv4_lib_dirs)
+  cv4_feat = cpp.find_library('opencv_features2d430', dirs: cv4_lib_dirs)
+  cv4_flann = cpp.find_library('opencv_flann430', dirs: cv4_lib_dirs)
+
   opencv_dep = declare_dependency(version: '4.3.0',
-                                  compile_args: ['-IC:/cv4/include'],
-                                  dependencies : [cv4_core, cv4_gui, cv4_codec, cv4_imgproc],
+                                  compile_args: ['-I' + cv4_include_path],
+                                  dependencies : [cv4_core, cv4_gui, cv4_codec, cv4_imgproc, cv4_calib, cv4_feat, cv4_flann],
                                   )
 endif
 if host_machine.system() == 'linux'
@@ -60,12 +72,12 @@ if host_machine.system() == 'linux'
   PvStream = cpp.find_library('PvStream', required: true, dirs: pleora_dirs)
   PvVirualDevice = cpp.find_library('PvVirtualDevice', required: true, dirs: pleora_dirs)
   PvGUI = cpp.find_library('PvGUI', required: true, dirs: pleora_dirs)
-  PvAppUtils = cpp.find_library('PvAppUtils', required: true, dirs: pleora_dirs)  
+  PvAppUtils = cpp.find_library('PvAppUtils', required: true, dirs: pleora_dirs)
   PvPersistence = cpp.find_library('PvPersistence', required: true, dirs: pleora_dirs)
 else # Windows, note force 64-bit
   pleora_dirs = ['C:/Program Files/Pleora Technologies Inc/eBUS SDK/Libraries']
   pleora_inc = '-IC:/Program Files/Pleora Technologies Inc/eBUS SDK/Includes'
-  pleora_args = [pleora_inc, '-D_AFXDLL']
+  pleora_args = [pleora_inc, '-D_AFXDLL', '/MD', '-D_CRT_SECURE_NO_WARNINGS']
   PvBase = cpp.find_library('PvBase64', required: true, dirs: pleora_dirs)
   PvBuffer = cpp.find_library('PvBuffer64', required: true, dirs: pleora_dirs)
   PvSystem = cpp.find_library('PvSystem64', required: true, dirs: pleora_dirs)
@@ -87,7 +99,7 @@ pleora_dep = declare_dependency(compile_args: pleora_inc,
                                                 PvGUI,
                                                 PvVirualDevice,
                                                 PvAppUtils,
-                                                PvPersistence
+                                                PvPersistence,
                                                 ],
                                 compile_args: pleora_args
                                )

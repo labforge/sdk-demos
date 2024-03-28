@@ -74,6 +74,9 @@ FOR %%M IN (
     opencv_highgui
     opencv_imgcodecs
     opencv_imgproc
+    opencv_calib3d
+	opencv_features2d
+	opencv_flann
 ) DO (
     COPY /Y %OPENCVHOME%\bin\%%M*.dll %~dp0\install\bin
     IF %ERRORLEVEL% NEQ 0 goto :exit_with_error

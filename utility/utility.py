@@ -60,7 +60,7 @@ class BottlenoseFinderWorker(QThread):
 
 
 class BottlenoseSelector(QDialog):
-    def __init__(self,  title, parent=None):
+    def __init__(self, title, parent=None):
         super().__init__(parent=parent)
         form = QFormLayout(self)
         self.listView = QListView(self)
@@ -80,6 +80,8 @@ class BottlenoseSelector(QDialog):
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         self.finished.connect(self.terminate_worker)
+
+        self.listView.doubleClicked.connect(self.accept)
 
     def terminate_worker(self, arg):
         self.worker.halt()
@@ -123,7 +125,8 @@ class MainWindow(QMainWindow):
         self.ui.btnFile.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogStart))
         self.ui.btnUpload.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
         self.ui.btnQuit.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCloseButton))
-        self.ui.btnConnect.setIcon(QIcon.fromTheme("network-wired", QIcon(":/network-wired.png")))
+        self.ui.btnConnect.setIcon(QIcon(":/network-wired.svg"))
+        # self.ui.btnConnect.setIcon(QIcon.fromTheme("network-wired", QIcon(":/network-wired.png")))
         self.ui.prgUpload.setVisible(False)
         self.ui.btnUpload.setVisible(False)
         self.ui.txtFile.setReadOnly(True)
@@ -138,9 +141,9 @@ class MainWindow(QMainWindow):
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls:
             if e.mimeData().urls()[0].toLocalFile().endswith(".tar") or \
-               e.mimeData().urls()[0].toLocalFile().endswith(".yaml") or \
-               e.mimeData().urls()[0].toLocalFile().endswith(".yml") or \
-               e.mimeData().urls()[0].toLocalFile().endswith(".json"):
+                    e.mimeData().urls()[0].toLocalFile().endswith(".yaml") or \
+                    e.mimeData().urls()[0].toLocalFile().endswith(".yml") or \
+                    e.mimeData().urls()[0].toLocalFile().endswith(".json"):
                 e.accept()
         else:
             e.ignore()
@@ -201,17 +204,24 @@ class MainWindow(QMainWindow):
             self.ui.txtFile.setText(selected_file)
 
     def handle_connect(self):
-        select = BottlenoseSelector("Select Bottlenose Camera", self)
-        if select.exec() == QDialog.Accepted:
-            connection_id = select.selected_bottlenose()
-            if connection_id is not None:
-                self.disconnect()
-                if self.connect_gev(connection_id) is not None:
-                    self.ui.btnFile.setEnabled(True)
-                    self.setAcceptDrops(True)
-                    if len(self.ui.txtFile.text()) > 0:
-                        self.ui.btnUpload.setVisible(True)
-                        self.ui.btnUpload.setEnabled(True)
+        if self.ui.btnConnect.text() == "Disconnect":
+            self.ui.btnConnect.setIcon(QIcon(":/network-wired.svg"))
+            self.ui.btnConnect.setText("Select")
+            self.disconnect()
+        else:
+            select = BottlenoseSelector("Select Bottlenose Camera", self)
+            if select.exec() == QDialog.Accepted:
+                connection_id = select.selected_bottlenose()
+                if connection_id is not None:
+                    if self.connect_gev(connection_id) is not None:
+                        self.ui.btnFile.setEnabled(True)
+                        self.setAcceptDrops(True)
+                        if len(self.ui.txtFile.text()) > 0:
+                            self.ui.btnUpload.setVisible(True)
+                            self.ui.btnUpload.setEnabled(True)
+
+                        self.ui.btnConnect.setText("Disconnect")
+                        self.ui.btnConnect.setIcon(QIcon(":/window-close.svg"))
 
     def handle_quit(self):
         self.close()
@@ -221,7 +231,6 @@ class MainWindow(QMainWindow):
         if ftype in {"Firmware", "DNN Weights"}:
             return fname.lower().endswith(".tar")
         return fname.lower().endswith(".json") or fname.lower().endswith(".yml") or fname.lower().endswith(".yaml")
-        
 
     def handle_upload(self):
         fname = self.ui.txtFile.text()
@@ -289,6 +298,7 @@ if __name__ == '__main__':
     # Instantiate import here
     import eBUS as eb
     from uploader import Uploader
+
     window = MainWindow()
     window.setWindowIcon(QIcon(":/labforge.ico"))
     window.show()

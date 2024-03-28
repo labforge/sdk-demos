@@ -24,6 +24,9 @@
 #include <QMutex>
 #include <QWaitCondition>
 #include <cstdint>
+#include <QVector>
+#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
 
 #ifndef __IO_DATA_THREAD_HPP__
 #define __IO_DATA_THREAD_HPP__
@@ -35,6 +38,8 @@ struct ImageData
     QImage left;
     QImage right;
     QString format;
+    cv::Mat disparity;
+    int32_t min_disparity;
 };
 
 class DataThread : public QThread
@@ -45,11 +50,12 @@ public:
     DataThread(QObject *parent = nullptr);
     ~DataThread();
 
-    void process(uint64_t timestamp, const QImage &left, const QImage &right, QString format);
+    void process(uint64_t timestamp, const QImage &left, const QImage &right, QString format, const uint16_t *raw, int32_t);
     bool setFolder(QString new_folder);
     void setStereoDisparity(bool is_stereo, bool is_disparity);
     void stop();   
 
+    void setDepthMatrix(cv::Mat& qmat);
 signals:
     void dataReceived();
     void dataProcessed();
@@ -73,6 +79,7 @@ private:
     bool m_stereo;
     bool m_abort;
     bool m_disparity;
+    cv::Mat m_matQ;
 };
 }
 
