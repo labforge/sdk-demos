@@ -16,9 +16,8 @@
 * limitations under the License.                                             *
 ******************************************************************************
 """
-__author__ = ("G. M. Tchamgoue <martin@labforge.ca>"
-              "Thomas Reidemeister <thomas@labforge.ca>")
-__copyright__ = "Copyright 2023, Labforge Inc."
+__author__ = "G. M. Tchamgoue <martin@labforge.ca>"
+__copyright__ = "Copyright 2024, Labforge Inc."
 
 import sys
 import warnings
@@ -33,7 +32,6 @@ import eBUS as eb
 sys.path.insert(1, '../common')
 from chunk_parser import decode_chunk
 from connection import init_bottlenose, deinit_bottlenose
-
 import draw_chunkdata as chk
 
 
@@ -43,19 +41,15 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mac", default=None, help="MAC address of the Bottlenose camera")
-    parser.add_argument("--corner_type", default='FAST', choices=['FAST', 'GFTT'],
-                        help="type of corner to detect")
-    parser.add_argument("--gftt_detector", default='Harris', choices=['Harris', 'MinEigenValue'],
-                        help="Set the detector for GFTT")
     parser.add_argument("--max_features", default=1000, type=int,
                         help="maximum number of features to detect")
-    parser.add_argument("--quality_level", default=500, type=int, help="quality level for GFTT")
-    parser.add_argument("--min_distance", default=15, type=int, help="minimum distance for GFTT")
-
-    parser.add_argument("-k", "--paramk", type=float, default=0,
-                        help="free parameter K for Harris corner")
     parser.add_argument("--threshold", type=int, default=20, help="set threshold for FAST")
     parser.add_argument("--nms", action='store_true', help="use nms for FAST")
+
+    parser.add_argument("--dlen", type=int, default=120, choices=[120, 128, 256, 486],
+                        help="AKAZE descriptor length")
+    parser.add_argument("--dwin", type=int, default=20, choices=[20, 30, 40, 60, 80],
+                        help="Window size for AKAZE computation")
 
     return parser.parse_args()
 
@@ -67,13 +61,9 @@ def parse_validate_args():
     """
     params = parse_args()
 
-    max_num = 65535 if params.corner_type == 'FAST' else 8192
+    max_num = 65535
     assert 0 < params.max_features <= max_num, f'Invalid max_features, values in [1, {max_num}]'
-
     assert 0 <= params.threshold <= 255, 'Invalid threshold, values in [0, 255]'
-    assert 0 < params.quality_level <= 1023, 'Invalid quality_level, values in [1, 1023]'
-    assert 0 <= params.min_distance <= 30, 'Invalid min_distance, values in [0, 30]'
-    assert 0 <= params.paramk <= 1.0, 'Invalid paramk, values in [0, 1.0]'
 
     return params
 
@@ -114,6 +104,27 @@ def set_image_streaming(device: eb.PvDeviceGEV):
     pixel_format.SetValue("YUV422_8")
 
 
+def print_descriptor(desc):
+    """
+    print out basic data from the descriptor.
+    It displays the descriptor data of the first keypoint from each list of keypoints
+    The list of keypoints and descriptors are index-matched.
+    fid is the frame ID the keypoints are from
+        0: LEFT_ONLY, for MONO camera or a stereo transmitting only the left image
+        1: RIGHT_ONLY, for a stereo camera transmitting only the right image
+        2: LEFT_STEREO, for the left image in a stereo transmission
+        3: RIGHT_STEREO, for the left image in a stereo transmission
+    :param desc: the descriptor data
+    :return:
+    """
+
+    if len(desc) > 0:
+        print('-')
+        for i in range(len(desc)):
+            print(f'fid: {desc[i].fid} nbits: {desc[i].nbits} '
+                  f'nbytes: {desc[i].nbytes} dkp[0]: {desc[i].data[0]}')
+
+
 def handle_buffer(pvbuffer, device):
     """
     handles incoming buffer with disparity data
@@ -125,14 +136,19 @@ def handle_buffer(pvbuffer, device):
         image = pvbuffer.GetImage()
         image_data = image.GetDataPointer()
 
+        # decode keypoints and descriptors chunkdata
         keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
+        descr = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
 
         # Bottlenose sends as YUV422
-        if image.GetPixelType() == eb.PvPixelYUV422_8:
-            image_data = cv2.cvtColor(image_data, cv2.COLOR_YUV2BGR_YUY2)
-            if len(keypoints):
-                image_data = chk.draw_keypoints(image_data, keypoints[0])
-            cv2.imshow("Keypoints", image_data)
+        image_data = cv2.cvtColor(image_data, cv2.COLOR_YUV2BGR_YUY2)
+        if len(keypoints):
+            image_data = chk.draw_keypoints(image_data, keypoints[0])
+
+        # print descriptors
+        print_descriptor(descr)
+
+        cv2.imshow("Keypoints", image_data)
 
     elif payload_type == eb.PvPayloadTypeMultiPart:
         image0 = pvbuffer.GetMultiPartContainer().GetPart(0).GetImage()
@@ -140,24 +156,31 @@ def handle_buffer(pvbuffer, device):
 
         image_data0 = image0.GetDataPointer()
         image_data1 = image1.GetDataPointer()
+
+        # decode keypoints and descriptors chunkdata
         keypoints = decode_chunk(device=device, buffer=pvbuffer, chunk='FeaturePoints')
+        descr = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureDescriptors')
 
         cvimage0 = cv2.cvtColor(image_data0, cv2.COLOR_YUV2BGR_YUY2)
         cvimage1 = cv2.cvtColor(image_data1, cv2.COLOR_YUV2BGR_YUY2)
 
-        if len(keypoints):
+        if len(keypoints) == 2:
             cvimage0 = chk.draw_keypoints(cvimage0, keypoints[0])
             cvimage1 = chk.draw_keypoints(cvimage1, keypoints[1])
+
+        # print descriptors
+        print_descriptor(descr)
 
         display_image = np.hstack((cvimage0, cvimage1))
 
         cv2.imshow("Keypoints", display_image)
 
 
-def enable_feature_points(device):
+def enable_chunkdata(device, name):
     """
-    Enable the feature points chunk data
-    :param device: The device to enable feature points on
+    Enables chunk data on device
+    :param device: The device to enable chunk data on
+    :param name: the name of the chunk to enable
     """
     # Get device parameters
     device_params = device.GetParameters()
@@ -167,7 +190,7 @@ def enable_feature_points(device):
     chunk_mode.SetValue(True)
 
     chunk_selector = device_params.Get("ChunkSelector")
-    chunk_selector.SetValue("FeaturePoints")
+    chunk_selector.SetValue(name)
 
     chunk_enable = device_params.Get("ChunkEnable")
     chunk_enable.SetValue(True)
@@ -196,39 +219,24 @@ def configure_fast9(device, max_num: int = 1000, threshold: int = 20, use_nms: b
     fast_nms.SetValue(use_nms)
 
 
-def configure_gftt(device, detector: str, max_num: int = 1000, quality_level: int = 500,
-                   min_distance: int = 15, k: float = 0.0):
+def configure_descriptor(device, length: int, win: int):
     """
-    Configure the GFTT keypoint detector
-    :param device: Device to configure
-    :param detector: the detector to use ['Harris', 'MinEigenValue']
-    :param max_num: Maximum number of features to consider.
-    :param quality_level: Quality level of keypoints
-    :param min_distance:  minimum distance between keypoints
-    :param k: the parameter k
+    Sets descriptor parameters on the device
+    :param device: The device on which to set parameters
+    :param length: The length of the descriptor
+    :param win: the size of the window
+    :return:
     """
     # Get device parameters
     device_params = device.GetParameters()
-    corner_type = device_params.Get("KPCornerType")
-    corner_type.SetValue("GFTT")
 
-    detector_name = 'Harris'
-    if detector.lower() == 'mineigenvalue':
-        detector_name = 'Min-Eigen'
-    detector_type = device_params.Get("KPDetector")
-    detector_type.SetValue(detector_name)
+    # set descriptor length
+    descr_len = device_params.Get("AKAZELength")
+    descr_len.SetValue(f"{length}-Bits")
 
-    max_features = device_params.Get("KPMaxNumber")
-    max_features.SetValue(max_num)
-
-    quality = device_params.Get("KPQualityLevel")
-    quality.SetValue(quality_level)
-
-    distance = device_params.Get("KPMinimunDistance")
-    distance.SetValue(min_distance)
-
-    param_k = device_params.Get("KPHarrisParamK")
-    param_k.SetValue(k)
+    # set descriptor window
+    descr_win = device_params.Get("AKAZEWindow")
+    descr_win.SetValue(f"{win}x{win}-Window")
 
 
 def run_demo(device, stream):
@@ -237,9 +245,6 @@ def run_demo(device, stream):
     :param device: The device to stream from
     :param stream: The stream to use for streaming
     """
-    # Create a resizable keypoints window
-    cv2.namedWindow('Keypoints', cv2.WINDOW_NORMAL)
-
     # Get device parameters need to control streaming
     device_params = device.GetParameters()
 
@@ -285,17 +290,16 @@ if __name__ == '__main__':
         # set device into image streaming mode
         set_image_streaming(device=bn_device)
 
-        # Enable keypoint detection and streaming
-        enable_feature_points(device=bn_device)
+        # Enable chunk data
+        enable_chunkdata(device=bn_device, name='FeaturePoints')
+        enable_chunkdata(device=bn_device, name='FeatureDescriptors')
 
-        # configure feature point detector
-        if args.corner_type == 'FAST':
-            configure_fast9(device=bn_device, max_num=args.max_features,
-                            threshold=args.threshold, use_nms=args.nms)
-        else:
-            configure_gftt(device=bn_device, detector=args.gftt_detector,
-                           max_num=args.max_features, quality_level=args.quality_level,
-                           min_distance=args.min_distance, k=args.paramk)
+        # configure fast feature point detector
+        configure_fast9(device=bn_device, max_num=args.max_features,
+                        threshold=args.threshold, use_nms=args.nms)
+
+        # configure descriptor detection
+        configure_descriptor(device=bn_device, length=args.dlen, win=args.dwin)
 
         # run demo
         run_demo(bn_device, bn_stream)
