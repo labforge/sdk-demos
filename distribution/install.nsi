@@ -70,6 +70,10 @@ Section "-hidden section"
   SetOutPath $INSTDIR
   File /r "${SRC}\dist\main\*"
 
+  ; Install MSVC 2015 redistributable
+  File "${SRC}\vc_redist.x64.exe"
+  !insertmacro InstallVC14
+
   ; Driver utility install
   File "${SRC}\build\driver.exe"
   File "C:\Program Files\Common Files\Pleora\eBUS SDK\PtUtilsLib64.dll"
@@ -101,12 +105,6 @@ Section "-hidden section"
                    "UninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${REGISTRY_KEY}" \
                    "DisplayIcon" "$INSTDIR\${ENTRYPOINT},0"
-
-
-
-  ; Install MSVC 2015 redistributable
-  File "${SRC}\vc_redist.x64.exe"
-  !insertmacro InstallVC14
 SectionEnd
 
 ; Create an uninstaller
