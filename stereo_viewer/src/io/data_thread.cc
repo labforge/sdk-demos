@@ -20,11 +20,9 @@
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
-
 #include "io/data_thread.hpp"
 
 #include <algorithm>
-#include <fstream>
 #include <cmath>
 
 using namespace labforge::io;
@@ -208,7 +206,10 @@ void DataThread::run() {
           cv::Mat dispf32;
 
           imdata.disparity.convertTo(dispf32, CV_32FC1, (1./255.0), 0);
+          //dispf32.setTo(-imdata.min_disparity, dispf32>255); ///< unmatched points to inf.
+          //dispf32.setTo(-imdata.min_disparity, dispf32==0);
           dispf32 += imdata.min_disparity;
+
 
           QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
           if(!m_matQ.empty()){

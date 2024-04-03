@@ -61,6 +61,7 @@ public Q_SLOTS:
   void handleFocus();
   void handleDeviceControl();
   void setRuler(int value);
+  void handleTimeOut();
 
 protected:
   void ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArray, const QString &aTitle );

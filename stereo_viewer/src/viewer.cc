@@ -545,6 +545,11 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
                   this,
                   &MainWindow::handleError,
                   Qt::QueuedConnection);
+          connect(m_pipeline.get(),
+                  &Pipeline::timeout,
+                  this,
+                  &MainWindow::handleTimeOut,
+                  Qt::QueuedConnection);
           return true;
         }
       } else {
@@ -556,6 +561,11 @@ bool MainWindow::connectGEV(const PvDeviceInfo *info) {
     }
   }
   return false;
+}
+
+void MainWindow::handleTimeOut(){
+  handleDisconnect();
+  QMessageBox::information(this, "Connection Error", "Camera disconnected: Communication timed out.");
 }
 
 void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo, bool disparity, uint16_t *raw_disparity, int32_t min_disparity) {

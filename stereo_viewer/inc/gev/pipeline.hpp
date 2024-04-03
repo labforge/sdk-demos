@@ -51,6 +51,7 @@ namespace labforge::gev {
     void monoReceived(bool is_disparity);
     void terminated(bool fatal = false);
     void onError(QString msg);
+    void timeout();
 
   private:
     PvStreamGEV * m_stream;

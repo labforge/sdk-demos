@@ -177,6 +177,7 @@ void Pipeline::Stop() {
 
 void Pipeline::run() {
   size_t consequitive_errors = 0;
+  size_t timeout_count = MAX_CONS_ERRORS_IN_ACQUISITION;
 
   while(m_start_flag) {
     PvBuffer *lBuffer = nullptr;
@@ -284,11 +285,17 @@ void Pipeline::run() {
       consequitive_errors++;
       emit onError(lResult.GetCodeString().GetAscii());
       cout << "BUF_ERR(" << consequitive_errors << ") :" << lResult.GetCodeString().GetAscii() << endl;
-    }
 
-    /*if(consequitive_errors > MAX_CONS_ERRORS_IN_ACQUISITION) {
-      m_start_flag = false;
-    }*/
+      if(lResult.GetCode() == PV_TIMEOUT){
+        timeout_count -= 1;
+        if (timeout_count == 0){
+          timeout_count = MAX_CONS_ERRORS_IN_ACQUISITION;
+          emit timeout();
+        }
+      } else{
+          timeout_count = MAX_CONS_ERRORS_IN_ACQUISITION;
+      }
+    }
   }
 
   // Tell the device to stop sending images.
