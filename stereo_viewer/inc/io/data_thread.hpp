@@ -27,6 +27,7 @@
 #include <QVector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
+#include "inc/bottlenose_chunk_parser.hpp"
 
 #ifndef __IO_DATA_THREAD_HPP__
 #define __IO_DATA_THREAD_HPP__
@@ -40,6 +41,7 @@ struct ImageData
     QString format;
     cv::Mat disparity;
     int32_t min_disparity;
+    pointcloud_t pc;
 };
 
 class DataThread : public QThread
@@ -50,10 +52,13 @@ public:
     DataThread(QObject *parent = nullptr);
     ~DataThread();
 
-    void process(uint64_t timestamp, const QImage &left, const QImage &right, QString format, const uint16_t *raw, int32_t);
+    void process(uint64_t timestamp, const QImage &left,
+                 const QImage &right, QString format,
+                 const uint16_t *raw, int32_t,
+                 pointcloud_t &pc);
     bool setFolder(QString new_folder);
     void setStereoDisparity(bool is_stereo, bool is_disparity);
-    void stop();   
+    void stop();
 
     void setDepthMatrix(cv::Mat& qmat);
 signals:
@@ -66,16 +71,18 @@ protected:
 private:
     QMutex m_mutex;
     QWaitCondition m_condition;
-    
+
     QString m_folder;
     QString m_left_subfolder;
     QString m_right_subfolder;
     QString m_disparity_subfolder;
+    QString m_pc_subfolder;
     QQueue<ImageData> m_queue;
     uint64_t m_frame_counter;
     QString m_left_fname;
     QString m_right_fname;
     QString m_disparity_fname;
+    QString m_pc_fname;
     bool m_stereo;
     bool m_abort;
     bool m_disparity;

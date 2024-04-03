@@ -54,8 +54,8 @@ public Q_SLOTS:
   void handleStereoData(bool is_disparity);
   void handleMonoData(bool is_disparity);
   void handleError(QString msg);
-  void newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo=true,
-               bool disparity=true, uint16_t *raw_disparity=nullptr, int32_t min_disparity=0);
+  void newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo,
+               bool disparity, uint16_t *raw_disparity, int32_t min_disparity, pointcloud_t &pc);
   void onFolderSelect();
   void handleSave();
   void handleFocus();

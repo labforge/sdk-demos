@@ -30,7 +30,8 @@
 #include <variant>
 #include <QQueue>
 #include <QString>
-
+#include <vector>
+#include "inc/bottlenose_chunk_parser.hpp"
 namespace labforge::gev {
 
   class Pipeline : public QThread {
@@ -43,7 +44,7 @@ namespace labforge::gev {
     bool Start(bool calibrate);
     void Stop();
     bool IsStarted() { return m_start_flag; }
-    size_t GetPairs(std::list<std::tuple<cv::Mat*, cv::Mat*, uint64_t, int32_t>> &out);
+    size_t GetPairs(std::list<std::tuple<cv::Mat*, cv::Mat*, uint64_t, int32_t, pointcloud_t>> &out);
     void run() override;
 
   Q_SIGNALS:
@@ -71,7 +72,7 @@ namespace labforge::gev {
     PvString m_pixfmt_init;
 
     std::list<PvBuffer*> m_buffers;
-    QQueue<std::tuple<cv::Mat*, cv::Mat*, uint64_t , int32_t>> m_images;
+    QQueue<std::tuple<cv::Mat*, cv::Mat*, uint64_t , int32_t, pointcloud_t>> m_images;
     volatile bool m_start_flag;
     QMutex m_image_lock;
   };

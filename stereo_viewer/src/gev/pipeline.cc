@@ -22,6 +22,7 @@
 #include "gev/util.hpp"
 #include <stdexcept>
 #include <iostream>
+#include <vector>
 #include <bottlenose_chunk_parser.hpp>
 
 using namespace labforge::gev;
@@ -152,11 +153,11 @@ bool Pipeline::Start(bool calibrate) {
   return true;
 }
 
-size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t, int32_t>> &out) {
+size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t, int32_t, pointcloud_t>> &out) {
   QMutexLocker l(&m_image_lock);
 
   if(!m_images.empty()){
-    tuple<Mat *, Mat *, uint64_t, int32_t> image = m_images.dequeue();
+    tuple<Mat *, Mat *, uint64_t, int32_t, pointcloud_t> image = m_images.dequeue();
     out.push_back(image);
   }
 
@@ -189,6 +190,7 @@ void Pipeline::run() {
     uint64_t timestamp;
     int64_t minDisparity = 0;
     info_t info = {};
+    pointcloud_t pointcloud;
 
     // Retrieve next buffer
     PvResult lResult = m_stream->RetrieveBuffer( &lBuffer, &lOperationResult, 1500 );
@@ -208,6 +210,9 @@ void Pipeline::run() {
           timestamp = info.real_time;
         } else {
           cerr << "Could not decode meta information" << endl;
+        }
+        if(chunkDecodePointCloud(lBuffer, pointcloud)) {
+          std::cout << "Bottlenose PC: " << pointcloud.size() << endl;
         }
 
         if(m_mindisparity){
@@ -234,7 +239,7 @@ void Pipeline::run() {
                       make_tuple(
                               new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
                               new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer()),
-                              timestamp, minDisparity
+                              timestamp, minDisparity, pointcloud
                               )
                               );
             }
@@ -256,7 +261,7 @@ void Pipeline::run() {
               }
 
               m_images.enqueue( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()),
-                                             new Mat(), timestamp, minDisparity));
+                                             new Mat(), timestamp, minDisparity, pointcloud));
             }
 
             emit monoReceived(is_disparity);

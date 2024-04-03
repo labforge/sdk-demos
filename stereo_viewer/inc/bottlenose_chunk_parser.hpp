@@ -33,6 +33,8 @@
 #error Unsupported compiler
 #endif
 
+#define MAX_KEYPOINTS 0xFFFF
+
 /**
  * @brief ChunkIDs for possible buffers appended to the GEV buffer.
  */
@@ -42,6 +44,8 @@ typedef enum {
   CHUNK_ID_DNNBBOXES = 0x4003,   ///< Bounding boxes for detected targets
   CHUNK_ID_EMBEDDINGS = 0x4004,  ///< Embeddings
   CHUNK_ID_INFO = 0x4005,        ///< Meta information
+  CHUNK_ID_MATCHES = 0x4006,     ///< Matching
+  CHUNK_ID_POINTCLOUD = 0x4007   ///< Sparse Point Cloud
 } chunk_type_t;
 
 /**
@@ -54,6 +58,15 @@ typedef PACKED_STRUCT_BEGIN() {
   float exposure;     ///< Exposure value
 } PACKED_STRUCT_END() info_t;
 
+
+typedef struct vector3f{
+  float x;
+  float y;
+  float z;
+} vector3f_t;
+
+typedef std::vector<vector3f_t> pointcloud_t;
+
 /**
  * Decode meta information from buffer, if present.
  * @param buffer Buffer received on GEV interface
@@ -64,5 +77,6 @@ bool chunkDecodeMetaInformation(PvBuffer *buffer, info_t *info);
 
 std::string ms_to_date_string(uint64_t ms);
 
+bool chunkDecodePointCloud(PvBuffer *buffer, std::vector<vector3f_t>&pointcloud);
 
 #endif // __BOTTLENOSE_CHUNK_PARSER_HPP__
