@@ -18,6 +18,9 @@
 @author Guy Martin Tchamgoue <martin@labforge.ca>, Thomas Reidemeister <thomas@labforge.ca>
 */
 #include <QDir>
+#include <QFile>
+#include <QTextStream>
+
 #include "io/data_thread.hpp"
 
 #include <algorithm>
@@ -134,7 +137,14 @@ static uint32_t countNaN(const cv::Mat& pointCloud){
 }
 
 static void saveColoredPLYFile(const cv::Mat& pointCloud, QImage &image, const QString& filename) {
-  ofstream plyFile(filename.toStdString());
+  QFile file(filename);
+
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    return;
+  }
+
+  // Create a QTextStream to write to the file
+  QTextStream plyFile(&file);
 
   uint32_t nan_counts = countNaN(pointCloud);
   uint32_t pc_size = pointCloud.rows * pointCloud.cols - nan_counts;
@@ -153,20 +163,21 @@ static void saveColoredPLYFile(const cv::Mat& pointCloud, QImage &image, const Q
 
   // Write point cloud data
   for (int y = 0; y < pointCloud.rows; ++y) {
-      for (int x = 0; x < pointCloud.cols; ++x) {
-          cv::Point3f pt = pointCloud.at<cv::Point3f>(y, x);
-          if(invalid(pt)) continue;
+    for (int x = 0; x < pointCloud.cols; ++x) {
+        cv::Point3f pt = pointCloud.at<cv::Point3f>(y, x);
+        if(invalid(pt)) continue;
 
-          QColor color = image.pixelColor(x, y);
+        QColor color = image.pixelColor(x, y);
 
-          plyFile << pt.x << " " << pt.y << " " << pt.z << " "
-                  << color.red() << " "  // Red
-                  << color.green() << " "  // Green
-                  << color.blue() << "\n"; // Blue
-      }
+        plyFile << pt.x << " " << pt.y << " " << pt.z << " "
+                << color.red() << " "  // Red
+                << color.green() << " "  // Green
+                << color.blue() << "\n"; // Blue
+    }
+    plyFile.flush();
   }
 
-  plyFile.close();
+  file.close();
 }
 
 void DataThread::run() {
