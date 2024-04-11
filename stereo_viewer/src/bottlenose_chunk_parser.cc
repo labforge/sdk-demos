@@ -168,3 +168,16 @@ std::string ms_to_date_string(uint64_t ms) {
   return ss.str();
 }
 
+bool chunkDecodePointCloud(PvBuffer *buffer, std::vector<vector3f_t>&pointcloud){
+  pointcloud.clear();
+  uint8_t *data = getChunkRawData(buffer, CHUNK_ID_POINTCLOUD);
+  if(data == nullptr) return false;
+
+  uint32_t count = uintFromBytes(data, 4, true);
+  vector3f_t *points = (vector3f_t *)&data[sizeof(uint32_t)];
+  for(uint32_t i = 0; i < count; ++i){
+    pointcloud.push_back(points[i]);
+  }
+
+  return true;
+}

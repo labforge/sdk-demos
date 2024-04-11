@@ -18,11 +18,14 @@
 @author Guy Martin Tchamgoue <martin@labforge.ca>, Thomas Reidemeister <thomas@labforge.ca>
 */
 #include <QDir>
+#include <QFile>
+#include <QTextStream>
 #include "io/data_thread.hpp"
 
 #include <algorithm>
-#include <fstream>
 #include <cmath>
+#include <cstdlib>
+#include <ctime>
 
 using namespace labforge::io;
 using namespace std;
@@ -34,6 +37,7 @@ DataThread::DataThread(QObject *parent)
   m_left_subfolder = "cam0";
   m_right_subfolder = "cam1";
   m_disparity_subfolder = "disparity";
+  m_pc_subfolder = "pc";
   m_frame_counter = 0;
   m_stereo = true;
   m_disparity = false;
@@ -49,15 +53,17 @@ DataThread::~DataThread()
   wait();
 }
 
-void DataThread::process(uint64_t timestamp, const QImage &left_image, const QImage &right_image,
-                         QString format, const uint16_t *raw, int32_t min_disparity){
+void DataThread::process(uint64_t timestamp, const QImage &left_image,
+                         const QImage &right_image, QString format,
+                         const uint16_t *raw, int32_t min_disparity,
+                         pointcloud_t &pc){
   QMutexLocker locker(&m_mutex);
 
   cv::Mat dmat;
   if(raw != nullptr){
     dmat = cv::Mat(left_image.height(),left_image.width(), CV_16UC1, (uint16_t *)raw);
   }
-  m_queue.enqueue({timestamp, left_image, right_image, format, dmat, min_disparity});
+  m_queue.enqueue({timestamp, left_image, right_image, format, dmat, min_disparity, pc});
 
   if (!isRunning()) {
     start(HighPriority);
@@ -95,6 +101,7 @@ bool DataThread::setFolder(QString new_folder){
       status = getFilename(m_left_fname, m_folder, m_left_subfolder, "left_");
       status = status && getFilename(m_right_fname, m_folder, m_right_subfolder, "right_");
     }
+    status = status && getFilename(m_pc_fname, m_folder, m_pc_subfolder, "spc_");
   }else{
     if(m_disparity){
       status = getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
@@ -133,8 +140,24 @@ static uint32_t countNaN(const cv::Mat& pointCloud){
   return count;
 }
 
+static uint32_t countNaN(const pointcloud_t& pointCloud){
+  uint32_t count = 0;
+  for (uint32_t i = 0; i < pointCloud.size(); ++i) {
+    cv::Point3f pt(pointCloud[i].x, pointCloud[i].y, pointCloud[i].z);
+    if(invalid(pt)) count++;
+  }
+  return count;
+}
+
 static void saveColoredPLYFile(const cv::Mat& pointCloud, QImage &image, const QString& filename) {
-  ofstream plyFile(filename.toStdString());
+  QFile file(filename);
+
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    return;
+  }
+
+  // Create a QTextStream to write to the file
+  QTextStream plyFile(&file);
 
   uint32_t nan_counts = countNaN(pointCloud);
   uint32_t pc_size = pointCloud.rows * pointCloud.cols - nan_counts;
@@ -153,20 +176,66 @@ static void saveColoredPLYFile(const cv::Mat& pointCloud, QImage &image, const Q
 
   // Write point cloud data
   for (int y = 0; y < pointCloud.rows; ++y) {
-      for (int x = 0; x < pointCloud.cols; ++x) {
-          cv::Point3f pt = pointCloud.at<cv::Point3f>(y, x);
-          if(invalid(pt)) continue;
+    for (int x = 0; x < pointCloud.cols; ++x) {
+        cv::Point3f pt = pointCloud.at<cv::Point3f>(y, x);
+        if(invalid(pt)) continue;
 
-          QColor color = image.pixelColor(x, y);
+        QColor color = image.pixelColor(x, y);
 
-          plyFile << pt.x << " " << pt.y << " " << pt.z << " "
-                  << color.red() << " "  // Red
-                  << color.green() << " "  // Green
-                  << color.blue() << "\n"; // Blue
-      }
+        plyFile << pt.x << " " << pt.y << " " << pt.z << " "
+                << color.red() << " "  // Red
+                << color.green() << " "  // Green
+                << color.blue() << "\n"; // Blue
+    }
+    plyFile.flush();
   }
 
-  plyFile.close();
+  file.close();
+}
+
+static void saveColoredPLYFile(const pointcloud_t &pointCloud, QImage &image, const QString& filename) {
+  QFile file(filename);
+
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    return;
+  }
+
+  // Create a QTextStream to write to the file
+  QTextStream plyFile(&file);
+
+  uint32_t nan_counts = countNaN(pointCloud);
+  uint32_t pc_size = pointCloud.size() - nan_counts;
+
+  // Write PLY header
+  plyFile << "ply\n";
+  plyFile << "format ascii 1.0\n";
+  plyFile << "element vertex " << pc_size << "\n";
+  plyFile << "property float x\n";
+  plyFile << "property float y\n";
+  plyFile << "property float z\n";
+  plyFile << "property uchar red\n";
+  plyFile << "property uchar green\n";
+  plyFile << "property uchar blue\n";
+  plyFile << "end_header\n";
+
+  std::srand(std::time(nullptr));
+
+  // Write point cloud data
+  for (uint32_t i = 0; i < pointCloud.size(); ++i){
+    cv::Point3f pt(pointCloud[i].x, pointCloud[i].y, pointCloud[i].z);
+    if(invalid(pt)) continue;
+
+    uint32_t x = std::rand() % image.width();
+    uint32_t y = std::rand() % image.height();
+    QColor color = image.pixelColor(x, y);
+
+    plyFile << pt.x << " " << pt.y << " " << pt.z << " "
+            << color.red() << " "  // Red
+            << color.green() << " "  // Green
+            << color.blue() << "\n"; // Blue
+  }
+
+  file.close();
 }
 
 void DataThread::run() {
@@ -197,7 +266,10 @@ void DataThread::run() {
           cv::Mat dispf32;
 
           imdata.disparity.convertTo(dispf32, CV_32FC1, (1./255.0), 0);
+          //dispf32.setTo(-imdata.min_disparity, dispf32>255); ///< unmatched points to inf.
+          //dispf32.setTo(-imdata.min_disparity, dispf32==0);
           dispf32 += imdata.min_disparity;
+
 
           QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
           if(!m_matQ.empty()){
@@ -208,6 +280,10 @@ void DataThread::run() {
       } else {
         imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);
         imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str(), quality);
+      }
+      if(imdata.pc.size() > 0){
+        QString fname = m_pc_fname + suffix.replace(ext.toLower(), "ply");
+        saveColoredPLYFile(imdata.pc, imdata.left, fname);
       }
     } else {
       if(m_disparity){
