@@ -211,9 +211,8 @@ void Pipeline::run() {
         } else {
           cerr << "Could not decode meta information" << endl;
         }
-        if(chunkDecodePointCloud(lBuffer, pointcloud)) {
-          std::cout << "Bottlenose PC: " << pointcloud.size() << endl;
-        }
+
+        chunkDecodePointCloud(lBuffer, pointcloud);
 
         if(m_mindisparity){
           m_mindisparity->GetValue(minDisparity);
