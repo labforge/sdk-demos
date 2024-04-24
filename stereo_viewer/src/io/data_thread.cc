@@ -56,7 +56,7 @@ DataThread::~DataThread()
 void DataThread::process(uint64_t timestamp, const QImage &left_image,
                          const QImage &right_image, QString format,
                          const uint16_t *raw, int32_t min_disparity,
-                         pointcloud_t &pc){
+                         const pointcloud_t &pc){
   QMutexLocker locker(&m_mutex);
 
   cv::Mat dmat;

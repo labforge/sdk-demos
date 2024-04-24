@@ -34,6 +34,14 @@
 #include "inc/bottlenose_chunk_parser.hpp"
 namespace labforge::gev {
 
+  struct BNImageData{
+    cv::Mat* left;
+    cv::Mat* right;
+    uint64_t timestamp;
+    int32_t min_disparity;
+    pointcloud_t pc;
+  };
+
   class Pipeline : public QThread {
     Q_OBJECT
 
@@ -44,7 +52,7 @@ namespace labforge::gev {
     bool Start(bool calibrate);
     void Stop();
     bool IsStarted() { return m_start_flag; }
-    size_t GetPairs(std::list<std::tuple<cv::Mat*, cv::Mat*, uint64_t, int32_t, pointcloud_t>> &out);
+    size_t GetPairs(std::list<BNImageData> &out);
     void run() override;
 
   Q_SIGNALS:
@@ -72,7 +80,7 @@ namespace labforge::gev {
     PvString m_pixfmt_init;
 
     std::list<PvBuffer*> m_buffers;
-    QQueue<std::tuple<cv::Mat*, cv::Mat*, uint64_t , int32_t, pointcloud_t>> m_images;
+    QQueue<BNImageData> m_images;
     volatile bool m_start_flag;
     QMutex m_image_lock;
   };

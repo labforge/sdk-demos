@@ -31,7 +31,7 @@ app_inc = include_directories(
 cpp = meson.get_compiler('cpp')
 # set PATH=C:\qt5\bin;%PATH%
 qt5 = import('qt5')
-qt5_deps = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'Test', 'Network'], main: true)
+qt5_deps = dependency('qt5', modules: ['Core', 'Gui', 'Widgets', 'Test', 'Network', 'Concurrent'], main: true)
 opencv_dep = dependency('opencv4', required: false)
 if not opencv_dep.found()
   cv_dir = get_option('cv_dir')
@@ -104,11 +104,17 @@ pleora_dep = declare_dependency(compile_args: pleora_inc,
                                 compile_args: pleora_args
                                )
 
+# json
+nlohmann_json_dep = dependency('nlohmann_json', fallback : ['nlohmann_json', 'nlohmann_json_dep'])
+yamlcpp_dep = dependency('yaml-cpp', fallback : ['yaml-cpp', 'yamlcpp_dep'])
+
 # Lump together all monolithic dependencies from above
 app_deps = [
   qt5_deps,
   opencv_dep,
   pleora_dep,
+  nlohmann_json_dep,
+  yamlcpp_dep
 ]
 
 subdir('src')

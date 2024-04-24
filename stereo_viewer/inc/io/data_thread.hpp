@@ -55,7 +55,7 @@ public:
     void process(uint64_t timestamp, const QImage &left,
                  const QImage &right, QString format,
                  const uint16_t *raw, int32_t,
-                 pointcloud_t &pc);
+                 const pointcloud_t &pc);
     bool setFolder(QString new_folder);
     void setStereoDisparity(bool is_stereo, bool is_disparity);
     void stop();

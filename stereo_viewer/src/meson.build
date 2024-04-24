@@ -16,6 +16,8 @@ qt_app_headers = [
   '../inc/ui/cameraview.hpp',
   '../inc/gev/pipeline.hpp',
   '../inc/io/data_thread.hpp',
+  '../inc/io/file_uploader.hpp',
+  '../inc/io/calib.hpp',
   '../inc/gev/calib_params.hpp',
   ]
 
@@ -29,6 +31,8 @@ source_files = files([
   'focus.cc',
   'bottlenose_chunk_parser.cc',
   'io/util.cc',
+  'io/file_uploader.cc',
+  'io/calib.cc',
   'gev/pipeline.cc',
   'gev/util.cc',
   'ui/cameraview.cc',

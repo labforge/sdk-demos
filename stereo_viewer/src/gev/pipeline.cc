@@ -153,11 +153,11 @@ bool Pipeline::Start(bool calibrate) {
   return true;
 }
 
-size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t, int32_t, pointcloud_t>> &out) {
+size_t Pipeline::GetPairs(list<BNImageData> &out) {
   QMutexLocker l(&m_image_lock);
 
   if(!m_images.empty()){
-    tuple<Mat *, Mat *, uint64_t, int32_t, pointcloud_t> image = m_images.dequeue();
+    BNImageData image = m_images.dequeue();
     out.push_back(image);
   }
 
@@ -234,12 +234,11 @@ void Pipeline::run() {
               QMutexLocker l(&m_image_lock);
               // See if there is chunk data attached
 
-              m_images.enqueue(
-                      make_tuple(
+              m_images.enqueue({
                               new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
                               new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer()),
                               timestamp, minDisparity, pointcloud
-                              )
+                              }
                               );
             }
 
@@ -259,8 +258,8 @@ void Pipeline::run() {
                 is_disparity = false;
               }
 
-              m_images.enqueue( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()),
-                                             new Mat(), timestamp, minDisparity, pointcloud));
+              m_images.enqueue({new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()),
+                                new Mat(), timestamp, minDisparity, pointcloud});
             }
 
             emit monoReceived(is_disparity);
