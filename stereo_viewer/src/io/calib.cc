@@ -24,7 +24,7 @@ bool readCalibDotIOParameters(const QString &filePath,
       return false;
     }
 
-    int nCameras = jsonStruct["Calibration"]["cameras"].size();
+    uint32_t nCameras = (uint32_t)jsonStruct["Calibration"]["cameras"].size();
     if (nCameras < 1) {
       return false;
     }
@@ -33,7 +33,7 @@ bool readCalibDotIOParameters(const QString &filePath,
     kp["kWidth"] = camera["imageSize"]["width"];
     kp["kHeight"] = camera["imageSize"]["height"];
 
-    for (int i = 0; i < nCameras; ++i) {
+    for (uint32_t i = 0; i < nCameras; ++i) {
       QString id = QString::number(i);
       auto intrinsics = jsonStruct["Calibration"]["cameras"][i]["model"]["ptr_wrapper"]["data"]["parameters"];
 
@@ -75,7 +75,7 @@ bool readYAMLParameters(const QString &filePath,
 
   try {
     YAML::Node calib = YAML::LoadFile(filePath.toStdString());
-    uint32_t nCameras =  calib.size();
+    uint32_t nCameras =  (uint32_t)calib.size();
 
     if (nCameras < 1) {
       return false;

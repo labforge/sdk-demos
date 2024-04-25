@@ -18,11 +18,11 @@
 @author Martin Tchamgoue <martin@labforge.ca>
 */
 #include <QFile>
+#include <QFileInfo>
 #include "io/file_uploader.hpp"
 #include "io/calib.hpp"
 
 #include <QRegularExpression>
-#include <iostream>
 #include <QtConcurrent>
 #include <QNetworkReply>
 
@@ -110,7 +110,7 @@ void FileUploader::uploadCalibration(uint32_t expected_cam, const QString &fname
   uint32_t processed = 16;
   emit progress(processed);
 
-  uint32_t step = 64 / kparams.size();
+  uint32_t step = 64 / (uint32_t)kparams.size();
   for (const auto& [kname, kvalue] : kparams){
     if(!setRegister(kname, kvalue)){
       emitError("Failed to set [" + kname + "] on the camera.");
@@ -284,8 +284,6 @@ void FileUploader::transferFile(const QString &filePath){
   QString serverIP = m_device->GetIPAddress().GetAscii();
   QString serverPath = "ftp://" + serverIP + "/";
   QUrl serverURL(serverPath + fileInfo.fileName());
-  std::cout << "URL: " << serverPath.toStdString() << std::endl;
-  std::cout << "FILE: " << fileInfo.fileName().toStdString() << std::endl;
   serverURL.setUserName("anonymous");
   serverURL.setPassword("");
   serverURL.setPort(21);
