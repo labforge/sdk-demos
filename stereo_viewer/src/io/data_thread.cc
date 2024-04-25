@@ -238,6 +238,15 @@ static void saveColoredPLYFile(const pointcloud_t &pointCloud, QImage &image, co
   file.close();
 }
 
+static void filterPointCloud(cv::Mat &pc, const cv::Mat &disp){
+  for (int y = 0; y < disp.rows; ++y) {
+    for (int x = 0; x < disp.cols; ++x) {
+      if((disp.at<ushort>(y, x) > 0) && (disp.at<ushort>(y, x) < 65535)) continue;
+      pc.at<cv::Point3f>(y, x).z = NAN;
+    }
+  }
+}
+
 void DataThread::run() {
   while(!m_abort) {
     m_mutex.lock();
@@ -270,10 +279,10 @@ void DataThread::run() {
           //dispf32.setTo(-imdata.min_disparity, dispf32==0);
           dispf32 += imdata.min_disparity;
 
-
           QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
           if(!m_matQ.empty()){
             cv::reprojectImageTo3D(dispf32, pc, m_matQ, false, CV_32F);
+            filterPointCloud(pc, imdata.disparity);
             saveColoredPLYFile(pc, imdata.left, fname);
           }
         }

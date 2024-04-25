@@ -106,7 +106,11 @@ pleora_dep = declare_dependency(compile_args: pleora_inc,
 
 # json
 nlohmann_json_dep = dependency('nlohmann_json', fallback : ['nlohmann_json', 'nlohmann_json_dep'])
-yamlcpp_dep = dependency('yaml-cpp', fallback : ['yaml-cpp', 'yamlcpp_dep'])
+
+# yaml-cpp
+cmake = import('cmake')
+sub_proj = cmake.subproject('yaml-cpp')
+yaml_cpp = sub_proj.dependency('yaml-cpp')
 
 # Lump together all monolithic dependencies from above
 app_deps = [
@@ -114,7 +118,7 @@ app_deps = [
   opencv_dep,
   pleora_dep,
   nlohmann_json_dep,
-  yamlcpp_dep
+  yaml_cpp
 ]
 
 subdir('src')

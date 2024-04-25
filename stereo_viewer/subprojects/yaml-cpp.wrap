@@ -2,7 +2,3 @@
 url = https://github.com/jbeder/yaml-cpp.git
 revision = 0.8.0
 depth = 1
-
-[provide]
-0.8.0 = yamlcpp_dep
-
