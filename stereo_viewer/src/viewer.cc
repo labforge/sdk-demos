@@ -206,7 +206,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.spinMaxDisparity->setVisible(false);
 
   cfg.btnDeviceControl->setEnabled(true);
-  m_device_browser = new PvGenBrowserWnd;
+  m_device_browser = new PvGenBrowserWnd();
   m_device = nullptr;
 
   // Register event handlers
@@ -278,6 +278,13 @@ MainWindow::~MainWindow(){
 
   if(m_data_thread){
     m_data_thread.reset();
+  }
+  if(m_upbar){
+    m_upbar->close();
+    delete m_upbar;
+  }
+  if(m_uploader){
+    m_uploader.reset();
   }
 }
 
