@@ -773,8 +773,8 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool s
 
   if(stereo){
     cfg.widgetRightSensor->setImage(right, false);
-    QString label = disparity?"Disparity":"Right";
-    cfg.lblDisplayRight->setText(label);
+    /*QString label = disparity?"Disparity":"Right";
+    cfg.lblDisplayRight->setText(label);*/
   }else{
     QString label = disparity?"Disparity":"Display";
     cfg.lblDisplayLeft->setText(label);
@@ -850,14 +850,32 @@ void MainWindow::handleStereoData(bool is_disparity) {
     // Convert and display
     for (auto const & image:images) {
       m_payload = image.left->cols * image.left->rows * 16;
-      QImage q1 = s_yuv2_to_qimage(image.left);
+      QImage q1;
       QImage q2;
 
-      if(is_disparity){
+      if((image.left->type() == CV_16UC1) && (image.right->type() == CV_16UC1)){
+        q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
+        raw_disparity = (uint16_t*)image.left->data;
+        q2 = s_mono_to_qimage(image.right, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
+        cfg.lblDisplayLeft->setText("Disparity");
+        cfg.lblDisplayRight->setText("Confidence");
+      } else if((image.left->type() == CV_8UC2) && (image.right->type() == CV_16UC1)){
+        q1 = s_yuv2_to_qimage(image.left);
         q2 = s_mono_to_qimage(image.right, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
         raw_disparity = (uint16_t*)image.right->data;
-      }else{
+        cfg.lblDisplayLeft->setText("Left");
+        cfg.lblDisplayRight->setText("Disparity");
+      } else if((image.left->type() == CV_16UC1) && (image.right->type() == CV_8UC2)){
+        q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
         q2 = s_yuv2_to_qimage(image.right);
+        raw_disparity = (uint16_t*)image.left->data;
+        cfg.lblDisplayLeft->setText("Disparity");
+        cfg.lblDisplayRight->setText("Right");
+      } else{
+        q1 = s_yuv2_to_qimage(image.left);
+        q2 = s_yuv2_to_qimage(image.right);
+        cfg.lblDisplayLeft->setText("Left");
+        cfg.lblDisplayRight->setText("Right");
       }
 
       newData(image.timestamp, q1, q2, true, is_disparity, raw_disparity, image.min_disparity, image.pc);

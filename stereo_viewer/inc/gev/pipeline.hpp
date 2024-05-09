@@ -83,6 +83,7 @@ namespace labforge::gev {
     QQueue<BNImageData> m_images;
     volatile bool m_start_flag;
     QMutex m_image_lock;
+
   };
 }
 
