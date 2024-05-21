@@ -237,7 +237,7 @@ void Pipeline::run() {
               m_images.enqueue({
                               new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
                               new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer()),
-                              timestamp, minDisparity, pointcloud
+                              timestamp, static_cast<int32_t>(minDisparity), pointcloud
                               }
                               );
             }
@@ -259,7 +259,7 @@ void Pipeline::run() {
               }
 
               m_images.enqueue({new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()),
-                                new Mat(), timestamp, minDisparity, pointcloud});
+                                new Mat(), timestamp, static_cast<int32_t>(minDisparity), pointcloud});
             }
 
             emit monoReceived(is_disparity);
