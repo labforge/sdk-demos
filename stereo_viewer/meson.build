@@ -108,7 +108,7 @@ pleora_dep = declare_dependency(compile_args: pleora_inc,
 # json
 nlohmann_json_dep = dependency('nlohmann_json', fallback : ['nlohmann_json', 'nlohmann_json_dep'])
 
-# yaml-cpp
+# yaml-cppnau
 yamlcpp_dep = dependency('yaml-cpp', version: '>= 0.6.1', required: false)
 if not yamlcpp_dep.found()
   yamlcmake = import('cmake')
