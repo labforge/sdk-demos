@@ -192,7 +192,7 @@ static void saveColoredPLYFile(const cv::Mat& pointCloud, const QImage &image, c
   file.close();
 }
 
-static void saveColoredPLYFile(const pointcloud_t &pointCloud, QImage &image, const QString& filename) {
+static void saveColoredSparsePLYFile(const pointcloud_t &pointCloud, QImage &image, const QString& filename) {
   QFile file(filename);
 
   if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -308,7 +308,7 @@ void DataThread::run() {
     if((imdata.pc.size() > 0) && (imdata.imtype == IMTYPE_LR)){
       getFilename(m_pc_fname, m_folder, m_pc_subfolder, "spc_");
       QString fname = m_pc_fname + suffix.replace(ext.toLower(), "ply");
-      saveColoredPLYFile(imdata.pc, imdata.left, fname);
+      saveColoredSparsePLYFile(imdata.pc, imdata.left, fname);
     }
 
     m_frame_counter += 1;
