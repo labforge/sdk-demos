@@ -756,9 +756,20 @@ void MainWindow::handleTimeOut(){
   QMessageBox::information(this, "Connection Error", "Camera disconnected: Communication timed out.");
 }
 
-void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo,
-                         bool disparity, uint16_t *raw_disparity, int32_t min_disparity, const pointcloud_t &pc) {
+/*static labforge::io::ImageDataType getImageType(QPair<QString, QString> &label){
+  if(label.second.isEmpty()){
+    return (label.first=="Display")?labforge::io::IMTYPE_IO:labforge::io::IMTYPE_DO;
+  } else{
+    if((label.first=="Left") && (label.second=="Right")) return labforge::io::IMTYPE_LR;
+    if((label.first=="Left") && (label.second=="Left")) return labforge::io::IMTYPE_LR;
+  }
+}*/
+
+void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, QPair<QString, QString> &label,
+                         bool disparity, uint16_t *raw_disparity, int32_t min_disparity,
+                         const pointcloud_t &pc) {
   // Set the image
+  bool stereo = !label.second.isEmpty();
   cfg.widgetLeftSensor->setImage(left, false);
   cfg.widgetRightSensor->setVisible(stereo);
   cfg.lblDisplayRight->setVisible(stereo);
@@ -771,13 +782,10 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool s
   cfg.spinMinDisparity->setVisible(disparity);
   cfg.spinMaxDisparity->setVisible(disparity);
 
+  cfg.lblDisplayLeft->setText(label.first);
   if(stereo){
     cfg.widgetRightSensor->setImage(right, false);
-    /*QString label = disparity?"Disparity":"Right";
-    cfg.lblDisplayRight->setText(label);*/
-  }else{
-    QString label = disparity?"Disparity":"Display";
-    cfg.lblDisplayLeft->setText(label);
+    cfg.lblDisplayRight->setText(label.second);
   }
 
   // Do we have boundingboxes or feature points
@@ -840,9 +848,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
   if(m_pipeline) {
     list<BNImageData> images;
     uint16_t *raw_disparity = nullptr;
-
     m_pipeline->GetPairs(images);
-    m_data_thread->setStereoDisparity(true, is_disparity);
 
     m_frameCount += images.size();
     showStatusMessage(2);
@@ -852,33 +858,39 @@ void MainWindow::handleStereoData(bool is_disparity) {
       m_payload = image.left->cols * image.left->rows * 16;
       QImage q1;
       QImage q2;
+      QPair<QString, QString> label;
 
       if((image.left->type() == CV_16UC1) && (image.right->type() == CV_16UC1)){
         q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
         raw_disparity = (uint16_t*)image.left->data;
         q2 = s_mono_to_qimage(image.right, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
-        cfg.lblDisplayLeft->setText("Disparity");
-        cfg.lblDisplayRight->setText("Confidence");
+
+        label.first = "Disparity";
+        label.second = "Confidence";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_DC);
       } else if((image.left->type() == CV_8UC2) && (image.right->type() == CV_16UC1)){
         q1 = s_yuv2_to_qimage(image.left);
         q2 = s_mono_to_qimage(image.right, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
         raw_disparity = (uint16_t*)image.right->data;
-        cfg.lblDisplayLeft->setText("Left");
-        cfg.lblDisplayRight->setText("Disparity");
+        label.first = "Left";
+        label.second = "Disparity";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_LD);
       } else if((image.left->type() == CV_16UC1) && (image.right->type() == CV_8UC2)){
         q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
         q2 = s_yuv2_to_qimage(image.right);
         raw_disparity = (uint16_t*)image.left->data;
-        cfg.lblDisplayLeft->setText("Disparity");
-        cfg.lblDisplayRight->setText("Right");
+        label.first = "Disparity";
+        label.second = "Right";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_DR);
       } else{
         q1 = s_yuv2_to_qimage(image.left);
         q2 = s_yuv2_to_qimage(image.right);
-        cfg.lblDisplayLeft->setText("Left");
-        cfg.lblDisplayRight->setText("Right");
+        label.first = "Left";
+        label.second = "Right";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_LR);
       }
 
-      newData(image.timestamp, q1, q2, true, is_disparity, raw_disparity, image.min_disparity, image.pc);
+      newData(image.timestamp, q1, q2, label, is_disparity, raw_disparity, image.min_disparity, image.pc);
       delete image.left;
       delete image.right;
     }
@@ -890,7 +902,6 @@ void MainWindow::handleMonoData(bool is_disparity){
     list<BNImageData> images;
     uint16_t *raw_disparity = nullptr;
     m_pipeline->GetPairs(images);
-    m_data_thread->setStereoDisparity(false, is_disparity);
 
     m_frameCount += images.size();
     showStatusMessage(1);
@@ -899,16 +910,22 @@ void MainWindow::handleMonoData(bool is_disparity){
       m_payload = image.left->cols * image.left->rows * 16;
       QImage q1;
       QImage q2;
+      QPair<QString, QString> label;
 
-      if(is_disparity){
+      if(image.left->type() == CV_16UC1){
         q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
         raw_disparity = (uint16_t*)image.left->data;
+        label.first = "Disparity";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_DO);
       }
       else{
         q1 = s_yuv2_to_qimage(image.left);
+        label.first = "Display";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_IO);
       }
+      label.second = "";
 
-      newData(image.timestamp, q1, q2, false, is_disparity, raw_disparity, image.min_disparity, image.pc);
+      newData(image.timestamp, q1, q2, label, is_disparity, raw_disparity, image.min_disparity, image.pc);
       delete image.left;
       delete image.right;
     }

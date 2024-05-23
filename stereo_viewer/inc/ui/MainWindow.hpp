@@ -29,6 +29,7 @@
 #include <PvStreamGEV.h>
 #include <chrono>
 #include <QProgressDialog>
+#include <QPair>
 #include <QtWidgets>
 
 #include "ui_stereo_viewer.h"
@@ -57,7 +58,7 @@ public Q_SLOTS:
   void handleStereoData(bool is_disparity);
   void handleMonoData(bool is_disparity);
   void handleError(QString msg);
-  void newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo,
+  void newData(uint64_t timestamp, QImage &left, QImage &right, QPair<QString, QString> &label,
                bool disparity, uint16_t *raw_disparity, int32_t min_disparity, const pointcloud_t &pc);
   void onFolderSelect();
   void handleSave();

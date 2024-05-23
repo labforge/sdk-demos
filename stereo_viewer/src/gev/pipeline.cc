@@ -250,13 +250,14 @@ void Pipeline::run() {
               QMutexLocker l(&m_image_lock);
               img0 = lBuffer->GetImage();
               m_pixformat->GetValue( pixformat );
-              int cv_pixformat = CV_16UC1;
+              //int cv_pixformat = CV_16UC1;
               is_disparity = true;
+              int cv_pixformat = (img0->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
 
-              if(strcmp(pixformat.GetAscii(), "YUV422_8") == 0){
+              /*if(strcmp(pixformat.GetAscii(), "YUV422_8") == 0){
                 cv_pixformat = CV_8UC2;
                 is_disparity = false;
-              }
+              }*/
 
               m_images.enqueue({new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()),
                                 new Mat(), timestamp, static_cast<int32_t>(minDisparity), pointcloud});

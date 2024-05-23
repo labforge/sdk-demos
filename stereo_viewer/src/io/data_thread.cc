@@ -31,7 +31,7 @@ using namespace labforge::io;
 using namespace std;
 
 DataThread::DataThread(QObject *parent)
-    : QThread(parent), m_abort(false)
+    : QThread(parent), m_abort(false), m_imtype(IMTYPE_LR)
 {
   m_folder = "";
   m_left_subfolder = "cam0";
@@ -39,8 +39,6 @@ DataThread::DataThread(QObject *parent)
   m_disparity_subfolder = "disparity";
   m_pc_subfolder = "pc";
   m_frame_counter = 0;
-  m_stereo = true;
-  m_disparity = false;
 }
 
 DataThread::~DataThread()
@@ -63,13 +61,18 @@ void DataThread::process(uint64_t timestamp, const QImage &left_image,
   if(raw != nullptr){
     dmat = cv::Mat(left_image.height(),left_image.width(), CV_16UC1, (uint16_t *)raw);
   }
-  m_queue.enqueue({timestamp, left_image, right_image, format, dmat, min_disparity, pc});
+
+  m_queue.enqueue({timestamp, left_image, right_image, format, dmat, min_disparity, pc, m_imtype});
 
   if (!isRunning()) {
     start(HighPriority);
   } else {
     m_condition.wakeOne();
   }
+}
+
+void DataThread::setImageDataType(ImageDataType imtype){
+  m_imtype = imtype;
 }
 
 bool getFilename(QString &fname, const QString &new_folder, const QString &subfolder, QString file_prefix){
@@ -93,29 +96,25 @@ bool DataThread::setFolder(QString new_folder){
     m_frame_counter = 0;
   }
 
-  if(m_stereo){
-    if(m_disparity){
-      status = getFilename(m_left_fname, m_folder, m_left_subfolder, "left_");
-      status = status && getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
-    }else{
-      status = getFilename(m_left_fname, m_folder, m_left_subfolder, "left_");
-      status = status && getFilename(m_right_fname, m_folder, m_right_subfolder, "right_");
-    }
-    status = status && getFilename(m_pc_fname, m_folder, m_pc_subfolder, "spc_");
-  }else{
-    if(m_disparity){
-      status = getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
-    } else {
-      status = getFilename(m_left_fname, m_folder, m_left_subfolder, "mono_");
-    }
+  if(m_imtype == IMTYPE_IO){
+    status = getFilename(m_left_fname, m_folder, m_left_subfolder, "mono_");
+  } else if (m_imtype == IMTYPE_DO){
+    status = status && getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
+  } else if (m_imtype == IMTYPE_LR){
+    status = status && getFilename(m_left_fname, m_folder, m_left_subfolder, "left_");
+    status = status && getFilename(m_right_fname, m_folder, m_right_subfolder, "right_");
+  } else if (m_imtype == IMTYPE_LD){
+    status = status && getFilename(m_left_fname, m_folder, m_left_subfolder, "left_");
+    status = status && getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
+  } else if (m_imtype == IMTYPE_DR){
+    status = status && getFilename(m_right_fname, m_folder, m_right_subfolder, "right_");
+    status = status && getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
+  } else if (m_imtype == IMTYPE_DC){
+    status = status && getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
+    status = status && getFilename(m_conf_fname, m_folder, m_disparity_subfolder, "conf_");
   }
 
   return status;
-}
-
-void DataThread::setStereoDisparity(bool is_stereo, bool is_disparity){
-  m_stereo = is_stereo;
-  m_disparity = is_disparity;
 }
 
 void DataThread::stop(){
@@ -149,7 +148,7 @@ static uint32_t countNaN(const pointcloud_t& pointCloud){
   return count;
 }
 
-static void saveColoredPLYFile(const cv::Mat& pointCloud, QImage &image, const QString& filename) {
+static void saveColoredPLYFile(const cv::Mat& pointCloud, const QImage &image, const QString& filename) {
   QFile file(filename);
 
   if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -247,6 +246,24 @@ static void filterPointCloud(cv::Mat &pc, const cv::Mat &disp){
   }
 }
 
+static void saveProjected3D(const cv::Mat &disparity, QImage &qimage,
+                            int32_t min_disparity, cv::Mat &matQ, QString &dfname){
+  if(disparity.empty()) return;
+  if(dfname.isEmpty()) return;
+
+  cv::Mat pc(qimage.height(), qimage.width(), CV_32FC3);
+  cv::Mat dispf32;
+
+  disparity.convertTo(dispf32, CV_32FC1, (1./255.0), 0);
+  dispf32 += min_disparity;
+
+  if(!matQ.empty()){
+    cv::reprojectImageTo3D(dispf32, pc, matQ, false, CV_32F);
+    filterPointCloud(pc, disparity);
+    saveColoredPLYFile(pc, qimage, dfname);
+  }
+}
+
 void DataThread::run() {
   while(!m_abort) {
     m_mutex.lock();
@@ -265,41 +282,33 @@ void DataThread::run() {
     QString suffix =  padded_cntr + "_" + QString::number(imdata.timestamp)  + "." + ext.toLower();
     int32_t quality = (ext == "JPG") ? 90 : -1;
 
-    if (m_stereo){
-      if(m_disparity){
-        imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);
-        imdata.right.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);
-
-        if(!imdata.disparity.empty()){
-          cv::Mat pc(imdata.left.height(), imdata.left.width(), CV_32FC3);
-          cv::Mat dispf32;
-
-          imdata.disparity.convertTo(dispf32, CV_32FC1, (1./255.0), 0);
-          //dispf32.setTo(-imdata.min_disparity, dispf32>255); ///< unmatched points to inf.
-          //dispf32.setTo(-imdata.min_disparity, dispf32==0);
-          dispf32 += imdata.min_disparity;
-
-          QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
-          if(!m_matQ.empty()){
-            cv::reprojectImageTo3D(dispf32, pc, m_matQ, false, CV_32F);
-            filterPointCloud(pc, imdata.disparity);
-            saveColoredPLYFile(pc, imdata.left, fname);
-          }
-        }
-      } else {
-        imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);
-        imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str(), quality);
-      }
-      if(imdata.pc.size() > 0){
-        QString fname = m_pc_fname + suffix.replace(ext.toLower(), "ply");
-        saveColoredPLYFile(imdata.pc, imdata.left, fname);
-      }
-    } else {
-      if(m_disparity){
-        imdata.left.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);
-      } else {
-        imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);
-      }
+    if(imdata.imtype == IMTYPE_IO){
+      imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);
+    } else if (imdata.imtype == IMTYPE_DO){
+      imdata.left.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);
+    } else if (imdata.imtype == IMTYPE_LR){
+      imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);
+      imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str(), quality);
+    } else if (imdata.imtype == IMTYPE_LD){
+      imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);
+      imdata.right.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);
+      QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
+      saveProjected3D(imdata.disparity, imdata.left, imdata.min_disparity, m_matQ, fname);
+    } else if (imdata.imtype == IMTYPE_DR){
+      imdata.left.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);
+      imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str(), quality);
+      //QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
+      //saveProjected3D(imdata.disparity, imdata.rig, imdata.min_disparity, m_matQ, fname);
+    } else if (imdata.imtype == IMTYPE_DC){
+      imdata.left.save(m_disparity_fname + suffix, ext.toStdString().c_str(), quality);
+      imdata.right.save(m_conf_fname + suffix, ext.toStdString().c_str(), quality);
+      //QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
+      //saveProjected3D(imdata, m_matQ, fname);
+    }
+    if((imdata.pc.size() > 0) && (imdata.imtype == IMTYPE_LR)){
+      getFilename(m_pc_fname, m_folder, m_pc_subfolder, "spc_");
+      QString fname = m_pc_fname + suffix.replace(ext.toLower(), "ply");
+      saveColoredPLYFile(imdata.pc, imdata.left, fname);
     }
 
     m_frame_counter += 1;
