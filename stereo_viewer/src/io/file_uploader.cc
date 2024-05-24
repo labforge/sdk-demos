@@ -136,6 +136,28 @@ bool FileUploader::attemptConnect(uint32_t trials, QString &errorMsg){
   errorMsg = "";
   bool flags = false;
 
+  // Sanity check to prevent firmware corruption
+  if(!m_reset_flag){
+    bool devflag = false;
+    PvString devStatus;
+    PvResult res = m_flag->GetValue(devflag);
+    if(!res.IsOK()){
+      emitError("Failed to query camera register, please try again.");
+      return false;
+    }
+    res = m_status->GetValue(devStatus);
+    if(!res.IsOK()){
+      emitError("Failed to query camera status, please try again.");
+      return false;
+    }
+    QString status = QString(devStatus.GetAscii());
+
+    if(devflag && (status.toLower() != "ftp running")){
+      emitError("Please, power-cycle the camera before attempting another update.");
+      return false;
+    }
+  }
+
   m_flag->SetValue(false);
   QThread::msleep(100);
   for(uint32_t i = 0; i < trials; ++i){
@@ -171,16 +193,6 @@ bool FileUploader::attemptConnect(uint32_t trials, QString &errorMsg){
 }
 
 void FileUploader::monitorTransfer(){
-
-  // Sanity check to prevent firmware corruption
-  if(!m_reset_flag){
-    bool status = false;
-    PvResult res = m_flag->GetValue(status);
-    if(status){
-      emitError("Please power-cycle the camera before attempting another update.");
-      return;
-    }
-  }
 
   if((m_flag == nullptr) || (m_status == nullptr)){
     emitError("Function not supported by device ... please update the firmware");
@@ -303,7 +315,7 @@ void FileUploader::onRequestFinished(QNetworkReply *reply){
     emitError("Network error during file transfer [" + reply->errorString() +"]");
   }
   else{
-    emit workingOn("Updating " + m_ftype + "...");
+    emit workingOn("Updating " + m_ftype + "... Do not interact with the camera.");
     QtConcurrent::run([&]{
       monitorTransfer();
    });

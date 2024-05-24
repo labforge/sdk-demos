@@ -56,6 +56,8 @@ bool labforge::gev::SetParameter(PvDeviceGEV *aDevice, PvStream *aStream, const 
       return dynamic_cast<PvGenString*>(param)->SetValue(std::get<string>(value).c_str()).IsOK();
     case PvGenTypeBoolean:
       return dynamic_cast<PvGenBoolean*>(param)->SetValue(std::get<bool>(value)).IsOK();
+    case PvGenTypeEnum:
+      return dynamic_cast<PvGenEnum*>(param)->SetValue(std::get<string>(value).c_str()).IsOK();
     default:
       return false;
   }

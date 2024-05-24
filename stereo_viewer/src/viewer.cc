@@ -830,7 +830,7 @@ void MainWindow::resetStatusCounters(){
   m_startTime = std::chrono::system_clock::now();
 }
 
-void MainWindow::handleError(QString msg){
+void MainWindow::handleError(const QString &msg){
   m_errorCount += 1;
   m_errorMsg = msg;
   showStatusMessage();

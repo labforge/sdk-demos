@@ -59,7 +59,7 @@ namespace labforge::gev {
     void pairReceived();
     void monoReceived();
     void terminated(bool fatal = false);
-    void onError(QString msg);
+    void onError(const QString &msg);
     void timeout();
 
   private:

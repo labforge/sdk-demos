@@ -57,7 +57,7 @@ public Q_SLOTS:
   void handleRecording();
   void handleStereoData();
   void handleMonoData();
-  void handleError(QString msg);
+  void handleError(const QString &msg);
   void newData(uint64_t timestamp, QImage &left, QImage &right, QPair<QString, QString> &label,
                bool disparity, uint16_t *raw_disparity, int32_t min_disparity, const pointcloud_t &pc);
   void onFolderSelect();

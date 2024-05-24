@@ -116,8 +116,17 @@ void Pipeline::enterCalibrationMode(bool enable, bool stereo){
 
   PvGenParameterArray *lDeviceParams = m_device->GetParameters();
   PvGenParameter *param = lDeviceParams->Get("ComponentSelector");
+
   if (param == nullptr) {
-    throw runtime_error("Could not enable access component selector");
+    if(!SetParameter(m_device, m_stream, "PixelFormat", "YUV422_8")) {
+      throw runtime_error("Could not enable PixelFormat");
+      return;
+    }
+    if(!SetParameter(m_device, m_stream, "Rectification", false)) {
+      throw runtime_error("Could not disable Rectification");
+      return;
+    }
+    return;
   }
 
   PvResult res = static_cast<PvGenEnum *>(param)->SetValue("Confidence");
