@@ -49,15 +49,15 @@ namespace labforge::gev {
     Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV*device_gev, QObject*parent = nullptr);
 
     virtual ~Pipeline();
-    bool Start(bool calibrate);
+    bool Start(bool calibrate, bool stereo);
     void Stop();
     bool IsStarted() { return m_start_flag; }
     size_t GetPairs(std::list<BNImageData> &out);
     void run() override;
 
   Q_SIGNALS:
-    void pairReceived(bool is_disparity);
-    void monoReceived(bool is_disparity);
+    void pairReceived();
+    void monoReceived();
     void terminated(bool fatal = false);
     void onError(QString msg);
     void timeout();
@@ -70,19 +70,14 @@ namespace labforge::gev {
     PvGenCommand *m_stop;
     PvGenFloat *m_fps;
     PvGenFloat *m_bandwidth;
-    PvGenEnum* m_pixformat;
-    PvGenBoolean *m_rectify;
-    PvGenBoolean *m_undistort;
     PvGenInteger *m_mindisparity;
-
-    bool m_rectify_init;
-    bool m_undistort_init;
-    PvString m_pixfmt_init;
 
     std::list<PvBuffer*> m_buffers;
     QQueue<BNImageData> m_images;
     volatile bool m_start_flag;
     QMutex m_image_lock;
+
+    void enterCalibrationMode(bool enable, bool stereo);
 
   };
 }

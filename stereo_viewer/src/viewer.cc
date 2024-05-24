@@ -340,7 +340,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
 
 void MainWindow::handleStart() {
   if(m_pipeline) {
-    if(m_pipeline->Start(cfg.chkCalibrate->isChecked())) {
+    bool is_stereo = cfg.editModel->text().endsWith("_ST", Qt::CaseInsensitive);
+    if(m_pipeline->Start(cfg.chkCalibrate->isChecked(), is_stereo)) {
       cfg.btnStart->setEnabled(false);
       cfg.btnStop->setEnabled(true);
       cfg.btnSave->setEnabled(true);
@@ -756,15 +757,6 @@ void MainWindow::handleTimeOut(){
   QMessageBox::information(this, "Connection Error", "Camera disconnected: Communication timed out.");
 }
 
-/*static labforge::io::ImageDataType getImageType(QPair<QString, QString> &label){
-  if(label.second.isEmpty()){
-    return (label.first=="Display")?labforge::io::IMTYPE_IO:labforge::io::IMTYPE_DO;
-  } else{
-    if((label.first=="Left") && (label.second=="Right")) return labforge::io::IMTYPE_LR;
-    if((label.first=="Left") && (label.second=="Left")) return labforge::io::IMTYPE_LR;
-  }
-}*/
-
 void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, QPair<QString, QString> &label,
                          bool disparity, uint16_t *raw_disparity, int32_t min_disparity,
                          const pointcloud_t &pc) {
@@ -844,7 +836,7 @@ void MainWindow::handleError(QString msg){
   showStatusMessage();
 }
 
-void MainWindow::handleStereoData(bool is_disparity) {
+void MainWindow::handleStereoData() {
   if(m_pipeline) {
     list<BNImageData> images;
     uint16_t *raw_disparity = nullptr;
@@ -859,6 +851,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
       QImage q1;
       QImage q2;
       QPair<QString, QString> label;
+      bool is_disparity = false;
 
       if((image.left->type() == CV_16UC1) && (image.right->type() == CV_16UC1)){
         q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
@@ -868,6 +861,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
         label.first = "Disparity";
         label.second = "Confidence";
         m_data_thread->setImageDataType(labforge::io::IMTYPE_DC);
+        is_disparity = true;
       } else if((image.left->type() == CV_8UC2) && (image.right->type() == CV_16UC1)){
         q1 = s_yuv2_to_qimage(image.left);
         q2 = s_mono_to_qimage(image.right, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
@@ -875,6 +869,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
         label.first = "Left";
         label.second = "Disparity";
         m_data_thread->setImageDataType(labforge::io::IMTYPE_LD);
+        is_disparity = true;
       } else if((image.left->type() == CV_16UC1) && (image.right->type() == CV_8UC2)){
         q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
         q2 = s_yuv2_to_qimage(image.right);
@@ -882,6 +877,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
         label.first = "Disparity";
         label.second = "Right";
         m_data_thread->setImageDataType(labforge::io::IMTYPE_DR);
+        is_disparity = true;
       } else{
         q1 = s_yuv2_to_qimage(image.left);
         q2 = s_yuv2_to_qimage(image.right);
@@ -897,7 +893,7 @@ void MainWindow::handleStereoData(bool is_disparity) {
   }
 }
 
-void MainWindow::handleMonoData(bool is_disparity){
+void MainWindow::handleMonoData(){
   if(m_pipeline){
     list<BNImageData> images;
     uint16_t *raw_disparity = nullptr;
@@ -911,12 +907,14 @@ void MainWindow::handleMonoData(bool is_disparity){
       QImage q1;
       QImage q2;
       QPair<QString, QString> label;
+      bool is_disparity = false;
 
       if(image.left->type() == CV_16UC1){
         q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
         raw_disparity = (uint16_t*)image.left->data;
         label.first = "Disparity";
         m_data_thread->setImageDataType(labforge::io::IMTYPE_DO);
+        is_disparity = true;
       }
       else{
         q1 = s_yuv2_to_qimage(image.left);

@@ -55,8 +55,8 @@ public Q_SLOTS:
   void handleConnect();
   void handleDisconnect();
   void handleRecording();
-  void handleStereoData(bool is_disparity);
-  void handleMonoData(bool is_disparity);
+  void handleStereoData();
+  void handleMonoData();
   void handleError(QString msg);
   void newData(uint64_t timestamp, QImage &left, QImage &right, QPair<QString, QString> &label,
                bool disparity, uint16_t *raw_disparity, int32_t min_disparity, const pointcloud_t &pc);
