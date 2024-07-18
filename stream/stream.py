@@ -143,7 +143,7 @@ def acquire_images(device, stream, nframes=None):
                         print(f"BBoxes: {len(bboxes)} data: {bboxes[0]}")
 
                     matches = decode_chunk(device=device, buffer=pvbuffer, chunk='FeatureMatches')
-                    if matches is not None:
+                    if matches is not None and len(matches) > 0:
                         print(f"Matches: {len(matches.points)} data: ({matches.points[0].x}, {matches.points[0].y})")
 
                     pointcloud = decode_chunk(device=device, buffer=pvbuffer, chunk='SparsePointCloud')
