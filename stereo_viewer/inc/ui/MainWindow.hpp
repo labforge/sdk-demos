@@ -28,11 +28,15 @@
 #include <PvDevice.h>
 #include <PvStreamGEV.h>
 #include <chrono>
+#include <QProgressDialog>
+#include <QPair>
+#include <QtWidgets>
 
 #include "ui_stereo_viewer.h"
 #include "gev/pipeline.hpp"
 #include "io/data_thread.hpp"
 #include "gev/calib_params.hpp"
+#include "io/file_uploader.hpp"
 #include <cstdint>
 
 class PvGenBrowserWnd;
@@ -51,21 +55,26 @@ public Q_SLOTS:
   void handleConnect();
   void handleDisconnect();
   void handleRecording();
-  void handleStereoData(bool is_disparity);
-  void handleMonoData(bool is_disparity);
-  void handleError(QString msg);
-  void newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo,
-               bool disparity, uint16_t *raw_disparity, int32_t min_disparity, pointcloud_t &pc);
+  void handleStereoData();
+  void handleMonoData();
+  void handleError(const QString &msg);
+  void newData(uint64_t timestamp, QImage &left, QImage &right, QPair<QString, QString> &label,
+               bool disparity, uint16_t *raw_disparity, int32_t min_disparity, const pointcloud_t &pc);
   void onFolderSelect();
   void handleSave();
   void handleFocus();
   void handleDeviceControl();
   void setRuler(int value);
   void handleTimeOut();
+  void handleUpload();
+  void onFileTransferSelect();
+  void handleFileUploadError(QString msg);
+  void handleFileUploadFinished(bool);
 
 protected:
   void ShowGenWindow( PvGenBrowserWnd *aWnd, PvGenParameterArray *aArray, const QString &aTitle );
   void CloseGenWindow( PvGenBrowserWnd *aWnd );
+  bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
   bool connectGEV(const PvDeviceInfo *info);
@@ -93,6 +102,9 @@ private:
   void resetStatusCounters();
 
   labforge::gev::CalibParams m_calib;
+
+  std::unique_ptr<labforge::io::FileUploader> m_uploader;
+  QProgressDialog *m_upbar;
 };
 
 }

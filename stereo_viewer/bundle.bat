@@ -51,6 +51,8 @@ FOR %%M IN (
     Gui
     Widgets
     OpenGL
+    Network
+    Concurrent
 ) DO (
     COPY /Y %QTHOME%\bin\QT5%%M.dll %~dp0\install\bin
     IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
@@ -82,6 +84,10 @@ FOR %%M IN (
     IF %ERRORLEVEL% NEQ 0 goto :exit_with_error
     echo "Past %OPENCVHOME%\bin\%%M*.dll"
 )
+
+:: COPY YamlCPP
+copy /Y %~dp0\install\lib\yaml_cpp.dll	%~dp0\install\bin
+ECHO "YamlCPP copied"
 
 :: COPY Pleora SDK Files
 copy /Y "C:\Program Files\Common Files\Pleora\eBUS SDK\GenICam\bin\Win64_x64\*.dll" ^

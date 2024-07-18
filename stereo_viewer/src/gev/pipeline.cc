@@ -72,9 +72,6 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
   // Map start and stop and status commands
   m_start = dynamic_cast<PvGenCommand *>( lDeviceParams->Get( "AcquisitionStart" ) );
   m_stop = dynamic_cast<PvGenCommand *>( lDeviceParams->Get( "AcquisitionStop" ) );
-  m_pixformat = dynamic_cast<PvGenEnum *>( lDeviceParams->Get( "PixelFormat" ) );
-  m_rectify  = dynamic_cast<PvGenBoolean *>( lDeviceParams->Get( "Rectification" ) );
-  m_undistort = dynamic_cast<PvGenBoolean *>( lDeviceParams->Get( "Undistortion" ) );
   m_mindisparity = dynamic_cast<PvGenInteger *>( lDeviceParams->Get( "MinimumDisparity" ) );
 
   // Get stream parameters
@@ -82,20 +79,12 @@ Pipeline::Pipeline(PvStreamGEV *stream_gev, PvDeviceGEV *device_gev, QObject * p
   m_fps = dynamic_cast<PvGenFloat *>( lStreamParams->Get( "AcquisitionRate" ) );
   m_bandwidth = dynamic_cast<PvGenFloat *>( lStreamParams->Get( "Bandwidth" ) );
 
-  if(!m_start ||
-     !m_stop) {
+  if(!m_start || !m_stop) {
     throw runtime_error("Could map stream start and stop commands");
   }
-  if(!m_fps ||
-     !m_bandwidth ||
-     !m_pixformat ||
-     !m_undistort){
-      throw runtime_error("Unable to initialise critical camera features. Please, make sure the camera is accessible.");
-     }
-
-  if(m_rectify) m_rectify->GetValue(m_rectify_init);
-  m_undistort->GetValue(m_undistort_init);
-  m_pixformat->GetValue( m_pixfmt_init );
+  if(!m_fps || !m_bandwidth){
+    throw runtime_error("Unable to initialise critical camera features. Please, make sure the camera is accessible.");
+  }
 
   m_start_flag = false;
 }
@@ -104,11 +93,6 @@ Pipeline::~Pipeline() {
   // Terminate worker if active
   if(m_start_flag){
     Stop();
-  }
-  else{
-    if(m_rectify) m_rectify->SetValue(m_rectify_init);
-    m_undistort->SetValue(m_undistort_init);
-    m_pixformat->SetValue(m_pixfmt_init);
   }
 
   // Close stream when pipeline is destroyed
@@ -121,7 +105,66 @@ Pipeline::~Pipeline() {
   }
 }
 
-bool Pipeline::Start(bool calibrate) {
+void Pipeline::enterCalibrationMode(bool enable, bool stereo){
+  if(!enable) return;
+
+  if(!SetParameter(m_device, m_stream, "Undistortion", false)) {
+    throw runtime_error("Could not disable Undistortion");
+  }
+
+  if(!stereo) return;
+
+  PvGenParameterArray *lDeviceParams = m_device->GetParameters();
+  PvGenParameter *param = lDeviceParams->Get("ComponentSelector");
+
+  if (param == nullptr) {
+    if(!SetParameter(m_device, m_stream, "PixelFormat", "YUV422_8")) {
+      throw runtime_error("Could not enable PixelFormat");
+      return;
+    }
+    if(!SetParameter(m_device, m_stream, "Rectification", false)) {
+      throw runtime_error("Could not disable Rectification");
+      return;
+    }
+    return;
+  }
+
+  PvResult res = static_cast<PvGenEnum *>(param)->SetValue("Confidence");
+  if(!res.IsOK()) {
+    throw runtime_error("Could not select Component value [Confidence]");
+  }
+  if(!SetParameter(m_device, m_stream, "ComponentEnable", false)) {
+    throw runtime_error("Could not disable Component Confidence");
+  }
+  res = static_cast<PvGenEnum *>(param)->SetValue("IntensityLeft");
+  if(!res.IsOK()) {
+    throw runtime_error("Could not select Component value [IntensityLeft]");
+  }
+  if(!SetParameter(m_device, m_stream, "ComponentEnable", true)) {
+    throw runtime_error("Could not enable Component IntensityLeft");
+  }
+  res = static_cast<PvGenEnum *>(param)->SetValue("Disparity");
+  if(!res.IsOK()) {
+    throw runtime_error("Could not select Component value [Disparity]");
+  }
+  if(!SetParameter(m_device, m_stream, "ComponentEnable", false)) {
+    throw runtime_error("Could not disable Component Disparity");
+  }
+  res = static_cast<PvGenEnum *>(param)->SetValue("IntensityRight");
+  if(!res.IsOK()) {
+    throw runtime_error("Could not select Component value [IntensityRight]");
+  }
+  if(!SetParameter(m_device, m_stream, "ComponentEnable", true)) {
+    throw runtime_error("Could not enable Component IntensityRight");
+  }
+  res = static_cast<PvGenEnum *>(param)->SetValue("IntensityLeft");
+
+  if(!SetParameter(m_device, m_stream, "Rectification", false)) {
+    throw runtime_error("Could not disable Rectification");
+  }
+}
+
+bool Pipeline::Start(bool calibrate, bool is_stereo) {
   // Queue all buffers
   auto lIt = m_buffers.begin();
   while ( lIt != m_buffers.end() )
@@ -130,17 +173,7 @@ bool Pipeline::Start(bool calibrate) {
     lIt++;
   }
 
-  if(m_rectify) m_rectify->GetValue(m_rectify_init);
-  m_undistort->GetValue(m_undistort_init);
-  m_pixformat->GetValue( m_pixfmt_init );
-
-  bool rct_value = calibrate?!calibrate:m_rectify_init;
-  bool und_value = calibrate?!calibrate:m_undistort_init;
-  PvString pixformat = calibrate?"YUV422_8":m_pixfmt_init.GetAscii();
-
-  if(m_rectify) m_rectify->SetValue(rct_value);
-  m_undistort->SetValue(und_value);
-  m_pixformat->SetValue(pixformat);
+  enterCalibrationMode(calibrate, is_stereo);
 
   PvResult res = m_device->StreamEnable();
   if(!res.IsOK())
@@ -153,11 +186,11 @@ bool Pipeline::Start(bool calibrate) {
   return true;
 }
 
-size_t Pipeline::GetPairs(list<tuple<Mat *, Mat *, uint64_t, int32_t, pointcloud_t>> &out) {
+size_t Pipeline::GetPairs(list<BNImageData> &out) {
   QMutexLocker l(&m_image_lock);
 
   if(!m_images.empty()){
-    tuple<Mat *, Mat *, uint64_t, int32_t, pointcloud_t> image = m_images.dequeue();
+    BNImageData image = m_images.dequeue();
     out.push_back(image);
   }
 
@@ -169,11 +202,6 @@ void Pipeline::Stop() {
   // Wait for thread to terminate
   wait();
   // Discard all queued buffers
-
-  if(m_rectify) m_rectify->SetValue(m_rectify_init);
-  m_undistort->SetValue(m_undistort_init);
-  m_pixformat->SetValue(m_pixfmt_init);
-  QThread::currentThread()->usleep(100*1000);
 }
 
 void Pipeline::run() {
@@ -183,8 +211,7 @@ void Pipeline::run() {
   while(m_start_flag) {
     PvBuffer *lBuffer = nullptr;
     PvResult lOperationResult;
-    PvString pixformat;
-    bool is_disparity = true;
+
     double lFrameRateVal = 0.0;
     double lBandwidthVal = 0.0;
     uint64_t timestamp;
@@ -223,47 +250,37 @@ void Pipeline::run() {
           case PvPayloadTypeMultiPart:
             img0 = lBuffer->GetMultiPartContainer()->GetPart(0)->GetImage();
             img1 = lBuffer->GetMultiPartContainer()->GetPart(1)->GetImage();
-            m_pixformat->GetValue( pixformat );
 
             // Protected image creation
             {
               int cv_pixfmt0 = (img0->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
               int cv_pixfmt1 = (img1->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
-              is_disparity = ((cv_pixfmt0 == CV_16UC1) || (cv_pixfmt1 == CV_16UC1));
 
               QMutexLocker l(&m_image_lock);
               // See if there is chunk data attached
 
-              m_images.enqueue(
-                      make_tuple(
+              m_images.enqueue({
                               new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt0, img0->GetDataPointer()),
                               new Mat(img1->GetHeight(), img1->GetWidth(), cv_pixfmt1, img1->GetDataPointer()),
-                              timestamp, minDisparity, pointcloud
-                              )
+                              timestamp, static_cast<int32_t>(minDisparity), pointcloud
+                              }
                               );
             }
 
-            emit pairReceived(is_disparity);
+            emit pairReceived();
             break;
 
           case PvPayloadTypeImage:
             {
               QMutexLocker l(&m_image_lock);
               img0 = lBuffer->GetImage();
-              m_pixformat->GetValue( pixformat );
-              int cv_pixformat = CV_16UC1;
-              is_disparity = true;
+              int cv_pixformat = (img0->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
 
-              if(strcmp(pixformat.GetAscii(), "YUV422_8") == 0){
-                cv_pixformat = CV_8UC2;
-                is_disparity = false;
-              }
-
-              m_images.enqueue( make_tuple(new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()),
-                                             new Mat(), timestamp, minDisparity, pointcloud));
+              m_images.enqueue({new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()),
+                                new Mat(), timestamp, static_cast<int32_t>(minDisparity), pointcloud});
             }
 
-            emit monoReceived(is_disparity);
+            emit monoReceived();
             break;
 
           default:

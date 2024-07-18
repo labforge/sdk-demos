@@ -42,7 +42,7 @@ CALL "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\B
 
 :: QT5
 IF NOT DEFINED QTHOME (
-    SET QTHOME=C:\qt5
+    SET QTHOME=C:\Qt\5.15.2\msvc2015_64
 )
 IF NOT EXIST %QTHOME% (
     ECHO QT5 not properly installed ... exiting

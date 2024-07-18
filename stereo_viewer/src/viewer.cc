@@ -29,9 +29,9 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QPixmap>
-
 #include <PvDeviceGEV.h>
 #include <PvStreamGEV.h>
+
 // Note QT conflicts with AFX definitions in Pleora library, undefine QT_LIB just for this include if AFX enabled
 #ifdef _AFXDLL // Windows
 #undef QT_GUI_LIB
@@ -206,7 +206,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   cfg.spinMaxDisparity->setVisible(false);
 
   cfg.btnDeviceControl->setEnabled(true);
-  m_device_browser = new PvGenBrowserWnd;
+  m_device_browser = new PvGenBrowserWnd();
   m_device = nullptr;
 
   // Register event handlers
@@ -221,6 +221,26 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   connect(cfg.btnDeviceControl, &QPushButton::released, this, &MainWindow::handleDeviceControl);
   connect(cfg.cbxFocus,&QCheckBox::stateChanged, this, &MainWindow::handleFocus);
   connect(cfg.spinRuler, QOverload<int>::of(&QSpinBox::valueChanged), this, &MainWindow::setRuler);
+  connect(cfg.btnUpload, &QPushButton::released, this, &MainWindow::handleUpload);
+  connect(cfg.btnFile, &QPushButton::released, this, &MainWindow::onFileTransferSelect);
+
+  //fileManager
+  cfg.cbxFileType->addItem("Firmware", "FRW");
+  cfg.cbxFileType->addItem("DNN Weights", "DNN");
+  cfg.cbxFileType->addItem("Calibration", "CLB");
+
+  cfg.btnFile->setText("");
+  cfg.btnFile->setIcon(pStyle->standardIcon(QStyle::SP_FileDialogStart));
+  cfg.btnUpload->setIcon(pStyle->standardIcon(QStyle::SP_ArrowUp));
+  cfg.btnUpload->setVisible(true);
+  cfg.btnUpload->setEnabled(false);
+  cfg.txtFile->setReadOnly(true);
+  m_upbar = nullptr;
+  m_uploader = nullptr;
+
+  // event filter
+  cfg.editFolder->installEventFilter(this);
+  cfg.txtFile->installEventFilter(this);
 
   // Force disconnected state
   OnDisconnected();
@@ -259,15 +279,74 @@ MainWindow::~MainWindow(){
   if(m_data_thread){
     m_data_thread.reset();
   }
+  if(m_upbar){
+    m_upbar->close();
+    delete m_upbar;
+  }
+  if(m_uploader){
+    m_uploader.reset();
+  }
+}
+
+static bool validateFileType(QString fname, QString ftype);
+bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
+  if(event->type() == QEvent::DragEnter){
+    QDragEnterEvent *e = static_cast<QDragEnterEvent*>(event);
+    if(e->mimeData()->hasUrls()) {
+      QString fname = e->mimeData()->urls()[0].toLocalFile();
+
+      if(obj == cfg.editFolder) {
+        QFileInfo finfo(fname);
+        if(finfo.exists() && finfo.isDir()){
+          e->acceptProposedAction();
+        } else e->ignore();
+        return true;
+      }
+
+      if(obj == cfg.txtFile){
+        if (validateFileType(fname, cfg.cbxFileType->currentText())){
+          e->acceptProposedAction();
+        } else e->ignore();
+        return true;
+      }
+    } else e->ignore();
+  }
+  else if(event->type() == QEvent::Drop){
+    QDropEvent *e = static_cast<QDropEvent*>(event);
+    if(e->mimeData()->hasUrls()) {
+      QString fname = e->mimeData()->urls()[0].toLocalFile();
+
+      if(obj == cfg.editFolder) {
+        QFileInfo finfo(fname);
+        if(finfo.exists() && finfo.isDir()){
+          cfg.editFolder->setText(fname);
+          e->acceptProposedAction();
+        } else e->ignore();
+        return true;
+      }
+
+      if(obj == cfg.txtFile){
+        if (validateFileType(fname, cfg.cbxFileType->currentText())){
+          cfg.txtFile->setText(fname);
+          e->acceptProposedAction();
+        } else e->ignore();
+        return true;
+      }
+    } else e->ignore();
+  }
+
+  return false;
 }
 
 void MainWindow::handleStart() {
   if(m_pipeline) {
-    if(m_pipeline->Start(cfg.chkCalibrate->isChecked())) {
+    bool is_stereo = cfg.editModel->text().endsWith("_ST", Qt::CaseInsensitive);
+    if(m_pipeline->Start(cfg.chkCalibrate->isChecked(), is_stereo)) {
       cfg.btnStart->setEnabled(false);
       cfg.btnStop->setEnabled(true);
       cfg.btnSave->setEnabled(true);
       cfg.btnRecord->setEnabled(true);
+      cfg.btnUpload->setEnabled(false);
 
       cfg.chkCalibrate->setEnabled(false);
       resetStatusCounters();
@@ -298,6 +377,7 @@ void MainWindow::handleStop(bool fatal) {
   cfg.widgetLeftSensor->reset();
   cfg.widgetRightSensor->reset();
   cfg.chkCalibrate->setEnabled(true);
+  cfg.btnUpload->setEnabled(true);
 
   // Check if we lost connection
   if(!m_device || !m_device->IsConnected() || fatal) {
@@ -315,6 +395,7 @@ void MainWindow::OnConnected() {
   cfg.btnRecord->setEnabled(false);
   cfg.btnSave->setEnabled(false);
   cfg.btnDeviceControl->setEnabled(true);
+  cfg.btnUpload->setEnabled(true);
   showStatusMessage();
   // FIXME: Clear data canvases
 }
@@ -334,6 +415,7 @@ void MainWindow::OnDisconnected() {
   cfg.editModel->setText("");
   cfg.chkCalibrate->setEnabled(true);
   cfg.btnDeviceControl->setEnabled(false);
+  cfg.btnUpload->setEnabled(false);
 }
 
 void MainWindow::handleRecording(){
@@ -425,6 +507,113 @@ void MainWindow::handleDisconnect() {
 void MainWindow::handleFocus() {
   cfg.widgetLeftSensor->enableFocus(cfg.cbxFocus->isChecked());
   cfg.widgetRightSensor->enableFocus(cfg.cbxFocus->isChecked());
+}
+
+static bool validateFileType(QString fname, QString ftype){
+  if((ftype == "Firmware") || (ftype == "DNN Weights")){
+    return fname.endsWith(".tar", Qt::CaseInsensitive);
+  } else if(ftype == "Calibration"){
+      return (fname.endsWith(".json", Qt::CaseInsensitive) ||
+              fname.endsWith(".yaml", Qt::CaseInsensitive) ||
+              fname.endsWith(".yml", Qt::CaseInsensitive));
+  }
+
+  return false;
+}
+
+void MainWindow::handleUpload(){
+  QString fname = cfg.txtFile->text();
+  QString ftype = cfg.cbxFileType->currentText();
+  QString fid = cfg.cbxFileType->currentData().toString();
+  QString address = cfg.editIP->text();
+
+  if(fname.isEmpty()){
+    QMessageBox::information(this, "Empty " + ftype + " File", "Select a " + ftype + " file to upload.");
+    return;
+  }
+
+  if(!validateFileType(fname, ftype)){
+    QMessageBox::warning(this, "File Error", "Unrecognized " + ftype + " file type!");
+    return;
+  }
+  if(!QFile::exists(fname)){
+    QMessageBox::warning(this, "File Error", ftype + " File not found!");
+    return;
+  }
+  if((m_device == nullptr) || (address.isEmpty())){
+    QMessageBox::warning(this, "Connection Error", "Bottlenose Camera not found.");
+    return;
+  }
+
+  if(m_upbar == nullptr) {
+    m_upbar = new QProgressDialog("", nullptr, 0, 100, this);
+    //m_upbar->setWindowFlags(m_upbar->windowFlags() | Qt::WindowCloseButtonHint); // Remove the close button
+    m_upbar->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint| Qt::WindowCloseButtonHint);
+    m_upbar->setWindowModality(Qt::WindowModal);
+  }
+
+  cfg.btnStart->setEnabled(false);
+  cfg.btnUpload->setEnabled(false);
+  cfg.btnFile->setEnabled(false);
+
+  m_uploader = make_unique<labforge::io::FileUploader>(dynamic_cast<PvDeviceGEV*>(m_device));
+  connect(m_uploader.get(),
+          &labforge::io::FileUploader::error,
+          this,
+          &MainWindow::handleFileUploadError,
+          Qt::QueuedConnection);
+  connect(m_uploader.get(),
+          &labforge::io::FileUploader::finished,
+          this,
+          &MainWindow::handleFileUploadFinished,
+          Qt::QueuedConnection);
+  connect(m_uploader.get(),
+          SIGNAL(workingOn(const QString&)),
+          m_upbar,
+          SLOT(setLabelText(const QString&)),
+          Qt::QueuedConnection);
+  connect(m_uploader.get(), SIGNAL(progress(int)), m_upbar, SLOT(setValue(int)));
+  m_uploader->process(fid, ftype, fname);
+
+  m_upbar->exec();
+}
+
+void MainWindow::onFileTransferSelect(){
+  QString fpath = cfg.txtFile->text().isEmpty()?QDir::currentPath():QFileInfo(cfg.txtFile->text()).absoluteDir().absolutePath();
+  QString item = cfg.cbxFileType->currentText();
+  QString title = "Select " + item + " File";
+  QString filter_text = item + " (*.tar)";
+
+  if(item == "Calibration"){
+    filter_text = item + " (*.json *.yaml *.yml)";
+  }
+  QString selected_file = QFileDialog::getOpenFileName(this, title, fpath, filter_text);
+  if(!selected_file.isEmpty()){
+    cfg.txtFile->setText(selected_file);
+  }
+}
+
+void MainWindow::handleFileUploadError(QString what){
+  QMessageBox::warning(this, "Update failed", what);
+}
+
+void MainWindow::handleFileUploadFinished(bool success){
+  if(success){
+    QString ftype = cfg.cbxFileType->currentText();
+    if(ftype == "Firmware")
+        QMessageBox::information(this, "Update Finished", "Please, power cycle the sensor to apply the new firmware.");
+    else if(ftype == "Calibration")
+        QMessageBox::information(this, "Update Finished", "Calibration updated!");
+    else
+        QMessageBox::information(this, "Update Finished", "Weights file updated!");
+  }
+
+  cfg.btnStart->setEnabled(true);
+  cfg.btnUpload->setEnabled(true);
+  cfg.btnFile->setEnabled(true);
+
+  if(m_upbar != nullptr) m_upbar->close();
+  if(m_uploader != nullptr) m_uploader.reset();
 }
 
 bool isWinVisible(PvGenBrowserWnd *aWnd){
@@ -568,9 +757,11 @@ void MainWindow::handleTimeOut(){
   QMessageBox::information(this, "Connection Error", "Camera disconnected: Communication timed out.");
 }
 
-void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool stereo,
-                         bool disparity, uint16_t *raw_disparity, int32_t min_disparity, pointcloud_t &pc) {
+void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, QPair<QString, QString> &label,
+                         bool disparity, uint16_t *raw_disparity, int32_t min_disparity,
+                         const pointcloud_t &pc) {
   // Set the image
+  bool stereo = !label.second.isEmpty();
   cfg.widgetLeftSensor->setImage(left, false);
   cfg.widgetRightSensor->setVisible(stereo);
   cfg.lblDisplayRight->setVisible(stereo);
@@ -583,13 +774,10 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, bool s
   cfg.spinMinDisparity->setVisible(disparity);
   cfg.spinMaxDisparity->setVisible(disparity);
 
+  cfg.lblDisplayLeft->setText(label.first);
   if(stereo){
     cfg.widgetRightSensor->setImage(right, false);
-    QString label = disparity?"Disparity":"Right";
-    cfg.lblDisplayRight->setText(label);
-  }else{
-    QString label = disparity?"Disparity":"Display";
-    cfg.lblDisplayLeft->setText(label);
+    cfg.lblDisplayRight->setText(label.second);
   }
 
   // Do we have boundingboxes or feature points
@@ -642,69 +830,102 @@ void MainWindow::resetStatusCounters(){
   m_startTime = std::chrono::system_clock::now();
 }
 
-void MainWindow::handleError(QString msg){
+void MainWindow::handleError(const QString &msg){
   m_errorCount += 1;
   m_errorMsg = msg;
   showStatusMessage();
 }
 
-void MainWindow::handleStereoData(bool is_disparity) {
+void MainWindow::handleStereoData() {
   if(m_pipeline) {
-    list<tuple<Mat*, Mat*, uint64_t, int32_t, pointcloud_t>> images;
+    list<BNImageData> images;
     uint16_t *raw_disparity = nullptr;
-
     m_pipeline->GetPairs(images);
-    m_data_thread->setStereoDisparity(true, is_disparity);
 
     m_frameCount += images.size();
     showStatusMessage(2);
 
     // Convert and display
-    for (auto it = images.begin(); it != images.end(); ++it) {
-      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;
-      QImage q1 = s_yuv2_to_qimage(get<0>(*it));
+    for (auto const & image:images) {
+      m_payload = image.left->cols * image.left->rows * 16;
+      QImage q1;
       QImage q2;
+      QPair<QString, QString> label;
+      bool is_disparity = false;
 
-      if(is_disparity){
-        q2 = s_mono_to_qimage(get<1>(*it), cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
-        raw_disparity = (uint16_t*)get<1>(*it)->data;
-      }else{
-        q2 = s_yuv2_to_qimage(get<1>(*it));
+      if((image.left->type() == CV_16UC1) && (image.right->type() == CV_16UC1)){
+        q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
+        raw_disparity = (uint16_t*)image.left->data;
+        q2 = s_mono_to_qimage(image.right, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
+
+        label.first = "Disparity";
+        label.second = "Confidence";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_DC);
+        is_disparity = true;
+      } else if((image.left->type() == CV_8UC2) && (image.right->type() == CV_16UC1)){
+        q1 = s_yuv2_to_qimage(image.left);
+        q2 = s_mono_to_qimage(image.right, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
+        raw_disparity = (uint16_t*)image.right->data;
+        label.first = "Left";
+        label.second = "Disparity";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_LD);
+        is_disparity = true;
+      } else if((image.left->type() == CV_16UC1) && (image.right->type() == CV_8UC2)){
+        q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
+        q2 = s_yuv2_to_qimage(image.right);
+        raw_disparity = (uint16_t*)image.left->data;
+        label.first = "Disparity";
+        label.second = "Right";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_DR);
+        is_disparity = true;
+      } else{
+        q1 = s_yuv2_to_qimage(image.left);
+        q2 = s_yuv2_to_qimage(image.right);
+        label.first = "Left";
+        label.second = "Right";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_LR);
       }
 
-      newData(get<2>(*it), q1, q2, true, is_disparity, raw_disparity, get<3>(*it), get<4>(*it));
-      delete get<0>(*it);
-      delete get<1>(*it);
+      newData(image.timestamp, q1, q2, label, is_disparity, raw_disparity, image.min_disparity, image.pc);
+      delete image.left;
+      delete image.right;
     }
   }
 }
 
-void MainWindow::handleMonoData(bool is_disparity){
+void MainWindow::handleMonoData(){
   if(m_pipeline){
-    list<tuple<Mat*, Mat*, uint64_t, int32_t, pointcloud_t>> images;
+    list<BNImageData> images;
     uint16_t *raw_disparity = nullptr;
     m_pipeline->GetPairs(images);
-    m_data_thread->setStereoDisparity(false, is_disparity);
 
     m_frameCount += images.size();
     showStatusMessage(1);
 
-    for (auto it = images.begin(); it != images.end(); ++it) {
-      m_payload = get<0>(*it)->cols * get<0>(*it)->rows * 16;
+    for (auto const& image:images) {
+      m_payload = image.left->cols * image.left->rows * 16;
       QImage q1;
       QImage q2;
+      QPair<QString, QString> label;
+      bool is_disparity = false;
 
-      if(is_disparity){
-        q1 = s_mono_to_qimage(get<0>(*it), cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
-        raw_disparity = (uint16_t*)get<0>(*it)->data;
+      if(image.left->type() == CV_16UC1){
+        q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
+        raw_disparity = (uint16_t*)image.left->data;
+        label.first = "Disparity";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_DO);
+        is_disparity = true;
       }
       else{
-        q1 = s_yuv2_to_qimage(get<0>(*it));
+        q1 = s_yuv2_to_qimage(image.left);
+        label.first = "Display";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_IO);
       }
+      label.second = "";
 
-      newData(get<2>(*it), q1, q2, false, is_disparity, raw_disparity, get<3>(*it), get<4>(*it));
-      delete get<0>(*it);
-      delete get<1>(*it);
+      newData(image.timestamp, q1, q2, label, is_disparity, raw_disparity, image.min_disparity, image.pc);
+      delete image.left;
+      delete image.right;
     }
   }
 }
