@@ -18,7 +18,7 @@
 """
 __author__ = ("Thomas Reidemeister <thomas@labforge.ca>"
               "G. M. Tchamgoue <martin@labforge.ca>")
-__copyright__ = "Copyright 2023, Labforge Inc."
+__copyright__ = "Copyright 2024, Labforge Inc."
 
 import warnings
 import eBUS as eb
@@ -44,15 +44,19 @@ def find_bottlenose(mac=None):
             device_info = interface.GetDeviceInfo(j)
             if device_info.GetMACAddress().GetUnicode().find(LABFORGE_MAC_RANGE) == 0:
                 device_vector.append(device_info)
-                if mac is not None and mac == device_info.GetMACAddress().GetUnicode():
+                if mac is not None and mac.lower() == device_info.GetMACAddress().GetUnicode():
                     return device_info.GetConnectionID()
 
     if len(device_vector) == 0:
         warnings.warn("No Bottlenose camera found!", RuntimeWarning)
         return None
 
-    # Return first Bottlenose found
-    return device_vector[0].GetConnectionID()
+    if mac is not None:
+        warnings.warn(f"No Bottlenose camera with MAC address {mac} found!", RuntimeWarning)
+        return None
+    else:
+        # Return first Bottlenose found
+        return device_vector[0].GetConnectionID()
 
 
 def connect_to_device(connection_id):
