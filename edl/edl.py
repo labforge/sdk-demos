@@ -39,10 +39,14 @@ def acquire_images(device, stream, nframes=None):
     stop = device_params.Get("AcquisitionStop")
 
     pixel_format = device_params.Get("PixelFormat")
-    print(pixel_format)
     res = pixel_format.SetValue(eb.PvPixelBayerRG10)
     if not res.IsOK():
         print("Failed to set pixel format to BayerRG10")
+        return
+    edl = device_params.Get("embeddedData")
+    res = edl.SetValue(True)
+    if not res.IsOK():
+        print("Failed to enable embedded Data")
         return
 
     # Get stream parameters
@@ -82,7 +86,6 @@ def acquire_images(device, stream, nframes=None):
                 if payload_type == eb.PvPayloadTypeImage:
                     image = pvbuffer.GetImage()
                     image_data = image.GetDataPointer()
-                    import ipdb; ipdb.set_trace()
                     print(f" W: {image.GetWidth()} H: {image.GetHeight()}", end='')
 
                     if (image.GetPixelType() == eb.PvPixelBayerRG10) or (image.GetPixelType() == eb.PvPixelBayerBG10):
@@ -90,8 +93,10 @@ def acquire_images(device, stream, nframes=None):
                     if nframes is None:
                         if display_image:
                             cv2.imshow("stream", image_data)
+
                     if nframes is None:
                         if cv2.waitKey(1) & 0xFF != 0xFF:
+                            cv2.imwrite("image.png", image_data)
                             break
                 print(f" {frame_rate_val:.1f} FPS  {bandwidth_val / 1000000.0:.1f} Mb/s", end='\r')
             else:
