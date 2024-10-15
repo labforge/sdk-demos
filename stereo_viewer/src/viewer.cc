@@ -90,6 +90,20 @@ static QImage s_yuv2_to_qimage(const cv::Mat*img) {
   return QImage((uchar*) res.data, res.cols, res.rows, res.step, QImage::Format_RGB888).copy();
 }
 
+static QImage s_bayer_to_qimage(const cv::Mat*img) {
+  Mat res = img->clone();
+  // Iterate through the image and shift each pixel value
+  // Iterate through the image and shift each pixel value
+  for (int i = 0; i < img->rows; i++) {
+    for (int j = 0; j < img->cols; j++) {
+      // Access each pixel and shift it left by 6 bits
+      res.at<uint16_t>(i, j) = img->at<uint16_t>(i, j) << 6;
+    }
+  }
+  // data pointer looses scope, deep copy needed
+  return QImage((uchar*) res.data, res.cols, res.rows, res.step, QImage::Format_Grayscale16).copy();
+}
+
 static QImage s_mono_to_qimage(const cv::Mat*img, int colormap=COLORMAP_JET, int mindisp=0, int maxdisp=0) {
   Mat res;
   QImage::Format qformat = QImage::Format_Grayscale8;
@@ -878,14 +892,19 @@ void MainWindow::handleStereoData() {
         label.second = "Right";
         m_data_thread->setImageDataType(labforge::io::IMTYPE_DR);
         is_disparity = true;
-      } else{
+      } else if((image.left->type() == CV_8UC2) && (image.right->type() == CV_8UC2)) {
         q1 = s_yuv2_to_qimage(image.left);
         q2 = s_yuv2_to_qimage(image.right);
         label.first = "Left";
         label.second = "Right";
         m_data_thread->setImageDataType(labforge::io::IMTYPE_LR);
+      } else if((image.left->type() == CV_16SC1) && (image.right->type() == CV_16SC1)) {
+        q1 = s_bayer_to_qimage(image.left);
+        q2 = s_bayer_to_qimage(image.right);
+        label.first = "Left";
+        label.second = "Right";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_LR);
       }
-
       newData(image.timestamp, q1, q2, label, is_disparity, raw_disparity, image.min_disparity, image.pc);
       delete image.left;
       delete image.right;
