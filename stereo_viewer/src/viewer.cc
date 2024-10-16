@@ -105,7 +105,7 @@ static QImage s_bayer_to_qimage(const cv::Mat*img) {
   return QImage((uchar*) res.data, res.cols, res.rows, res.step, QImage::Format_Grayscale16).copy();
 }
 #else // Older QT versions don't support 16-bit images
-sstatic QImage s_bayer_to_qimage(const cv::Mat* img) {
+static QImage s_bayer_to_qimage(const cv::Mat* img) {
     cv::Mat res = cv::Mat::zeros(img->rows, img->cols, CV_8UC1); // Create an 8-bit result image
 
     // Iterate through the image and shift each pixel value
