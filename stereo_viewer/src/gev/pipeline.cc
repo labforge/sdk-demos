@@ -211,7 +211,9 @@ inline int cv_pixformat(PvPixelType pleora) {
       return CV_8UC2;
     case PvPixelBayerBG10:
     case PvPixelBayerRG10:
-      return CV_16SC1; // Fixme use this as marker for 10-bit encoded images
+    case PvPixelBayerBG16:
+    case PvPixelBayerRG16:
+      return CV_16SC1; // Fixme use this as marker for bayer encoded images
     default:
       return CV_16UC1;
   }

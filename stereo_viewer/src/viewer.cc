@@ -122,6 +122,48 @@ static QImage s_bayer_to_qimage(const cv::Mat* img) {
 }
 #endif
 
+/**
+ * @brief Convert an interlaced image to a pair of images
+ * @param img Interlaced image
+ * @param left First resulting image (row 0)
+ * @param right Second resulting image (row +1)
+ */
+static void s_interlaced_to_pair(const cv::Mat*img, QImage &left, QImage &right) {
+#if(QT_VERSION >= QT_VERSION_CHECK(5, 15, 0))
+  // Split the interlaced image into two separate images
+  Mat l = Mat(img->rows/2, img->cols, CV_16UC1);
+  Mat r = Mat(img->rows/2, img->cols, CV_16UC1);
+
+  for (int i = 0; i < l.rows; i++) {
+    for (int j = 0; j < l.cols; j++) {
+      // Copy the l image
+      l.at<uint16_t>(i, j) = img->at<uint16_t>(i * 2, j);
+      // Copy the right image
+      r.at<uint16_t>(i, j) = img->at<uint16_t>(i*2 + 1, j);
+    }
+  }
+//  QImage in((uchar*) img->data, img->cols, img->rows, img->step, QImage::Format_Grayscale16);
+//  in.save("interlaced.png");
+  left = QImage((uchar*) l.data, l.cols, l.rows, l.step, QImage::Format_Grayscale16).copy();
+  right = QImage((uchar*) r.data, r.cols, r.rows, r.step, QImage::Format_Grayscale16).copy();
+#else
+  // Split the interlaced image into two separate images
+  Mat l = Mat(img->rows/2, img->cols, CV_8UC1);
+  Mat r = Mat(img->rows/2, img->cols, CV_8UC1);
+
+  for (int i = 0; i < l.rows; i++) {
+    for (int j = 0; j < l.cols; j++) {
+      // Copy the l image
+      l.at<uint8_t>(i, j) = img->at<uint16_t>(i * 2, j) >> 8;
+      // Copy the right image
+      r.at<uint8_t>(i, j) = img->at<uint16_t>(i * 2 + 1, j) >> 8;
+    }
+  }
+  left = QImage((uchar*) l.data, l.cols, l.rows, l.step, QImage::Format_Mono).copy();
+  right = QImage((uchar*) r.data, r.cols, r.rows, r.step, QImage::Format_Mono).copy();
+#endif
+}
+
 static QImage s_mono_to_qimage(const cv::Mat*img, int colormap=COLORMAP_JET, int mindisp=0, int maxdisp=0) {
   Mat res;
   QImage::Format qformat = QImage::Format_Grayscale8;
@@ -835,7 +877,6 @@ void MainWindow::newData(uint64_t timestamp, QImage &left, QImage &right, QPair<
 
   cfg.widgetLeftSensor->setStyleSheet(QStringLiteral("background-color:black; border: 2px solid green;"));
   cfg.widgetRightSensor->setStyleSheet(QStringLiteral("background-color:black; border: 2px solid green;"));
-
 }
 
 void MainWindow::showStatusMessage(uint32_t rcv_images){
@@ -945,6 +986,7 @@ void MainWindow::handleMonoData(){
       QImage q2;
       QPair<QString, QString> label;
       bool is_disparity = false;
+      label.second = "";
 
       if(image.left->type() == CV_16UC1){
         q1 = s_mono_to_qimage(image.left, cfg.cbxColormap->currentIndex(), cfg.spinMinDisparity->value(), cfg.spinMaxDisparity->value());
@@ -952,13 +994,16 @@ void MainWindow::handleMonoData(){
         label.first = "Disparity";
         m_data_thread->setImageDataType(labforge::io::IMTYPE_DO);
         is_disparity = true;
-      }
-      else{
+      } else if(image.left->type() == CV_16SC1) { // Interlaced HDR image
+        s_interlaced_to_pair(image.left, q1, q2);
+        label.first = "HDR high exposure";
+        label.second = "HDR low exposure";
+        m_data_thread->setImageDataType(labforge::io::IMTYPE_HDR);
+      } else {
         q1 = s_yuv2_to_qimage(image.left);
         label.first = "Display";
         m_data_thread->setImageDataType(labforge::io::IMTYPE_IO);
       }
-      label.second = "";
 
       newData(image.timestamp, q1, q2, label, is_disparity, raw_disparity, image.min_disparity, image.pc);
       delete image.left;
