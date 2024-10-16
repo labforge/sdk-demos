@@ -90,6 +90,7 @@ static QImage s_yuv2_to_qimage(const cv::Mat*img) {
   return QImage((uchar*) res.data, res.cols, res.rows, res.step, QImage::Format_RGB888).copy();
 }
 
+#if(QT_VERSION >= QT_VERSION_CHECK(5, 15, 0))
 static QImage s_bayer_to_qimage(const cv::Mat*img) {
   Mat res = img->clone();
   // Iterate through the image and shift each pixel value
@@ -103,6 +104,23 @@ static QImage s_bayer_to_qimage(const cv::Mat*img) {
   // data pointer looses scope, deep copy needed
   return QImage((uchar*) res.data, res.cols, res.rows, res.step, QImage::Format_Grayscale16).copy();
 }
+#else // Older QT versions don't support 16-bit images
+sstatic QImage s_bayer_to_qimage(const cv::Mat* img) {
+    cv::Mat res = cv::Mat::zeros(img->rows, img->cols, CV_8UC1); // Create an 8-bit result image
+
+    // Iterate through the image and shift each pixel value
+    for (int i = 0; i < img->rows; i++) {
+        for (int j = 0; j < img->cols; j++) {
+            // Access each pixel, shift it right by 2 bits to convert to 8-bit, and store in the result image
+            uint16_t pixel_value = img->at<uint16_t>(i, j);
+            res.at<uchar>(i, j) = static_cast<uchar>(pixel_value >> 2); // Shift down by 2 bits
+        }
+    }
+
+    // Create and return a deep copy of the QImage
+    return QImage((uchar*) res.data, res.cols, res.rows, res.step, QImage::Format_Mono).copy();
+}
+#endif
 
 static QImage s_mono_to_qimage(const cv::Mat*img, int colormap=COLORMAP_JET, int mindisp=0, int maxdisp=0) {
   Mat res;
