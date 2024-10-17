@@ -112,6 +112,9 @@ bool DataThread::setFolder(QString new_folder){
   } else if (m_imtype == IMTYPE_DC){
     status = status && getFilename(m_disparity_fname, m_folder, m_disparity_subfolder, "disparity_");
     status = status && getFilename(m_conf_fname, m_folder, m_disparity_subfolder, "conf_");
+  } else if (m_imtype == IMTYPE_HDR) {
+    status = status && getFilename(m_left_fname, m_folder, m_left_subfolder, "hdr_high_");
+    status = status && getFilename(m_right_fname, m_folder, m_right_subfolder, "hdr_low_");
   }
 
   return status;
@@ -304,6 +307,10 @@ void DataThread::run() {
       imdata.right.save(m_conf_fname + suffix, ext.toStdString().c_str(), quality);
       //QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
       //saveProjected3D(imdata, m_matQ, fname);
+    } else if (imdata.imtype == IMTYPE_HDR) {
+      suffix.replace(ext.toLower(), "png"); // PNG is 16-bit grayscale for bayer images
+      imdata.left.save(m_left_fname + suffix, "png", quality);
+      imdata.right.save(m_right_fname + suffix, "png", quality);
     }
     if((imdata.pc.size() > 0) && (imdata.imtype == IMTYPE_LR)){
       getFilename(m_pc_fname, m_folder, m_pc_subfolder, "spc_");
