@@ -308,8 +308,9 @@ void DataThread::run() {
       //QString fname = m_disparity_fname + suffix.replace(ext.toLower(), "ply");
       //saveProjected3D(imdata, m_matQ, fname);
     } else if (imdata.imtype == IMTYPE_HDR) {
-      imdata.left.save(m_left_fname + suffix, ext.toStdString().c_str(), quality);
-      imdata.right.save(m_right_fname + suffix, ext.toStdString().c_str(), quality);
+      suffix.replace(ext.toLower(), "png"); // PNG is 16-bit grayscale for bayer images
+      imdata.left.save(m_left_fname + suffix, "png", quality);
+      imdata.right.save(m_right_fname + suffix, "png", quality);
     }
     if((imdata.pc.size() > 0) && (imdata.imtype == IMTYPE_LR)){
       getFilename(m_pc_fname, m_folder, m_pc_subfolder, "spc_");
