@@ -204,6 +204,21 @@ void Pipeline::Stop() {
   // Discard all queued buffers
 }
 
+inline int cv_pixformat(PvPixelType pleora) {
+  //PvPixelBayerBG10
+  switch(pleora) {
+    case PvPixelYUV422_8:
+      return CV_8UC2;
+    case PvPixelBayerBG10:
+    case PvPixelBayerRG10:
+    case PvPixelBayerBG16:
+    case PvPixelBayerRG16:
+      return CV_16SC1; // Fixme use this as marker for bayer encoded images
+    default:
+      return CV_16UC1;
+  }
+}
+
 void Pipeline::run() {
   size_t consequitive_errors = 0;
   size_t timeout_count = MAX_CONS_ERRORS_IN_ACQUISITION;
@@ -253,8 +268,8 @@ void Pipeline::run() {
 
             // Protected image creation
             {
-              int cv_pixfmt0 = (img0->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
-              int cv_pixfmt1 = (img1->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
+              int cv_pixfmt0 = cv_pixformat(img0->GetPixelType());
+              int cv_pixfmt1 = cv_pixformat(img1->GetPixelType());
 
               QMutexLocker l(&m_image_lock);
               // See if there is chunk data attached
@@ -274,9 +289,9 @@ void Pipeline::run() {
             {
               QMutexLocker l(&m_image_lock);
               img0 = lBuffer->GetImage();
-              int cv_pixformat = (img0->GetPixelType() == PvPixelYUV422_8)? CV_8UC2: CV_16UC1;
+              int cv_pixfmt = cv_pixformat( img0->GetPixelType() );
 
-              m_images.enqueue({new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixformat, img0->GetDataPointer()),
+              m_images.enqueue({new Mat(img0->GetHeight(), img0->GetWidth(), cv_pixfmt, img0->GetDataPointer()),
                                 new Mat(), timestamp, static_cast<int32_t>(minDisparity), pointcloud});
             }
 
