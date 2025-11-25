@@ -38,6 +38,7 @@ enum ImageDataType {
     IMTYPE_IO,  ///< single image
     IMTYPE_DO,  ///< disparity alone
     IMTYPE_LR,  ///< left+right images
+    IMTYPE_HDR, ///< HDR images
     IMTYPE_LD,  ///< left+disparity images
     IMTYPE_DR,  ///< disparity+right images
     IMTYPE_DC,  ///< disparity+confidence images
