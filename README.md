@@ -33,8 +33,7 @@ required python packages to run.
 
 ### Microsoft Windows
 
-Note the Python backend for Microsoft Windows systems does not install Python
-support by default. Please [install the following wheels](https://packaging.python.org/en/latest/tutorials/installing-packages/)
+Please [install the following wheels](https://packaging.python.org/en/latest/tutorials/installing-packages/)
 for your respective Python version.
 
 | ***Python Version*** | ***Matching Wheel***                   |
@@ -50,8 +49,7 @@ and require a newer version than Python 3.6.
 
 ### Ubuntu Linux
 
-We provide support for Ubuntu Linux. To install the SDK including Python packages
-please install corresponding Debian package (.dpkg).
+To install the SDK including Python packages please install corresponding Debian package (.dpkg).
 
 ```bash
 sudo dpkg -i eBUS_SDK_Ubuntu-<Ubuntu version>-*.deb
